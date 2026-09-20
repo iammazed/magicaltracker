@@ -1,0 +1,985 @@
+<title>Shipping MagicalTracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+  /* ── Light palette: complete definition ─────────────────────────── */
+  :root {
+    --ground:      #F4F7F7;
+    --surface:     #FFFFFF;
+    --surface-alt: #EDF2F2;
+    --ink:         #12212A;
+    --ink-soft:    #52666F;
+    --ink-faint:   #7D9099;
+    --rule:        #D9E3E3;
+    --rule-soft:   #E8EFEF;
+
+    --teal:      #00807E;
+    --teal-deep: #0B7078;
+    --blue:      #1A596E;
+    --navy:      #2B4063;
+    --indigo:    #342758;
+    --violet:    #512663;
+
+    --gold:      #B07818;
+    --gold-bg:   #FBF3E0;
+    --flag:      #9E3B2E;
+    --flag-bg:   #FBECE9;
+    --good:      #1F7A52;
+    --good-bg:   #E6F4EC;
+
+    --accent:      var(--teal);
+    --accent-text: var(--teal-deep);
+    --shadow:      0 1px 2px rgba(18,33,42,.05), 0 8px 24px -12px rgba(18,33,42,.14);
+    --shadow-flat: 0 1px 0 var(--rule-soft);
+
+    --display: "Instrument Serif", Georgia, "Times New Roman", serif;
+    --body:    "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --mono:    "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  /* ── Dark: token overrides only ─────────────────────────────────── */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #0C1418;
+      --surface:     #131F25;
+      --surface-alt: #18272E;
+      --ink:         #E6EEEE;
+      --ink-soft:    #9DB2B8;
+      --ink-faint:   #6E858D;
+      --rule:        #25383F;
+      --rule-soft:   #1C2C33;
+
+      --teal:      #2FB5AF;
+      --teal-deep: #24A0A6;
+      --blue:      #4B94AF;
+      --navy:      #6D89BC;
+      --indigo:    #8677B8;
+      --violet:    #A272BE;
+
+      --gold:      #E5B45F;
+      --gold-bg:   #2A2313;
+      --flag:      #E58A78;
+      --flag-bg:   #2C1815;
+      --good:      #55C28D;
+      --good-bg:   #10281D;
+
+      --accent-text: var(--teal);
+      --shadow:      0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+      --shadow-flat: 0 1px 0 var(--rule-soft);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:      #0C1418;
+    --surface:     #131F25;
+    --surface-alt: #18272E;
+    --ink:         #E6EEEE;
+    --ink-soft:    #9DB2B8;
+    --ink-faint:   #6E858D;
+    --rule:        #25383F;
+    --rule-soft:   #1C2C33;
+
+    --teal:      #2FB5AF;
+    --teal-deep: #24A0A6;
+    --blue:      #4B94AF;
+    --navy:      #6D89BC;
+    --indigo:    #8677B8;
+    --violet:    #A272BE;
+
+    --gold:      #E5B45F;
+    --gold-bg:   #2A2313;
+    --flag:      #E58A78;
+    --flag-bg:   #2C1815;
+    --good:      #55C28D;
+    --good-bg:   #10281D;
+
+    --accent-text: var(--teal);
+    --shadow:      0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+    --shadow-flat: 0 1px 0 var(--rule-soft);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 16.5px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+    margin: 0;
+  }
+
+  .shell {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 22px 120px;
+  }
+
+  @media (min-width: 1040px) {
+    .shell { grid-template-columns: 208px minmax(0, 1fr); gap: 56px; padding: 0 32px 140px; }
+  }
+
+  /* ── Table of contents rail ─────────────────────────────────────── */
+  .rail { display: none; }
+  @media (min-width: 1040px) {
+    .rail {
+      display: block;
+      position: sticky;
+      top: 0;
+      align-self: start;
+      max-height: 100vh;
+      overflow-y: auto;
+      padding: 96px 0 40px;
+    }
+  }
+  .rail-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 14px;
+  }
+  .rail ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+  .rail a {
+    display: block;
+    padding: 5px 0 5px 13px;
+    font-size: 13.5px;
+    line-height: 1.35;
+    color: var(--ink-soft);
+    text-decoration: none;
+    border-left: 2px solid var(--rule);
+    transition: color .15s, border-color .15s;
+  }
+  .rail a:hover, .rail a:focus-visible { color: var(--accent-text); border-left-color: var(--accent); }
+
+  /* ── Masthead ───────────────────────────────────────────────────── */
+  .mast { padding: 76px 0 0; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0;
+  }
+  .ramp-strip {
+    display: flex;
+    height: 5px;
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 20px 0 26px;
+    max-width: 430px;
+  }
+  .ramp-strip span { flex: 1; }
+
+  h1 {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: clamp(2.9rem, 7vw, 4.4rem);
+    line-height: 1.02;
+    letter-spacing: -.012em;
+    margin: 0 0 20px;
+    text-wrap: balance;
+  }
+  h1 em { font-style: italic; color: var(--accent-text); }
+
+  .standfirst {
+    font-size: 1.16rem;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    max-width: 62ch;
+    margin: 0 0 30px;
+  }
+  .standfirst strong { color: var(--ink); font-weight: 600; }
+
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 28px;
+    padding: 18px 0;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--ink-faint);
+  }
+  .meta-row b { color: var(--ink); font-weight: 500; }
+
+  /* ── Sections ───────────────────────────────────────────────────── */
+  section { padding-top: 64px; scroll-margin-top: 24px; }
+  section > .sec-head { margin-bottom: 26px; }
+  .sec-head .eyebrow { margin-bottom: 9px; }
+
+  h2 {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: clamp(1.85rem, 3.6vw, 2.45rem);
+    line-height: 1.12;
+    letter-spacing: -.01em;
+    margin: 0;
+    text-wrap: balance;
+  }
+  h3 {
+    font-family: var(--body);
+    font-size: 1.04rem;
+    font-weight: 700;
+    letter-spacing: -.005em;
+    margin: 34px 0 10px;
+  }
+  h4 {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 26px 0 10px;
+  }
+
+  p { margin: 0 0 15px; max-width: 68ch; }
+  .prose > ul, .prose > ol { max-width: 68ch; }
+  a { color: var(--accent-text); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+  ul, ol { padding-left: 20px; margin: 0 0 15px; }
+  li { margin-bottom: 7px; }
+  li::marker { color: var(--ink-faint); }
+  strong { font-weight: 600; }
+  code {
+    font-family: var(--mono);
+    font-size: .855em;
+    background: var(--surface-alt);
+    border: 1px solid var(--rule-soft);
+    border-radius: 3px;
+    padding: .09em .34em;
+  }
+
+  /* ── Callouts ───────────────────────────────────────────────────── */
+  .note {
+    border-left: 3px solid var(--rule);
+    background: var(--surface);
+    padding: 16px 20px;
+    margin: 22px 0;
+    border-radius: 0 6px 6px 0;
+    box-shadow: var(--shadow-flat);
+  }
+  .note p:last-child { margin-bottom: 0; }
+  .note .tag {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    margin-bottom: 7px;
+    color: var(--ink-faint);
+  }
+  .note.stop  { border-left-color: var(--flag); background: var(--flag-bg); }
+  .note.stop .tag { color: var(--flag); }
+  .note.win   { border-left-color: var(--good); background: var(--good-bg); }
+  .note.win .tag { color: var(--good); }
+  .note.tip   { border-left-color: var(--gold); background: var(--gold-bg); }
+  .note.tip .tag { color: var(--gold); }
+
+  /* ── Tables ─────────────────────────────────────────────────────── */
+  .t-wrap { overflow-x: auto; margin: 20px 0 24px; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 520px; }
+  th {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--rule);
+    background: var(--surface-alt);
+    white-space: nowrap;
+  }
+  td { padding: 11px 16px; border-bottom: 1px solid var(--rule-soft); vertical-align: top; line-height: 1.5; }
+  tr:last-child td { border-bottom: none; }
+  td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.k { font-weight: 600; }
+
+  .pill {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+  .pill.free { background: var(--good-bg); color: var(--good); border: 1px solid color-mix(in srgb, var(--good) 28%, transparent); }
+  .pill.prem { background: var(--gold-bg); color: var(--gold); border: 1px solid color-mix(in srgb, var(--gold) 34%, transparent); }
+  .pill.cut  { background: var(--flag-bg); color: var(--flag); border: 1px solid color-mix(in srgb, var(--flag) 26%, transparent); }
+  .pill.later{ background: var(--surface-alt); color: var(--ink-faint); border: 1px solid var(--rule); }
+
+  /* ── Phase rail ─────────────────────────────────────────────────── */
+  .phases { display: flex; flex-direction: column; gap: 0; margin-top: 8px; }
+  .phase {
+    display: grid;
+    grid-template-columns: 54px minmax(0,1fr);
+    gap: 20px;
+    padding: 26px 0;
+    border-top: 1px solid var(--rule);
+  }
+  .phase:last-child { border-bottom: 1px solid var(--rule); }
+  .phase-mark { position: relative; }
+  .phase-num {
+    font-family: var(--display);
+    font-size: 2.15rem;
+    line-height: 1;
+    color: var(--pc);
+    font-variant-numeric: tabular-nums;
+  }
+  .phase-bar { width: 3px; height: 26px; background: var(--pc); border-radius: 2px; margin-top: 10px; }
+  .phase-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 4px; }
+  .phase-title h3 { margin: 0; font-size: 1.14rem; }
+  .phase-dur {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+    letter-spacing: .04em;
+    white-space: nowrap;
+  }
+  .phase-goal { color: var(--ink-soft); font-size: .95rem; margin: 0 0 12px; }
+  .phase ul { margin-bottom: 0; }
+  .phase li { font-size: 14.6px; }
+
+  /* ── Swatches ───────────────────────────────────────────────────── */
+  .swatches { display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); gap: 8px; margin: 22px 0; }
+  .sw { border-radius: 7px; overflow: hidden; border: 1px solid var(--rule); background: var(--surface); }
+  .sw-chip { height: 58px; display: flex; align-items: flex-end; padding: 7px 9px; }
+  .sw-chip span { font-family: var(--mono); font-size: 9.5px; color: #fff; letter-spacing: .06em; }
+  .sw-body { padding: 7px 9px 9px; }
+  .sw-body b { display: block; font-size: 12.5px; font-weight: 600; }
+  .sw-body i { display: block; font-style: normal; font-size: 11px; color: var(--ink-faint); line-height: 1.35; }
+
+  /* ── Two-col grid for lists ─────────────────────────────────────── */
+  .cols2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(258px, 1fr)); gap: 10px; margin: 20px 0; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 16px 18px;
+    box-shadow: var(--shadow-flat);
+  }
+  .card h3 { margin: 0 0 6px; font-size: .97rem; }
+  .card p { font-size: 14px; color: var(--ink-soft); margin: 0; max-width: none; }
+
+  pre {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.62;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 16px 18px;
+    overflow-x: auto;
+    margin: 18px 0 22px;
+  }
+  pre code { background: none; border: none; padding: 0; font-size: inherit; }
+  .cmt { color: var(--ink-faint); }
+  .kw  { color: var(--violet); font-weight: 500; }
+  .str { color: var(--teal-deep); }
+
+  hr.div { border: none; border-top: 1px solid var(--rule); margin: 0; }
+
+  .kicker {
+    font-family: var(--display);
+    font-size: 1.32rem;
+    line-height: 1.45;
+    color: var(--ink);
+    max-width: 58ch;
+    margin: 0 0 18px;
+  }
+
+  footer {
+    margin-top: 72px;
+    padding-top: 22px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+    line-height: 1.7;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  }
+  html { scroll-behavior: smooth; }
+</style>
+
+<div class="shell">
+
+  <nav class="rail" aria-label="Contents">
+    <p class="rail-label">Contents</p>
+    <ol>
+      <li><a href="#blockers">Four things first</a></li>
+      <li><a href="#stack">The stack</a></li>
+      <li><a href="#scope">What ships in v1</a></li>
+      <li><a href="#money">Free vs. Premium</a></li>
+      <li><a href="#data">Data model</a></li>
+      <li><a href="#phases">The build, phase by phase</a></li>
+      <li><a href="#costs">What it costs</a></li>
+      <li><a href="#risks">Risks &amp; concerns</a></li>
+      <li><a href="#better">Ideas worth stealing</a></li>
+      <li><a href="#color">Your color system</a></li>
+      <li><a href="#today">Start here today</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <header class="mast">
+      <p class="eyebrow">Build plan · MagicalTracker.com · iOS</p>
+      <div class="ramp-strip" aria-hidden="true">
+        <span style="background:#00807E"></span><span style="background:#0B7078"></span><span style="background:#1A596E"></span><span style="background:#2B4063"></span><span style="background:#342758"></span><span style="background:#512663"></span>
+      </div>
+      <h1>A passport for <em>every trip</em> you take</h1>
+      <p class="standfirst">MagicalTracker is a Disney World trip log: where you ate, where you stayed, what you earned. This is the whole path from empty folder to App Store — <strong>the stack, the cuts, the schema, the paywall, and the six things most likely to sink it.</strong></p>
+      <div class="meta-row">
+        <span>Target <b>iOS 17+</b></span>
+        <span>Stack <b>Expo + Supabase</b></span>
+        <span>To launch <b>~11 weeks part-time</b></span>
+        <span>Cost to launch <b>~$150</b></span>
+      </div>
+    </header>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <section id="blockers" class="prose">
+      <div class="sec-head">
+        <p class="eyebrow">Read before anything else</p>
+        <h2>Four things that change the plan</h2>
+      </div>
+
+      <p class="kicker">Your feature list is strong. But four realities reshape it before you write a line of code, and it's much cheaper to absorb them now than in month three.</p>
+
+      <h3>1. You're on Windows, so Swift is off the table</h3>
+      <p>Xcode is macOS-only, full stop. That isn't a preference — you physically cannot build a native SwiftUI app on Windows 11. This single fact settles the framework debate: you're using <strong>Expo (React Native)</strong>, which builds in the cloud through EAS Build and needs no Mac at any point. Happily, that's also the stack that best matches what you already write.</p>
+      <p>You'll need a real iPhone for testing (the simulator is Mac-only) — that's fine, and honestly better, since you're building an app used while walking around a theme park.</p>
+
+      <h3>2. There is no My Disney Experience API</h3>
+      <p>Disney publishes no public API for itineraries, reservations, or wait times. The only way to read someone's MDE plans is to ask for their Disney credentials and scrape — which violates Disney's terms, creates a genuine security liability for you, and will get the app rejected under App Store guideline 5.2.</p>
+      <div class="note stop">
+        <span class="tag">Cut this feature</span>
+        <p><strong>Remove MDE integration from the roadmap entirely.</strong> Replace it with manual trip entry — the user types "Ohana, Thursday 7:40pm" — and get the same payoff ("you've eaten here before, you rated it 4★") from data you own. It's 2% of the engineering and 100% legal.</p>
+      </div>
+
+      <h3>3. Disney's legal team is the real risk, not the code</h3>
+      <p>Apps like TouringPlans, Thrill-Data, and a dozen dining trackers coexist with Disney fine, so this is workable — but only if you stay strictly inside <em>nominative fair use</em>: you may factually name a place ("Be Our Guest Restaurant, Magic Kingdom") because there's no other way to refer to it. You may not borrow the brand's look. Full breakdown in <a href="#risks">Risks</a>, and the name "MagicalTracker" itself deserves an attorney's eye.</p>
+
+      <h3>4. Half your premium features need users you don't have yet</h3>
+      <p>Top 10 lists, trending restaurants, "people like you also ate at…", tracking other users on the map — every one of these is empty on launch day and stays empty until you have thousands of logged visits. If your paywall is built entirely on community data, day-one subscribers pay for blank screens and churn immediately.</p>
+      <p>The fix is sequencing: <strong>v1 premium sells personal depth</strong> (notes, photos, unlimited trips, full passport, widgets, export). <strong>v1.1 premium adds community</strong> once the data exists. Build the tables and the aggregation from day one so the feature switches on the moment there's something to show.</p>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <section id="stack" class="prose">
+      <div class="sec-head">
+        <p class="eyebrow">Architecture</p>
+        <h2>The stack, and why each piece</h2>
+      </div>
+
+      <p>The governing principle for a first app: <strong>minimize the number of genuinely new things you have to learn.</strong> You already ship React 19, TypeScript, Supabase, Drizzle, and Tailwind in <code>mycuppajoe-v2</code>. This stack keeps all of it and adds exactly one new concept — React Native.</p>
+
+      <div class="t-wrap">
+        <table>
+          <thead><tr><th>Layer</th><th>Choice</th><th>Why this one</th></tr></thead>
+          <tbody>
+            <tr><td class="k">App framework</td><td>Expo SDK 54+ · React Native · TypeScript</td><td>Same language and mental model you use daily. Cloud builds mean no Mac. One codebase covers Android later at near-zero cost.</td></tr>
+            <tr><td class="k">Navigation</td><td>Expo Router</td><td>File-based routing, identical mental model to Next.js App Router.</td></tr>
+            <tr><td class="k">Styling</td><td>NativeWind v4</td><td>Tailwind classes in React Native. Your existing Tailwind muscle memory transfers directly.</td></tr>
+            <tr><td class="k">UI primitives</td><td>Tamagui <em>or</em> hand-rolled</td><td>Start hand-rolled. A tracker app is lists, cards, and a map — you don't need a component library yet.</td></tr>
+            <tr><td class="k">Backend</td><td>Supabase — Postgres, Auth, Storage, Edge Functions</td><td>You already run this. Row Level Security handles multi-tenant user data with almost no backend code.</td></tr>
+            <tr><td class="k">Schema &amp; migrations</td><td>Drizzle + drizzle-kit</td><td>Already yours. Share the schema file between the app and a future web dashboard.</td></tr>
+            <tr><td class="k">On-device DB</td><td>expo-sqlite + Drizzle</td><td><strong>Critical.</strong> Ship the venue catalog inside the app so it works with no signal. See <a href="#better">Ideas</a>.</td></tr>
+            <tr><td class="k">Payments</td><td>RevenueCat + StoreKit 2</td><td>Handles receipt validation, trials, restore, and cross-platform entitlements. Free until $2.5k/mo revenue. Do not hand-roll StoreKit on your first app.</td></tr>
+            <tr><td class="k">Maps</td><td>react-native-maps (Apple Maps)</td><td>Native, free, no API key, no per-load billing. Google Maps would cost money for nothing extra here.</td></tr>
+            <tr><td class="k">Auth methods</td><td>Sign in with Apple + email magic link</td><td>Apple relay emails will break email-based family invites — plan for a username/code invite instead.</td></tr>
+            <tr><td class="k">Analytics</td><td>PostHog</td><td>Generous free tier, funnels, feature flags to gate the paywall experiments.</td></tr>
+            <tr><td class="k">Crash reporting</td><td>Sentry</td><td>Non-negotiable when you can't attach a debugger from Windows.</td></tr>
+            <tr><td class="k">Marketing site</td><td>Next.js on Vercel at MagicalTracker.com</td><td>Apple <em>requires</em> a live support URL and privacy policy URL at submission. This is a hard dependency, not a nice-to-have.</td></tr>
+            <tr><td class="k">Builds &amp; releases</td><td>EAS Build + EAS Submit + EAS Update</td><td>Cloud builds from Windows; over-the-air JS updates let you fix bugs without a review cycle.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note win">
+        <span class="tag">Why this wins</span>
+        <p>Roughly 80% of what you already know carries over, and EAS Update means a typo fix ships in ten minutes instead of a two-day App Store review. The trade is real but small: Live Activities and home-screen widgets need a native config plugin rather than a few lines of SwiftUI. Worth it.</p>
+      </div>
+
+      <h3>How the pieces actually talk</h3>
+      <pre><code><span class="cmt">// Catalog — read-mostly, rarely changes, must work offline</span>
+Supabase <span class="kw">venues</span> table
+  └─ nightly export → versioned JSON bundled in the app build
+       └─ seeded into expo-sqlite on first launch
+            └─ delta sync on app open (<span class="str">"catalog_version"</span> check)
+
+<span class="cmt">// User data — writes often, must sync across devices</span>
+App write → expo-sqlite (instant, optimistic UI)
+         → queued mutation → Supabase (RLS-scoped to auth.uid())
+         → on reconnect, replay queue
+
+<span class="cmt">// Aggregates — community ratings, Top 10, trending</span>
+Postgres materialized view, refreshed hourly by pg_cron
+  └─ read by app, never computed on device</code></pre>
+      <p>That split is the whole architecture. Catalog data flows down and is never written by users; user data flows up and is never read by others except through aggregates. Getting this boundary right on day one is what keeps the app fast in a dead zone behind Space Mountain.</p>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <section id="scope" class="prose">
+      <div class="sec-head">
+        <p class="eyebrow">Scope control</p>
+        <h2>What ships in v1, and what waits</h2>
+      </div>
+
+      <p>You listed about 25 features. Shipping all of them is a two-year project. Shipping the right eight is a three-month project that can start earning. Here's the triage.</p>
+
+      <div class="t-wrap">
+        <table>
+          <thead><tr><th>Feature</th><th>Verdict</th><th>Reasoning</th></tr></thead>
+          <tbody>
+            <tr><td class="k">Restaurant catalog + filters (park, resort, area, service type)</td><td><span class="pill free">v1 core</span></td><td>This is the product. Everything else hangs off it.</td></tr>
+            <tr><td class="k">Venue detail + description + menu link</td><td><span class="pill free">v1 core</span></td><td>Deep-link to disneyworld.com in an in-app browser. Never re-host menu content.</td></tr>
+            <tr><td class="k">Log a visit, rate it, multiple entries per venue</td><td><span class="pill free">v1 core</span></td><td>The core loop. Latest-visit-wins rating is a clean, defensible rule.</td></tr>
+            <tr><td class="k">Resort stay tracking</td><td><span class="pill free">v1 core</span></td><td>Same model as venues, ~30 rows. Very cheap to add.</td></tr>
+            <tr><td class="k">Passport — percentage achievements, per park &amp; overall</td><td><span class="pill free">v1 core</span></td><td>Your best differentiator and it needs zero other users to work.</td></tr>
+            <tr><td class="k">Trip + countdown</td><td><span class="pill free">v1 core</span></td><td>Cheap to build, and the reason someone opens the app 200 days before a trip.</td></tr>
+            <tr><td class="k">Map view with visited check marks</td><td><span class="pill free">v1 core</span></td><td>Also your defense against an App Store "too simple" rejection.</td></tr>
+            <tr><td class="k">Notes, dishes ordered, photos per visit</td><td><span class="pill prem">v1 premium</span></td><td>Personal depth. Valuable on day one with zero other users.</td></tr>
+            <tr><td class="k">Unlimited trips + full passport set</td><td><span class="pill prem">v1 premium</span></td><td>Free tier gets one active trip and the percentage badges.</td></tr>
+            <tr><td class="k">Live "near me" map, walk-up vs. reservation filter</td><td><span class="pill prem">v1 premium</span></td><td>In-park utility. Genuinely worth paying for on a trip week.</td></tr>
+            <tr><td class="k">Data export — CSV + printable passport recap</td><td><span class="pill prem">v1 premium</span></td><td>Nearly free to build, and collectors love it.</td></tr>
+            <tr><td class="k">Event check-offs — MNSSHP, MVMCP, Jollywood, festivals</td><td><span class="pill free">v1 core</span></td><td>Just rows in an events table. Trivial once the schema is right.</td></tr>
+            <tr><td class="k">Top 10 / trending / community ratings</td><td><span class="pill later">v1.1</span></td><td>Build the views now, reveal the screen when you pass ~500 rated visits.</td></tr>
+            <tr><td class="k">Recommendations from similar users</td><td><span class="pill later">v1.2</span></td><td>Needs real collaborative-filtering data. Months away, and fine.</td></tr>
+            <tr><td class="k">Family sharing + live location on map</td><td><span class="pill later">v2</span></td><td>Background location, battery, consent flows, kids' privacy. A whole project on its own.</td></tr>
+            <tr><td class="k">Hidden Mickey finder</td><td><span class="pill later">v2</span></td><td>Content-heavy (hundreds of hand-written locations) and the most trademark-adjacent thing on the list.</td></tr>
+            <tr><td class="k">My Disney Experience integration</td><td><span class="pill cut">Cut</span></td><td>No API exists. Credential scraping is a rejection and a liability.</td></tr>
+            <tr><td class="k">Track other users on the map</td><td><span class="pill cut">Cut</span></td><td>Broadcasting strangers' real-time locations at a destination full of children is a product you don't want to defend.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note tip">
+        <span class="tag">Don't over-cut</span>
+        <p>App Store guideline 4.2 rejects apps that are "simply a list" or offer minimal functionality. A pure checklist is a plausible rejection. The map, the passport engine, the trip countdown, and offline support are collectively what make this read as a real app — they're scope you should protect, not trim.</p>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <section id="money" class="prose">
+      <div class="sec-head">
+        <p class="eyebrow">Monetization</p>
+        <h2>Free vs. Premium, and what to charge</h2>
+      </div>
+
+      <p>One rule governs the split: <strong>never paywall data entry.</strong> Every rating a free user logs is an asset that makes your Top 10, your trending list, and your recommendation engine possible. Charging for logging would starve the thing that eventually makes premium worth buying.</p>
+      <p>So: free users get to <em>record</em> everything. Premium users get <em>insight, depth, and convenience</em>.</p>
+
+      <div class="cols2">
+        <div class="card">
+          <h3><span class="pill free">Free</span></h3>
+          <p>Unlimited restaurant &amp; resort check-offs · unlimited star ratings · full catalog, search, and filters · list and map views · one active trip with countdown · percentage passport badges (per park and overall) · event check-offs · your own stats.</p>
+        </div>
+        <div class="card">
+          <h3><span class="pill prem">Premium</span></h3>
+          <p>Visit notes, dishes ordered, and photos · unlimited trips and trip planning · complete passport including all challenge badges · live near-me map with walk-up/reservation filters · community Top 10 and trending <em>(v1.1)</em> · personalized recommendations <em>(v1.2)</em> · home-screen widget and Live Activity countdown · CSV and printable passport export · family trip sharing <em>(v2)</em>.</p>
+        </div>
+      </div>
+
+      <h3>Pricing</h3>
+      <div class="t-wrap">
+        <table>
+          <thead><tr><th>Tier</th><th>Price</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td class="k">Monthly</td><td class="num">$4.99</td><td>The anchor. Its job is to make annual look obvious, not to sell.</td></tr>
+            <tr><td class="k">Annual <em>— hero</em></td><td class="num">$24.99</td><td>Matches the natural cadence: people take a Disney trip about once a year. 7-day free trial.</td></tr>
+            <tr><td class="k">Lifetime</td><td class="num">$59.99</td><td>Converts the collector personality — the same person who wants 100% of the passport filled. One-time purchase, no churn.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note stop">
+        <span class="tag">Your #1 monetization risk</span>
+        <p><strong>Seasonal churn.</strong> Someone subscribes the week of their trip, uses it hard for seven days, then has no reason to open the app for eleven months. Two defenses, and you need both: <em>(a)</em> the annual plan priced low enough that cancelling isn't worth the thought, and <em>(b)</em> the countdown widget on their home screen, which is the only feature that stays useful during the eleven-month gap. The widget is not a nice-to-have — it's your retention strategy.</p>
+      </div>
+
+      <p>Apple takes 30%, or <strong>15% if you enroll in the Small Business Program</strong> (available to anyone under $1M/year — apply the day your developer account is active; it's free money). RevenueCat is free below $2,500/month in tracked revenue, then 1%.</p>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <section id="data" class="prose">
+      <div class="sec-head">
+        <p class="eyebrow">Schema</p>
+        <h2>The data model</h2>
+      </div>
+
+      <p>Get this right early — it's the one thing that's genuinely expensive to change later. Two details below are worth more than the rest of the schema combined, so they're called out after the sketch.</p>
+
+      <pre><code><span class="kw">destinations</span>    id, name                  <span class="cmt">-- 'wdw', later 'dlr', 'dcl', 'aulani'</span>
+<span class="kw">areas</span>           id, destination_id, name, kind
+                                          <span class="cmt">-- kind: park | resort_area | district</span>
+<span class="kw">resorts</span>         id, area_id, name, tier, lat, lng,
+                transport[], description, official_url
+                                          <span class="cmt">-- transport: monorail|skyliner|bus|boat|walk</span>
+<span class="kw">venues</span>          id, area_id, resort_id?, name, slug,
+                service_type, cuisine, price_tier,
+                accepts_reservations, is_character_dining,
+                is_signature, lat, lng, menu_url, description
+                                          <span class="cmt">-- service_type: quick|table|lounge|snack|cart</span>
+<span class="kw">events</span>          id, destination_id, name, kind, year, starts_on, ends_on
+                                          <span class="cmt">-- MNSSHP 2026, Food &amp; Wine 2026, Jollywood Nights</span>
+<span class="kw">achievements</span>    id, key, title, description, category, tier,
+                criteria jsonb, icon, is_premium
+
+<span class="cmt">-- user-scoped, all RLS'd to auth.uid() ------------------------</span>
+<span class="kw">profiles</span>        id → auth.users, handle, display_name, home_destination
+<span class="kw">trips</span>           id, user_id, name, start_date, end_date, resort_id?
+<span class="kw">visits</span>          id, user_id, venue_id, trip_id?, visited_on,
+                rating, would_return bool, party_size, meal_period
+<span class="kw">visit_details</span>   visit_id, notes, dishes[], photo_paths[]   <span class="cmt">-- PREMIUM</span>
+<span class="kw">stays</span>           id, user_id, resort_id, trip_id?, check_in,
+                check_out, room_type, rating
+<span class="kw">event_log</span>       user_id, event_id, trip_id?, attended_on
+<span class="kw">user_achievements</span>  user_id, achievement_id, progress, unlocked_at</code></pre>
+
+      <h3>Detail one — build for multiple destinations from day one</h3>
+      <p>That <code>destinations</code> table costs you about twenty minutes now. Skip it, and adding Disneyland later means a migration that touches every table, every query, and every cached client. Disneyland roughly doubles your addressable market; Disney Cruise Line and Aulani are natural extensions after that. Every table hangs off <code>destination_id</code> from the first migration, even though there's exactly one row in it for the next year.</p>
+
+      <h3>Detail two — "latest visit wins" needs a specific query</h3>
+      <p>Your rule is that a venue's rating reflects only each user's most recent visit. That's a good rule, but the naive <code>AVG(rating)</code> gets it wrong by over-weighting frequent visitors. You want the average <em>across users</em> of <em>each user's newest rating</em>:</p>
+      <pre><code><span class="kw">create view</span> venue_latest_ratings <span class="kw">as</span>
+  <span class="kw">select distinct on</span> (user_id, venue_id)
+    user_id, venue_id, rating, would_return, visited_on
+  <span class="kw">from</span> visits
+  <span class="kw">where</span> rating <span class="kw">is not null</span>
+  <span class="kw">order by</span> user_id, venue_id, visited_on <span class="kw">desc</span>, id <span class="kw">desc</span>;
+
+<span class="kw">create materialized view</span> venue_stats <span class="kw">as</span>
+  <span class="kw">select</span> venue_id,
+         <span class="kw">avg</span>(rating)::numeric(3,2) <span class="kw">as</span> avg_rating,
+         <span class="kw">count</span>(*) <span class="kw">as</span> rater_count,
+         <span class="kw">avg</span>(would_return::int) <span class="kw">as</span> return_rate
+  <span class="kw">from</span> venue_latest_ratings
+  <span class="kw">group by</span> venue_id
+  <span class="kw">having count</span>(*) >= 5;   <span class="cmt">-- hide thin data rather than show a lie</span></code></pre>
+      <p>Refresh it hourly with <code>pg_cron</code>. The <code>having</code> clause matters: a Top 10 built on venues with two ratings each is worse than no Top 10, and it's the kind of thing that makes people cancel.</p>
+
+      <h3>Detail three — achievements as data, not code</h3>
+      <p>You have thirty-plus challenges and you'll invent more. Don't write thirty <code>if</code> statements. Give each achievement a JSON criteria blob and write one evaluator:</p>
+      <pre><code><span class="cmt">// "Eaten at 50% of Magic Kingdom restaurants"</span>
+{ <span class="str">"type"</span>: <span class="str">"venue_coverage"</span>, <span class="str">"scope"</span>: <span class="str">"area"</span>, <span class="str">"area_id"</span>: <span class="str">"mk"</span>, <span class="str">"threshold"</span>: 0.5 }
+
+<span class="cmt">// "Drinking Around the World" — all 11 World Showcase pavilions</span>
+{ <span class="str">"type"</span>: <span class="str">"venue_set"</span>, <span class="str">"tag"</span>: <span class="str">"world_showcase_bar"</span>, <span class="str">"require"</span>: <span class="str">"all"</span> }
+
+<span class="cmt">// "Transportation Challenge" — 4 modes within one trip</span>
+{ <span class="str">"type"</span>: <span class="str">"trip_scoped_set"</span>, <span class="str">"field"</span>: <span class="str">"transport"</span>,
+  <span class="str">"require"</span>: [<span class="str">"monorail"</span>,<span class="str">"skyliner"</span>,<span class="str">"bus"</span>,<span class="str">"boat"</span>], <span class="str">"window"</span>: <span class="str">"trip"</span> }
+
+<span class="cmt">// "4 Parks in One Day"</span>
+{ <span class="str">"type"</span>: <span class="str">"same_day_set"</span>, <span class="str">"field"</span>: <span class="str">"park"</span>, <span class="str">"count"</span>: 4 }</code></pre>
+      <p>Five or six criteria <em>types</em> cover every challenge on your list. Adding "Snacking Around the World" then becomes a database row, not a deploy. Evaluate on-device for instant badge-unlock feedback, and re-verify server-side before anything touches a public leaderboard.</p>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <section id="phases" class="prose">
+      <div class="sec-head">
+        <p class="eyebrow">Execution</p>
+        <h2>The build, phase by phase</h2>
+      </div>
+
+      <p>Durations assume roughly 12 focused hours a week. Full-time, halve them. Phases are strictly ordered — each one's output is the next one's input.</p>
+
+      <div class="phases">
+
+        <div class="phase" style="--pc:#00807E">
+          <div class="phase-mark"><div class="phase-num">1</div><div class="phase-bar"></div></div>
+          <div>
+            <div class="phase-title"><h3>Accounts &amp; foundations</h3><span class="phase-dur">Week 1 · mostly waiting</span></div>
+            <p class="phase-goal">Nothing here is hard, but Apple's approval is a hard blocker with a variable clock. Start it on day one, today, before you write any code.</p>
+            <ul>
+              <li><strong>Enroll in the Apple Developer Program</strong> ($99/yr). Individual enrollment approves in 24–48h and publishes under your legal name. Enrolling as an LLC requires a D-U-N-S number and can take 1–2 weeks — decide now, because changing later means a new listing.</li>
+              <li>Apply for the <strong>Small Business Program</strong> the moment you're approved — it drops Apple's cut from 30% to 15%.</li>
+              <li>Reserve the app name <em>MagicalTracker</em> in App Store Connect. Names are first-come and reserving is free.</li>
+              <li>Run a USPTO trademark search on "MagicalTracker" and book a 30-minute IP attorney consult (~$300–600). See <a href="#risks">Risks</a> for what to ask.</li>
+              <li>Create: GitHub repo, Supabase project, Expo/EAS account, RevenueCat account, Sentry, PostHog.</li>
+              <li><code>npx create-expo-app</code>, add NativeWind + Expo Router, get "Hello World" running on your physical iPhone via EAS Build. <strong>Do this before anything else</strong> — the first successful device build is where first-time app projects most often stall, and you want that pain on week one, not week nine.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="phase" style="--pc:#0B7078">
+          <div class="phase-mark"><div class="phase-num">2</div><div class="phase-bar"></div></div>
+          <div>
+            <div class="phase-title"><h3>Build the catalog</h3><span class="phase-dur">Weeks 2–3 · the long pole</span></div>
+            <p class="phase-goal">This is unglamorous data entry and it is also your actual moat. Nobody has a clean, structured, geocoded WDW dining dataset — that's precisely why it's worth owning.</p>
+            <ul>
+              <li>Assemble roughly <strong>200 dining locations</strong> and <strong>~30 resorts</strong> with: name, area, park/resort, service type, cuisine, price tier, reservations yes/no, character dining flag, lat/lng, official menu URL, and a one-or-two-sentence original description.</li>
+              <li><strong>Write your own descriptions.</strong> Do not copy Disney's marketing text — that's a copyright issue distinct from trademark, and it's the easy one to avoid.</li>
+              <li>Geocode by dropping pins manually in Google Maps. Tedious, ~3 hours, and far more accurate than any geocoding API for in-park locations.</li>
+              <li>Tag venues for challenges as you go: <code>world_showcase_bar</code>, <code>character_dining</code>, <code>signature</code>, <code>snack_stand</code>. Tagging during entry costs minutes; retrofitting costs a day.</li>
+              <li>Seed <code>achievements</code> with your full challenge list and their criteria JSON.</li>
+              <li>Build the export script: Supabase → versioned JSON → bundled into the app.</li>
+            </ul>
+            <div class="note tip" style="margin-bottom:0">
+              <span class="tag">Speed it up</span>
+              <p>Draft the first pass with an LLM to produce the rows, then <strong>verify every single one by hand against disneyworld.com.</strong> Models confidently invent restaurants that closed in 2019. A wrong menu link is a one-star review; a hallucinated restaurant is a credibility problem you can't undo.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="phase" style="--pc:#1A596E">
+          <div class="phase-mark"><div class="phase-num">3</div><div class="phase-bar"></div></div>
+          <div>
+            <div class="phase-title"><h3>The core loop</h3><span class="phase-dur">Weeks 4–6</span></div>
+            <p class="phase-goal">Browse → open → log → see progress. When this loop feels good, you have an app. Everything after is amplification.</p>
+            <ul>
+              <li>Auth: Sign in with Apple + email magic link, with a <strong>guest mode</strong> that lets someone log visits before creating an account. Forced signup on first launch is the single biggest install-to-active killer.</li>
+              <li>Catalog list with search, and filters for park, resort area, service type, reservations, and character dining.</li>
+              <li>Venue detail: description, facts, menu link in an in-app browser, your visit history, your rating.</li>
+              <li>Log-a-visit sheet: date, rating, "would you go back?", party size, meal period. Two taps from the venue list, always.</li>
+              <li>Resort stays — same pattern, smaller dataset.</li>
+              <li>Offline layer: seed SQLite on first launch, optimistic writes, mutation queue with replay on reconnect.</li>
+              <li>Profile: counts, coverage percentages, recent activity.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="phase" style="--pc:#2B4063">
+          <div class="phase-mark"><div class="phase-num">4</div><div class="phase-bar"></div></div>
+          <div>
+            <div class="phase-title"><h3>Passport, trips &amp; map</h3><span class="phase-dur">Weeks 7–8</span></div>
+            <p class="phase-goal">The features that turn a log into something people care about maintaining.</p>
+            <ul>
+              <li>The achievement evaluator — one function, driven by the criteria JSON. Re-run on every visit write.</li>
+              <li>Passport screen: badge grid, locked/unlocked states, progress rings, and an unlock animation worth screenshotting.</li>
+              <li>Trips: create, assign visits to a trip, countdown screen.</li>
+              <li>Event check-offs for festivals and after-hours parties.</li>
+              <li>Map view: clustered pins, visited vs. unvisited styling, filter chips, tap-through to detail.</li>
+              <li>Home-screen widget + Live Activity for the countdown. Budget real time here — this is the trickiest Expo work in the whole project, and it's also your retention play.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="phase" style="--pc:#342758">
+          <div class="phase-mark"><div class="phase-num">5</div><div class="phase-bar"></div></div>
+          <div>
+            <div class="phase-title"><h3>Paywall &amp; premium</h3><span class="phase-dur">Weeks 9–10</span></div>
+            <p class="phase-goal">Wire up money. Mechanically simple, but full of small rules that cause rejections.</p>
+            <ul>
+              <li>Create the three products in App Store Connect; wire RevenueCat entitlements; gate features off a single <code>isPremium</code> hook so the boundary lives in one place.</li>
+              <li>Build premium: visit notes, dishes, photos (Supabase Storage), unlimited trips, near-me map filters, CSV + printable export.</li>
+              <li>Paywall screen — trigger it contextually (when someone taps "add a note"), not as a launch interstitial.</li>
+              <li><strong>Required by Apple:</strong> a visible Restore Purchases button, price and renewal terms shown before purchase, and links to your terms and privacy policy. Missing any of these is a guaranteed rejection.</li>
+              <li><strong>Also required:</strong> in-app account deletion. Mandatory since 2022 for any app with account creation.</li>
+              <li>Ship the <code>venue_stats</code> views and Top 10 screen behind a feature flag, dark until the data justifies it.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="phase" style="--pc:#512663">
+          <div class="phase-mark"><div class="phase-num">6</div><div class="phase-bar"></div></div>
+          <div>
+            <div class="phase-title"><h3>Beta, polish &amp; submit</h3><span class="phase-dur">Weeks 11–12</span></div>
+            <p class="phase-goal">The gap between "works on my phone" and "approved" is mostly paperwork and empty states.</p>
+            <ul>
+              <li>Onboarding: the rapid-fire "which of these have you been to?" pass (see <a href="#better">Ideas</a>) so the app is never empty on first open.</li>
+              <li>Every empty state, every loading state, every offline state. First-time apps are judged on these.</li>
+              <li>TestFlight with 15–25 real Disney-going testers — recruit from r/WaltDisneyWorld, Facebook planning groups, and DISboards. Their data corrections alone are worth the effort.</li>
+              <li>Ship MagicalTracker.com: landing page, privacy policy, terms, support page, and a support email. <strong>Apple blocks submission without live URLs.</strong></li>
+              <li>App Store assets: icon, 6.7" and 6.1" screenshots, subtitle, keywords, description, age rating, and the Privacy Nutrition Label questionnaire.</li>
+              <li>Add the non-affiliation disclaimer to the app's About screen, the App Store description, and the website footer.</li>
+              <li>Submit. Expect 24–72h review, and expect at least one rejection — it's normal, not a verdict.</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <section id="costs" class="prose">
+      <div class="sec-head">
+        <p class="eyebrow">Budget</p>
+        <h2>What it actually costs</h2>
+      </div>
+
+      <div class="t-wrap">
+        <table>
+          <thead><tr><th>Item</th><th>To launch</th><th>Ongoing</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="k">Apple Developer Program</td><td class="num">$99</td><td class="num">$99/yr</td><td>Hard requirement. Start today.</td></tr>
+            <tr><td class="k">MagicalTracker.com</td><td class="num">owned</td><td class="num">~$15/yr</td><td>Already yours.</td></tr>
+            <tr><td class="k">Supabase</td><td class="num">$0</td><td class="num">$0 → $25/mo</td><td>Free tier carries you well past launch. Pro when you need daily backups.</td></tr>
+            <tr><td class="k">EAS Build</td><td class="num">$0</td><td class="num">$0 → $19/mo</td><td>Free tier's build queue is slow. Worth paying once you're iterating daily.</td></tr>
+            <tr><td class="k">Vercel</td><td class="num">$0</td><td class="num">$0</td><td>Hobby tier is fine for a marketing site.</td></tr>
+            <tr><td class="k">RevenueCat</td><td class="num">$0</td><td class="num">1% over $2.5k/mo</td><td>Free until you're making real money.</td></tr>
+            <tr><td class="k">Sentry + PostHog</td><td class="num">$0</td><td class="num">$0</td><td>Free tiers are generous at this scale.</td></tr>
+            <tr><td class="k">IP attorney consult</td><td class="num">$300–600</td><td class="num">—</td><td>Optional, strongly recommended. Cheapest insurance you'll buy.</td></tr>
+            <tr><td class="k">Apple's cut</td><td class="num">—</td><td class="num">15%</td><td>With Small Business Program. 30% without — so enroll.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>Realistic total: about $100 to get to the App Store</strong> (or ~$700 with the legal consult), then roughly $45/month once you're actively iterating. The real cost of this project is your time, not your money — which is exactly why the scope cuts above matter more than any line in this table.</p>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <section id="risks" class="prose">
+      <div class="sec-head">
+        <p class="eyebrow">Attention required</p>
+        <h2>Risks &amp; concerns</h2>
+      </div>
+
+      <h3><span class="pill cut">Critical</span>&nbsp; Disney intellectual property</h3>
+      <p>This is the risk that can end the project rather than merely delay it. The line to stay on is <em>nominative fair use</em>: naming a real place factually is protected, because there's no other way to refer to it. Evoking the brand is not.</p>
+      <div class="cols2">
+        <div class="card">
+          <h3 style="color:var(--good)">Safe</h3>
+          <p>Factual names of restaurants, resorts, parks, and events · your own descriptions · deep links to disneyworld.com · your own icon and artwork · a clear non-affiliation disclaimer.</p>
+        </div>
+        <div class="card">
+          <h3 style="color:var(--flag)">Not safe</h3>
+          <p>Disney logos, character art, or park photography you didn't shoot · the Mickey silhouette anywhere in the UI or icon · Disney's fonts (Waltograph especially) · copied menu or marketing text · trademarked slogans like "The Most Magical Place on Earth" · "Disney" in the app's <em>name</em>.</p>
+        </div>
+      </div>
+      <p><strong>On the name itself:</strong> Disney holds a dense cluster of marks in this space — MagicBand, Magic Kingdom, My Magic+ — so "MagicalTracker" sits closer to that cluster than is comfortable. Using it is likely fine in practice; <em>registering</em> it as a trademark could draw an opposition. This is the specific question to bring to an attorney, along with your app description copy. Since you already own the domain, get the read before you build brand equity on it, not after.</p>
+      <p><strong>Always include:</strong> "MagicalTracker is an independent app and is not affiliated with, endorsed by, or sponsored by The Walt Disney Company." In the app, in the App Store description, and in the website footer.</p>
+
+      <h3><span class="pill cut">Critical</span>&nbsp; No My Disney Experience API</h3>
+      <p>Covered above. Cut the feature; don't look for a clever workaround, because every workaround runs through someone's Disney password.</p>
+
+      <h3><span class="pill prem">High</span>&nbsp; Catalog data goes stale</h3>
+      <p>Disney restaurants open, close, rebrand, and change service models constantly. A dead menu link or a closed restaurant reads as abandonware and drives one-star reviews. Budget a recurring hour a month to reconcile against disneyworld.com, and ship a "report an issue" button on every venue detail screen — your users will maintain the dataset for you if you let them.</p>
+
+      <h3><span class="pill prem">High</span>&nbsp; Seasonal churn</h3>
+      <p>Detailed in <a href="#money">Monetization</a>. The countdown widget and the annual price are the answers. Track month-2 retention from launch day, because it's the number that tells you whether this is a business or a hobby.</p>
+
+      <h3><span class="pill prem">High</span>&nbsp; Cold start on community features</h3>
+      <p>Don't reveal a Top 10 until it's real. Gate it behind a feature flag and a minimum rater count. An empty leaderboard is worse than a missing one.</p>
+
+      <h3><span class="pill later">Medium</span>&nbsp; App Store review</h3>
+      <p>Expect at least one rejection. The four most likely, in order: <strong>4.2</strong> minimum functionality (mitigated by shipping the map and passport, not just a checklist), <strong>5.2</strong> third-party IP (mitigated by the rules above), <strong>3.1.1</strong> in-app purchase compliance (restore button, visible terms), and <strong>5.1.1</strong> data collection — you must justify every permission you request and every data type on your privacy label.</p>
+
+      <h3><span class="pill later">Medium</span>&nbsp; Kids, privacy, and location</h3>
+      <p>A Disney app will be used by and around children. If you rate the app 4+ or market to families, you inherit stricter obligations under COPPA and Apple's Kids Category rules — no behavioral advertising, no third-party tracking SDKs, tighter data handling. This is a second reason to defer family location sharing: it's the feature most likely to put a minor's real-time position in your database. When you do build it, make it opt-in per trip, foreground-only, and auto-expiring at the end of the trip.</p>
+
+      <h3><span class="pill later">Medium</span>&nbsp; Debugging native code from Windows</h3>
+      <p>EAS Build handles compilation, but when a native module misbehaves you're reading cloud build logs instead of an Xcode stack trace. It's survivable and thousands of developers work this way. If the project gains traction, a used Mac mini (~$400–600) pays for itself quickly in reduced friction.</p>
+
+      <h3><span class="pill later">Medium</span>&nbsp; Reservation-availability alerts</h3>
+      <p>Worth naming because it's the single highest-value feature you could build — Disney dining reservations are famously hard to get, and a drop alert would sell subscriptions on its own. It also requires polling Disney's systems, which is a terms-of-service violation and an infrastructure burden. Several apps do it and live in a grey zone. Know that it's the highest-risk, highest-reward item on the board, and don't put it in v1.</p>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <section id="better" class="prose">
+      <div class="sec-head">
+        <p class="eyebrow">Recommendations</p>
+        <h2>Ideas worth stealing</h2>
+      </div>
+
+      <p>These aren't in your list, and several are worth more than features that are.</p>
+
+      <h3>1. Offline-first is a headline feature, not a technical detail</h3>
+      <p>Cell service in the parks is genuinely bad — crowded, concrete-heavy, and exactly where people want to log a meal. An app that works perfectly in a dead zone will get mentioned in reviews by name. This is the single highest-leverage architectural decision in the plan, which is why it's baked into phase 3.</p>
+
+      <h3>2. Make it a scrapbook, not a checklist</h3>
+      <p>A photo attached to every visit transforms what the app <em>is</em>. Checklists get abandoned; scrapbooks get revisited, and revisiting is retention. It also makes premium an easy sell, because photos are the feature people most want and least want to lose.</p>
+
+      <h3>3. The end-of-trip recap card</h3>
+      <p>When a trip's end date passes, generate a shareable image: "Jake's 2026 Trip — 14 restaurants, 3 new badges, 62% of Epcot complete." Disney fans post relentlessly in Facebook groups and on Reddit. This is your cheapest growth loop, it costs maybe two days to build, and every share carries your app name into an audience of exactly the right people.</p>
+
+      <h3>4. Widgets and Live Activities carry the dead months</h3>
+      <p>"142 days until your trip" on a home screen is the only thing keeping you present during the eleven months between visits. Named again here because it's the answer to your biggest monetization risk and it's easy to deprioritize as "polish."</p>
+
+      <h3>5. Never let the app be empty on first launch</h3>
+      <p>Onboarding should be a rapid tap-through: "Which of these have you eaten at?" across the 25 most popular restaurants. Thirty seconds later a new user has a populated passport, a coverage percentage, and probably a badge. Compare that to an empty grid and a "Log your first visit" button — the difference in day-two retention will be large.</p>
+
+      <h3>6. Public profiles on MagicalTracker.com</h3>
+      <p>A shareable web page at <code>magicaltracker.com/u/jake</code> showing someone's passport does three jobs at once: it's a share target for the recap card, it's SEO surface area, and it's social proof that the app has real users. You already build Next.js sites — this is a weekend, and it pairs directly with the SEO automation approach you've been planning.</p>
+
+      <h3>7. "Would you go back?" beats stars for ranking</h3>
+      <p>Star ratings inflate toward 4.5 and stop discriminating. A binary "would you go back?" is a cleaner, more honest signal and makes a far better Top 10 than average stars. Collect both — stars for the user's own memory, return-rate for your rankings. It's one extra column, and it's in the schema above.</p>
+
+      <h3>8. A lifetime tier for the collector</h3>
+      <p>The person who wants 100% passport completion is the same person who hates subscriptions and loves owning things. A one-time unlock converts a segment that would otherwise never pay you at all, with zero churn risk.</p>
+
+      <h3>9. Plan the second destination into the first release</h3>
+      <p>Not as a shipped feature — as a schema decision, already covered. Disneyland roughly doubles your market and, once the catalog pipeline exists, costs you a data-entry sprint rather than a rewrite.</p>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <section id="color" class="prose">
+      <div class="sec-head">
+        <p class="eyebrow">Design system</p>
+        <h2>Your color system, audited</h2>
+      </div>
+
+      <p>Your six colors form a clean teal-to-violet ramp — it reads like dusk falling over a park, it's distinctive against the primary-color noise of most Disney-adjacent apps, and the ordered progression is genuinely useful: map it onto parks, onto achievement tiers, onto trip phases. It's a better starting point than most.</p>
+
+      <div class="swatches">
+        <div class="sw"><div class="sw-chip" style="background:#00807E"><span>#00807E</span></div><div class="sw-body"><b>Teal</b><i>Primary action</i></div></div>
+        <div class="sw"><div class="sw-chip" style="background:#0B7078"><span>#0B7078</span></div><div class="sw-body"><b>Deep teal</b><i>Pressed states</i></div></div>
+        <div class="sw"><div class="sw-chip" style="background:#1A596E"><span>#1A596E</span></div><div class="sw-body"><b>Blue</b><i>Secondary</i></div></div>
+        <div class="sw"><div class="sw-chip" style="background:#2B4063"><span>#2B4063</span></div><div class="sw-body"><b>Navy</b><i>Surfaces, dark</i></div></div>
+        <div class="sw"><div class="sw-chip" style="background:#342758"><span>#342758</span></div><div class="sw-body"><b>Indigo</b><i>Depth</i></div></div>
+        <div class="sw"><div class="sw-chip" style="background:#512663"><span>#512663</span></div><div class="sw-body"><b>Violet</b><i>Accent, premium</i></div></div>
+      </div>
+
+      <h4>Contrast check</h4>
+      <p>White text clears WCAG AA on all six — <code>#00807E</code> is the lightest at about <strong>4.8:1</strong>, which passes for body text but leaves no margin. Don't tint it lighter for hover states; go darker. Black text fails on all six, so treat the whole ramp as "white text only."</p>
+
+      <h4>Three gaps to fill</h4>
+      <ul>
+        <li><strong>A warm accent.</strong> The ramp has no warm tone, and achievement unlocks and premium moments both want gold — it's what a stamp, a medal, and a passport seal all look like. Add roughly <code>#B07818</code> for light mode and <code>#E5B45F</code> for dark. It's the one color that should feel like a reward, and nothing in your current set can do that job.</li>
+        <li><strong>Neutrals with a hue bias.</strong> Don't pair the ramp with pure greys — they'll read as cheap next to saturated teal. Bias your neutrals slightly cool: ground <code>#F4F7F7</code>, text <code>#12212A</code>, rules <code>#D9E3E3</code>. This page uses exactly those, so you can see them working under your accents.</li>
+        <li><strong>Semantic colors.</strong> Success, warning, and error must be separate from your brand ramp, or a destructive confirm dialog ends up the same violet as the premium badge.</li>
+      </ul>
+
+      <h4>Dark mode</h4>
+      <p>Your palette is already dark-native, which is the awkward part — on a dark ground these colors nearly vanish. Lighten the whole ramp 15–20% for dark mode rather than reusing it, exactly as this page does in its dark theme. Build both palettes as tokens from day one; retrofitting dark mode into a finished app is miserable, and iOS users expect it.</p>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <section id="today" class="prose">
+      <div class="sec-head">
+        <p class="eyebrow">Next actions</p>
+        <h2>Start here today</h2>
+      </div>
+
+      <p class="kicker">Five things, in this order. The first two have waiting periods attached, so they go first regardless of what you feel like working on.</p>
+
+      <ol>
+        <li><strong>Enroll in the Apple Developer Program.</strong> $99, 24–48h for individual approval. It blocks everything downstream and costs you nothing but time to start now. Decide individual vs. LLC before you click.</li>
+        <li><strong>Reserve "MagicalTracker" in App Store Connect</strong> the moment your account is live, and run a USPTO search on the name the same day.</li>
+        <li><strong>Get "Hello World" onto your iPhone via EAS Build.</strong> <code>npx create-expo-app</code>, add NativeWind and Expo Router, run a development build. Prove the Windows-to-iPhone pipeline works before you invest a single day in features — this is where first-time iOS projects most often die.</li>
+        <li><strong>Create the Supabase project and write the first Drizzle migration</strong> from the schema above. Include <code>destinations</code>, even with one row.</li>
+        <li><strong>Start the catalog.</strong> Twenty restaurants a night for two weeks. It's the least fun part of the project and the part nobody else has, and beginning it early means it's finished when you need it rather than blocking you in week six.</li>
+      </ol>
+
+      <div class="note win">
+        <span class="tag">The shape of this</span>
+        <p>Ship a small, excellent, offline-capable tracker with a beautiful passport in about three months. Let real users tell you which of the twenty-five deferred features they actually want — they will not pick the ones you expect. The community features, the recommendations, and the family sharing all get dramatically easier to build correctly once you have users to build them for.</p>
+      </div>
+    </section>
+
+    <footer>
+      <p>MagicalTracker build plan · prepared 15 September 2026 · independent app, not affiliated with or endorsed by The Walt Disney Company</p>
+    </footer>
+
+  </main>
+</div>
