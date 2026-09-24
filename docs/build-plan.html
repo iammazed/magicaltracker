@@ -510,7 +510,7 @@
             <tr><td class="k">Auth methods</td><td>Sign in with Apple + email magic link</td><td>Apple relay emails will break email-based family invites — plan for a username/code invite instead.</td></tr>
             <tr><td class="k">Analytics</td><td>PostHog</td><td>Generous free tier, funnels, feature flags to gate the paywall experiments.</td></tr>
             <tr><td class="k">Crash reporting</td><td>Sentry</td><td>Non-negotiable when you can't attach a debugger from Windows.</td></tr>
-            <tr><td class="k">Marketing site</td><td>Next.js on Vercel at MagicalTracker.com</td><td>Apple <em>requires</em> a live support URL and privacy policy URL at submission. This is a hard dependency, not a nice-to-have.</td></tr>
+            <tr><td class="k">Marketing site</td><td>Next.js (static export) on Cloudflare Pages at MagicalTracker.com</td><td>Apple <em>requires</em> a live support URL and privacy policy URL at submission. This is a hard dependency, not a nice-to-have. <strong>Not Vercel</strong> — its free Hobby tier forbids commercial use, and a landing page for a paid app counts.</td></tr>
             <tr><td class="k">Builds &amp; releases</td><td>EAS Build + EAS Submit + EAS Update</td><td>Cloud builds from Windows; over-the-air JS updates let you fix bugs without a review cycle.</td></tr>
           </tbody>
         </table>
@@ -827,7 +827,7 @@ Postgres materialized view, refreshed hourly by pg_cron
             <tr><td class="k">MagicalTracker.com</td><td class="num">owned</td><td class="num">~$15/yr</td><td>Already yours.</td></tr>
             <tr><td class="k">Supabase</td><td class="num">$0</td><td class="num">$0 → $25/mo</td><td>Free tier carries you well past launch. Pro when you need daily backups.</td></tr>
             <tr><td class="k">EAS Build</td><td class="num">$0</td><td class="num">$0 → $19/mo</td><td>Free tier's build queue is slow. Worth paying once you're iterating daily.</td></tr>
-            <tr><td class="k">Vercel</td><td class="num">$0</td><td class="num">$0</td><td>Hobby tier is fine for a marketing site.</td></tr>
+            <tr><td class="k">Cloudflare Pages</td><td class="num">$0</td><td class="num">$0</td><td>Free tier permits commercial use and unlimited bandwidth. Vercel’s Hobby tier does not, and Pro is $20/mo — avoid it for this.</td></tr>
             <tr><td class="k">RevenueCat</td><td class="num">$0</td><td class="num">1% over $2.5k/mo</td><td>Free until you're making real money.</td></tr>
             <tr><td class="k">Sentry + PostHog</td><td class="num">$0</td><td class="num">$0</td><td>Free tiers are generous at this scale.</td></tr>
             <tr><td class="k">IP attorney consult</td><td class="num">$300–600</td><td class="num">—</td><td>Optional, strongly recommended. Cheapest insurance you'll buy.</td></tr>

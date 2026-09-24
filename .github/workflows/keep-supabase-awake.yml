@@ -1,0 +1,51 @@
+name: Keep Supabase awake
+
+# Supabase pauses Free Plan projects after ~7 days without database activity,
+# and restoring is manual. This queries a trivial table every 3 days so the
+# inactivity window never closes.
+#
+# Setup (once, after creating the Supabase project):
+#   1. Run the SQL in docs/supabase-heartbeat.sql
+#   2. Repo → Settings → Secrets and variables → Actions → New repository secret:
+#        SUPABASE_URL       https://xxxxx.supabase.co
+#        SUPABASE_PUBLISHABLE_KEY  eyJ...
+#
+# Note: GitHub disables scheduled workflows on repos with no commits for 60
+# days. Regular commits keep it alive; otherwise re-enable it in the Actions tab.
+
+on:
+  schedule:
+    # 09:00 UTC every 3rd day — comfortably inside the 7-day window even if a
+    # run is skipped during GitHub's scheduling backlog.
+    - cron: '0 9 */3 * *'
+  workflow_dispatch: # lets you trigger a run by hand to test it
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping database
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_PUBLISHABLE_KEY" ]; then
+            echo "Secrets not configured yet — skipping."
+            echo "Add SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY in repo settings."
+            exit 0
+          fi
+
+          echo "Querying heartbeat table..."
+          code=$(curl -sS -o /tmp/out.txt -w '%{http_code}' \
+            "${SUPABASE_URL}/rest/v1/heartbeat?select=id&limit=1" \
+            -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_PUBLISHABLE_KEY}")
+
+          echo "HTTP ${code}"
+          cat /tmp/out.txt
+
+          if [ "$code" != "200" ]; then
+            echo "::error::Heartbeat failed — the project may already be paused. Restore it in the Supabase dashboard."
+            exit 1
+          fi
+          echo "Database is awake."

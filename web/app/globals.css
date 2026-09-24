@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+/* ──────────────────────────────────────────────────────────────────────
+   Design tokens — mirrors src/constants/theme.ts in the app so the site
+   and the product read as one thing. Change them in both places.
+
+   Dark mode is handled entirely by redefining these variables, so utility
+   classes like `bg-surface` adapt with no `dark:` variants anywhere.
+   ────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --ground: #f4f7f7;
+  --surface: #ffffff;
+  --surface-alt: #edf2f2;
+
+  --ink: #12212a;
+  --ink-soft: #52666f;
+  --ink-faint: #7d9099;
+
+  --line: #d9e3e3;
+  --line-soft: #e8efef;
+
+  --accent: #00807e;
+  --accent-pressed: #0b7078;
+  --on-accent: #ffffff;
+
+  /* Reward — achievements and premium only. */
+  --gold: #b07818;
+  --gold-surface: #fbf3e0;
+
+  /* Brand ramp, teal → violet. Ordered; use it for ordered things. */
+  --brand-1: #00807e;
+  --brand-2: #0b7078;
+  --brand-3: #1a596e;
+  --brand-4: #2b4063;
+  --brand-5: #342758;
+  --brand-6: #512663;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ground: #0c1418;
+    --surface: #131f25;
+    --surface-alt: #18272e;
+
+    --ink: #e6eeee;
+    --ink-soft: #9db2b8;
+    --ink-faint: #6e858d;
+
+    --line: #25383f;
+    --line-soft: #1c2c33;
+
+    --accent: #2fb5af;
+    --accent-pressed: #24a0a6;
+    --on-accent: #052322;
+
+    --gold: #e5b45f;
+    --gold-surface: #2a2313;
+
+    /* Lightened ~18%: the source palette is dark-native and vanishes
+       against a dark ground if reused directly. */
+    --brand-1: #2fb5af;
+    --brand-2: #24a0a6;
+    --brand-3: #4b94af;
+    --brand-4: #6d89bc;
+    --brand-5: #8677b8;
+    --brand-6: #a272be;
+  }
+}
+
+@theme inline {
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-surface-alt: var(--surface-alt);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-accent: var(--accent);
+  --color-accent-pressed: var(--accent-pressed);
+  --color-on-accent: var(--on-accent);
+  --color-gold: var(--gold);
+  --color-gold-surface: var(--gold-surface);
+  --color-brand-1: var(--brand-1);
+  --color-brand-2: var(--brand-2);
+  --color-brand-3: var(--brand-3);
+  --color-brand-4: var(--brand-4);
+  --color-brand-5: var(--brand-5);
+  --color-brand-6: var(--brand-6);
+
+  --font-display: var(--font-instrument-serif), Georgia, serif;
+  --font-sans: var(--font-public-sans), system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--ground);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Keyboard focus stays visible everywhere. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+.prose-legal h2 {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  line-height: 1.2;
+  margin: 2.5rem 0 0.75rem;
+  color: var(--ink);
+}
+.prose-legal h3 {
+  font-weight: 600;
+  font-size: 1rem;
+  margin: 1.75rem 0 0.5rem;
+}
+.prose-legal p,
+.prose-legal li {
+  color: var(--ink-soft);
+  line-height: 1.7;
+  margin-bottom: 0.85rem;
+}
+.prose-legal ul {
+  list-style: disc;
+  padding-left: 1.3rem;
+  margin-bottom: 1rem;
+}
+.prose-legal strong { color: var(--ink); font-weight: 600; }
+.prose-legal a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }

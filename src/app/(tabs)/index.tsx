@@ -1,4 +1,5 @@
 import * as Device from 'expo-device';
+import { Link } from 'expo-router';
 import { Platform, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -35,7 +36,7 @@ export default function HomeScreen() {
         <ThemedView style={styles.heroSection}>
           <AnimatedIcon />
           <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
+            Welcome to&nbsp;MagicalTracker!
           </ThemedText>
         </ThemedView>
 
@@ -54,6 +55,12 @@ export default function HomeScreen() {
             hint={<ThemedText type="code">npm run reset-project</ThemedText>}
           />
         </ThemedView>
+
+        {__DEV__ ? (
+          <Link href="/theme">
+            <ThemedText type="linkPrimary">Design tokens →</ThemedText>
+          </Link>
+        ) : null}
 
         {Platform.OS === 'web' && <WebBadge />}
       </SafeAreaView>

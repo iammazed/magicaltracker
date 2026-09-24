@@ -1,0 +1,6 @@
+id,name,destination_id,area_id,sub_area,resort_id,venue_kind,service_type,dining_style,cuisine,price_tier,accepts_reservations,is_character_dining,is_signature,status,lat,lng,menu_url,description,tags,verified_on,source_url
+be-our-guest,Be Our Guest Restaurant,wdw,magic-kingdom,fantasyland,,restaurant,table,prix-fixe,French,3,TRUE,FALSE,FALSE,open,,,,,,,
+space-220,Space 220 Restaurant,wdw,epcot,world-discovery,,restaurant,table,prix-fixe,American,4,TRUE,FALSE,FALSE,open,,,,,,,
+ohana,'Ohana,wdw,mk-resort-area,,polynesian-village,restaurant,table,family-style,Polynesian,3,TRUE,FALSE,FALSE,open,,,,,character-dining,,
+sci-fi-dine-in,Sci-Fi Dine-In Theater Restaurant,wdw,hollywood-studios,commissary-lane,,restaurant,table,a-la-carte,American,2,TRUE,FALSE,FALSE,open,,,,,,,
+dockside-margaritas,Dockside Margaritas,wdw,disney-springs,the-landing,,lounge,lounge,a-la-carte,Bar,1,FALSE,FALSE,FALSE,open,,,,,,,

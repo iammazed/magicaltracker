@@ -1,0 +1,6 @@
+id,name,destination_id,area_id,tier,transport,lat,lng,official_url,description,status,verified_on,source_url
+polynesian-village,Disney's Polynesian Village Resort,wdw,mk-resort-area,deluxe,monorail|boat|bus,,,,,open,,
+art-of-animation,Disney's Art of Animation Resort,wdw,springs-resort-area,value,skyliner|bus,,,,,open,,
+wilderness-lodge,Disney's Wilderness Lodge,wdw,mk-resort-area,deluxe,boat|bus,,,,,open,,
+caribbean-beach,Disney's Caribbean Beach Resort,wdw,epcot-resort-area,moderate,skyliner|bus,,,,,open,,
+fort-wilderness,Disney's Fort Wilderness Resort & Campground,wdw,mk-resort-area,campground,boat|bus,,,,,open,,
