@@ -17,33 +17,37 @@ are plausible but wrong. Open the official page, read it, then type the row.
 
 ## How to enter data
 
-Use **`catalog-entry.xlsx`** in this folder. It is the same columns as the CSVs, with dropdowns
-wired to the vocabularies below, so an invalid enum cannot be typed. `sub_area` filters itself
-based on the `area_id` you picked in that row, and rows still missing `verified_on` tint red so
-your progress is visible at a glance.
+**`data/venues.csv` and `data/resorts.csv` are the only source of truth.** Everything else is
+derived from them. `catalog-entry.xlsx` is a generated copy and is gitignored — regenerating it
+overwrites anything typed there that has not been exported back to CSV.
 
-When a batch is done, export each tab and drop it in this folder as `venues.csv` /
-`resorts.csv`, then:
+The round trip, in order:
 
 ```
-npm run data:normalize    # repair what the spreadsheet broke
-npm run validate:data     # catch typos and bad references
+npm run data:workbook     # rebuild the xlsx FROM the current CSVs
+                          # -> upload to Google Sheets: File > Import > Replace spreadsheet
+                          # -> edit there
+                          # -> File > Download > CSV, once per tab, into data/
+npm run data:normalize    # repair the dates Sheets reformats on export
+npm run validate:data     # catch typos, bad coordinates, broken references
 npm run db:import         # push verified rows to Supabase
 ```
 
-**`data:normalize` is not optional after a Google Sheets export.** Sheets reformats anything it
-reads as a date, so `2026-09-21` comes back as `9/21/2026` on every row, every time. The
-normalizer converts it back and strips the BOM Excel adds. It is idempotent, so running it on
-clean files does nothing.
+**Always start a new editing session with `npm run data:workbook`.** That is what guarantees the
+spreadsheet reflects any change made since you last exported — a schema change, a fix applied
+directly to the CSV, anything. Skip it and you will overwrite those changes on your next
+download, silently.
+
+`data:normalize` is not optional. Sheets reformats anything it reads as a date, so `2026-09-21`
+comes back as `9/21/2026` on every row, every time. The normalizer converts it back and strips
+the BOM Excel adds. It is idempotent.
+
+The workbook generator needs Python with openpyxl (`pip install openpyxl`). Editing the CSVs
+directly in VS Code is always valid too — the **Rainbow CSV** extension makes 22 columns
+survivable — in which case skip steps 1 through 4 entirely.
 
 On Windows, turn on **File name extensions** in Explorer's View menu before renaming downloads.
 With extensions hidden, typing `resorts.csv` as the new name produces `resorts.csv.csv`.
-
-Plain CSV export is not good enough — it mangles the apostrophe in `'Ohana` and every accented
-character. It must be the UTF-8 variant.
-
-Editing the CSVs directly is fine too; the workbook is a convenience, not a requirement. If you
-do, the **Rainbow CSV** extension for VS Code makes 22 columns survivable.
 
 ## Workflow per row
 

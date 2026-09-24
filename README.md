@@ -48,7 +48,8 @@ On a network that blocks device-to-device traffic (guest wifi, hotels), use `npx
 
 | Command | Does |
 |---|---|
-| `npm run data:normalize` | Repair Google Sheets export damage (dates, BOM). Run this first. |
+| `npm run data:workbook` | Rebuild `catalog-entry.xlsx` **from** the CSVs, for upload to Sheets |
+| `npm run data:normalize` | Repair Google Sheets export damage (dates, BOM) |
 | `npm run validate:data` | Check the CSVs — enums, coordinates, foreign keys, achievement completability |
 | `npm run validate:data -- --strict` | Same, but unverified rows fail. The pre-ship gate. |
 | `npm run db:import` | Validate, then upsert verified CSV rows into Supabase |
@@ -78,10 +79,14 @@ Deployed to **Cloudflare Workers** with static assets — path `/web`, build `np
 ## How data flows
 
 ```
-data/catalog-entry.xlsx  ←── enter data here (dropdowns, validation)
-     │  Save As → CSV UTF-8
-     ▼
-data/*.csv  ←── source of truth. Git-tracked, diffable, reviewable.
+data/*.csv  ←── THE source of truth. Git-tracked, diffable, reviewable.
+     │  ▲
+     │  │  npm run data:normalize   (download from Sheets)
+     │  │
+     │  └──────────────────────────────────┐
+     │  npm run data:workbook              │
+     ▼                                     │
+data/catalog-entry.xlsx  ──→ Google Sheets ┘  (generated copy, gitignored)
      │
      │  npm run db:import   (validates first; skips unverified rows)
      ▼
@@ -122,7 +127,7 @@ deciding who can read it. `npm run db:check` fails the build if one slips throug
 | `src/components/` | Shared components (`.web.tsx` siblings override for web) |
 | `src/constants/theme.ts` | **All** design tokens — colors, spacing, radii |
 | `src/db/schema.ts` | Database schema and inferred types |
-| `data/catalog-entry.xlsx` | Data-entry workbook with dropdowns — export to CSV |
+| `data/catalog-entry.xlsx` | **Generated** workbook (gitignored) — rebuilt from the CSVs |
 | `data/` | Source-of-truth catalog CSVs + the data dictionary |
 | `drizzle/` | Generated migrations (committed) |
 | `scripts/` | Validation, import, and database tooling |

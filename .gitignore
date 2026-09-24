@@ -44,3 +44,7 @@ example
 # generated native folders
 /ios
 /android
+
+# Generated from data/*.csv by `npm run data:workbook`.
+# Derived artifact - never hand-edit, never commit.
+data/catalog-entry.xlsx

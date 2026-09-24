@@ -229,6 +229,10 @@ diffable, and reviewable; the database is downstream of them.
   ago and coordinates that are plausible but wrong. Open disneyworld.com, read it, type the row.
 - **`verified_on` is a gate.** `db:import` skips any row without it. Unverified data cannot reach
   the app.
+- **The CSVs are the only source of truth. `catalog-entry.xlsx` is generated and gitignored.**
+  Rebuild it with `npm run data:workbook` at the *start* of every editing session — it reads the
+  current CSVs, so it picks up anything changed since the last export. Editing a stale workbook
+  and downloading it silently reverts those changes.
 - **Controlled vocabularies live in `scripts/vocabulary.mjs`** — one copy, shared by the validator
   and the importer. `data/README.md` is the human-readable mirror; update both together.
 - **Imports upsert, never delete.** A truncated CSV cannot wipe the catalog. Rows in the database
