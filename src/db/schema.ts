@@ -140,6 +140,18 @@ export const resorts = pgTable(
     /** Drives the Transportation Challenge achievement — must be accurate. */
     transport: transportMode('transport').array().notNull(),
 
+    /**
+     * Human-readable detail for the resort screen, e.g. "Walk or boat to EPCOT
+     * and Hollywood Studios".
+     *
+     * `transport` answers WHICH MODES serve this resort, which is all the
+     * achievement needs. It cannot answer "to where" — the boat from Wilderness
+     * Lodge and the boat from Beach Club go to entirely different places. This
+     * column carries that, and only where it is not obvious. A value resort
+     * with `bus` needs nothing here.
+     */
+    transportNotes: text('transport_notes'),
+
     lat: doublePrecision('lat'),
     lng: doublePrecision('lng'),
     officialUrl: text('official_url'),

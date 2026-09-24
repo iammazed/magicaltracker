@@ -88,8 +88,8 @@ export const VENUE_COLUMNS = [
 ];
 
 export const RESORT_COLUMNS = [
-  'id', 'name', 'destination_id', 'area_id', 'tier', 'transport', 'lat', 'lng',
-  'official_url', 'description', 'status', 'verified_on', 'source_url',
+  'id', 'name', 'destination_id', 'area_id', 'tier', 'transport', 'transport_notes',
+  'lat', 'lng', 'official_url', 'description', 'status', 'verified_on', 'source_url',
 ];
 
 /* ── CSV parsing ──────────────────────────────────────────────────────── */

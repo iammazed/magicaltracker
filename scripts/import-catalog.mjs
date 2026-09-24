@@ -104,6 +104,7 @@ try {
         name: r.name,
         tier: r.tier,
         transport: pipes(r.transport),
+        transport_notes: nullable(r.transport_notes),
         lat: num(r.lat),
         lng: num(r.lng),
         official_url: nullable(r.official_url),
@@ -114,14 +115,15 @@ try {
       }));
       await tx`
         insert into resorts ${tx(rows, 'id', 'destination_id', 'area_id', 'name', 'tier',
-          'transport', 'lat', 'lng', 'official_url', 'description', 'status',
-          'verified_on', 'source_url')}
+          'transport', 'transport_notes', 'lat', 'lng', 'official_url', 'description',
+          'status', 'verified_on', 'source_url')}
         on conflict (id) do update set
           destination_id = excluded.destination_id,
           area_id        = excluded.area_id,
           name           = excluded.name,
           tier           = excluded.tier,
           transport      = excluded.transport,
+          transport_notes = excluded.transport_notes,
           lat            = excluded.lat,
           lng            = excluded.lng,
           official_url   = excluded.official_url,

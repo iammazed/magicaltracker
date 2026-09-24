@@ -1,0 +1,1 @@
+ALTER TABLE "resorts" ADD COLUMN "transport_notes" text;

@@ -95,6 +95,7 @@ do, the **Rainbow CSV** extension for VS Code makes 22 columns survivable.
 | `area_id` | yes | a resort area (below) |
 | `tier` | yes | `value` · `moderate` · `deluxe` · `villa` · `campground` |
 | `transport` | yes | pipe-delimited: `monorail` · `skyliner` · `bus` · `boat` · `walk` |
+| `transport_notes` | no | free text, e.g. "Walk or boat to EPCOT and Hollywood Studios" |
 | `lat` / `lng` | yes | as above |
 | `official_url` | yes | disneyworld.com resort page |
 | `description` | yes | your own words |
@@ -104,6 +105,15 @@ do, the **Rainbow CSV** extension for VS Code makes 22 columns survivable.
 
 `transport` drives the **Transportation Challenge** achievement, so it has to be right — an
 incorrect value makes a badge unearnable or wrongly earnable.
+
+`transport` answers **which modes serve this resort**, which is all the achievement needs — the
+badge is earned from what a user logs riding, not from the catalog. It cannot answer *to where*:
+the boat from Wilderness Lodge and the boat from Beach Club go to completely different places,
+and the same is true of `walk` and `monorail`.
+
+`transport_notes` carries that detail for the resort screen, and only where it is not obvious.
+Fill it for the Crescent Lake walkers and the Magic Kingdom walkway; leave it blank for a value
+resort whose only mode is `bus`. Roughly a dozen rows, not all 34.
 
 ## Controlled vocabularies
 
