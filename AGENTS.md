@@ -48,12 +48,16 @@ invisible to `/theme`, so nobody catches it until a user does.
 | `background` / `backgroundElement` / `backgroundSelected` | Screen ground, cards, pressed rows | Text |
 | `border` / `borderSoft` | Container edges / internal rules | Anything filled |
 | `accent` / `accentPressed` / `onAccent` | Primary actions, links | Decoration, large fills |
-| `gold` / `goldSurface` | **Achievement unlocks and premium only** | General emphasis |
+| `gold` / `goldSurface` | **Achievement unlocks, premium, and the wordmark** | General emphasis |
 | `success` / `warning` / `danger` | State and outcomes | Branding |
 | `brandTeal` … `brandViolet` | Sequential/categorical things | Body text, semantic state |
 
 **`gold` is load-bearing.** It marks reward. If it starts appearing as a general highlight, an
 unlocked achievement stops feeling like anything. Guard it.
+
+The wordmark is the one sanctioned exception: `Magical` is gold everywhere it appears. That is a
+brand use, not a reward use, and it is a fixed lockup rather than something applied case by case
+— so it does not erode the signal the way an ad-hoc gold highlight would.
 
 **The brand ramp is ordered.** `BrandRamp` is exported as an ordered array — index into it for
 anything sequential (park chips, achievement tiers, trip phases). Don't pick ramp colors ad hoc;

@@ -30,7 +30,7 @@ const SCRIPT_EM = 1.111;
 export function Wordmark({
   size = "sm",
   className = "",
-  scriptClass = "text-accent",
+  scriptClass = "text-gold",
   restClass = "text-ink",
 }: {
   size?: keyof typeof SIZES;
