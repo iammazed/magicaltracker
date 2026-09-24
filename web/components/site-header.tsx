@@ -21,7 +21,7 @@ export function SiteHeader() {
       <nav className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-3.5">
         <Link
           href="/"
-          className="font-display text-xl leading-none tracking-tight text-ink"
+          className="font-display text-[1.35rem] font-semibold leading-none text-ink"
         >
           Magical<span className="text-accent">Tracker</span>
         </Link>

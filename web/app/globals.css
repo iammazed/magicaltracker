@@ -89,8 +89,8 @@
   --color-brand-5: var(--brand-5);
   --color-brand-6: var(--brand-6);
 
-  --font-display: var(--font-instrument-serif), Georgia, serif;
-  --font-sans: var(--font-public-sans), system-ui, sans-serif;
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-sans: var(--font-figtree), system-ui, sans-serif;
 }
 
 html {
@@ -120,6 +120,8 @@ body {
 
 .prose-legal h2 {
   font-family: var(--font-display);
+  font-weight: 600;
+  font-variation-settings: "SOFT" 50, "WONK" 1, "opsz" 32;
   font-size: 1.6rem;
   line-height: 1.2;
   margin: 2.5rem 0 0.75rem;
@@ -143,3 +145,55 @@ body {
 }
 .prose-legal strong { color: var(--ink); font-weight: 600; }
 .prose-legal a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+
+
+/* ──────────────────────────────────────────────────────────────────────
+   Whimsy layer. The brand ramp is a twilight sky, not a set of rules —
+   these are the pieces that let it behave like one.
+   ────────────────────────────────────────────────────────────────────── */
+
+/* Soften and de-straighten the display face. WONK swaps in the alternate
+   italic forms; SOFT rounds the terminals. Together they read handmade. */
+.font-display {
+  font-variation-settings: "SOFT" 50, "WONK" 1, "opsz" 48;
+  letter-spacing: -0.015em;
+}
+
+/* Night sky behind the hero. Dark in both themes on purpose — it is dusk. */
+.sky {
+  background:
+    radial-gradient(120% 90% at 12% 8%, #0b7078 0%, transparent 55%),
+    radial-gradient(110% 80% at 88% 18%, #512663 0%, transparent 58%),
+    linear-gradient(168deg, #1a596e 0%, #2b4063 38%, #342758 68%, #23133a 100%);
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.15; transform: scale(0.85); }
+  50%      { opacity: 0.95; transform: scale(1); }
+}
+.star {
+  position: absolute;
+  border-radius: 9999px;
+  background: #fff;
+  animation: twinkle var(--dur) ease-in-out infinite;
+  animation-delay: var(--delay);
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+.rise {
+  animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--delay, 0ms);
+}
+
+@keyframes drift {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-9px); }
+}
+.drift { animation: drift 7s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .star, .rise, .drift { animation: none !important; opacity: 1 !important; transform: none !important; }
+}

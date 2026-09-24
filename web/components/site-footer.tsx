@@ -4,11 +4,11 @@ const YEAR = new Date().getFullYear();
 
 export function SiteFooter() {
   return (
-    <footer className="mt-24 border-t border-line bg-surface">
+    <footer className="border-t border-line bg-surface">
       <div className="mx-auto max-w-5xl px-5 py-12">
         <div className="flex flex-wrap items-start justify-between gap-8">
           <div className="max-w-xs">
-            <p className="font-display text-lg leading-none text-ink">
+            <p className="font-display text-xl font-semibold leading-none text-ink">
               Magical<span className="text-accent">Tracker</span>
             </p>
             <p className="mt-2.5 text-sm leading-relaxed text-ink-soft">

@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
-import { Instrument_Serif, Public_Sans } from "next/font/google";
+import { Fraunces, Figtree } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 
-const display = Instrument_Serif({
-  variable: "--font-instrument-serif",
+// Fraunces carries the warmth. Its SOFT and WONK axes round the terminals and
+// tilt the italics off-axis, which is what keeps it from reading as corporate.
+const display = Fraunces({
+  variable: "--font-fraunces",
   subsets: ["latin"],
-  weight: "400",
+  axes: ["SOFT", "WONK", "opsz"],
   display: "swap",
 });
 
-const sans = Public_Sans({
-  variable: "--font-public-sans",
+const sans = Figtree({
+  variable: "--font-figtree",
   subsets: ["latin"],
   display: "swap",
 });
