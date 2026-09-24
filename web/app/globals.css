@@ -27,9 +27,6 @@
   /* Reward — achievements and premium only. */
   --gold: #b07818;
   --gold-surface: #fbf3e0;
-  /* Does NOT flip with the theme. For .sky and .sky-bar only, which are dark
-     in both themes — --gold renders near-brown against twilight in light mode. */
-  --gold-on-dark: #e5b45f;
 
   /* Brand ramp, teal → violet. Ordered; use it for ordered things. */
   --brand-1: #00807e;
@@ -84,7 +81,6 @@
   --color-accent-pressed: var(--accent-pressed);
   --color-on-accent: var(--on-accent);
   --color-gold: var(--gold);
-  --color-gold-on-dark: var(--gold-on-dark);
   --color-gold-surface: var(--gold-surface);
   --color-brand-1: var(--brand-1);
   --color-brand-2: var(--brand-2);
@@ -171,12 +167,6 @@ body {
     radial-gradient(120% 90% at 12% 8%, #0b7078 0%, transparent 55%),
     radial-gradient(110% 80% at 88% 18%, #512663 0%, transparent 58%),
     linear-gradient(168deg, #1a596e 0%, #2b4063 38%, #342758 68%, #23133a 100%);
-}
-
-/* Header bar: the ramp run horizontally, since a vertical gradient has no
-   room to develop in a 56px strip. Dark in both themes, like .sky. */
-.sky-bar {
-  background: linear-gradient(100deg, #17506a 0%, #263c5e 52%, #33265a 100%);
 }
 
 @keyframes twinkle {
