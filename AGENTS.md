@@ -74,15 +74,20 @@ The wordmark is a three-part lockup:
 | Part | Face | Size |
 |---|---|---|
 | `M` | Berkshire Swash | 1.6x |
-| `agical` | Pacifico | base |
+| `agical` | Pacifico | 1.111x |
 | `Tracker` | Figtree semibold | base |
 
 It is defined once in `web/components/wordmark.tsx` and used everywhere it
 appears — never hand-roll it, or the header and footer drift apart.
 
-`agical` and `Tracker` share a font-size on purpose. They will not look
-identically tall, because Figtree's cap height per em exceeds Pacifico's
-x-height, and that mismatch is what keeps the script from reading as an error.
+The **1.111 is measured, not eyeballed**. At an equal font-size Pacifico's
+lowercase `a` and `c` render 95 units tall against Figtree's 106 and 105, so
+matching font-sizes leaves the script visibly short. Scaling by 1.111 lines the
+bowls up to within a pixel. The `l` and the ascenders still overshoot, which is
+correct for a script.
+
+If either face is ever swapped, **re-measure** rather than reusing the number.
+Sizes are written in `em` off the wrapper so the ratios stay readable.
 
 The **app icon, favicon and splash are the Berkshire Swash `M` alone**, in gold
 on the twilight gradient — the same initial that opens the wordmark, so the
