@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "magicaltracker",
+  "compatibility_date": "2026-09-23",
+
+  // Static-assets-only Worker: there is no `main` script, so Cloudflare just
+  // serves the files in ./out. This is where the "output directory" lives —
+  // the Workers dashboard has no field for it because it reads this instead.
+  "assets": {
+    "directory": "./out",
+
+    // Serve out/404.html for unmatched routes instead of a bare Cloudflare
+    // error page. Next's export produces that file from app/not-found.tsx.
+    "not_found_handling": "404-page"
+  }
+}

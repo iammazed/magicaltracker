@@ -39,14 +39,29 @@ magicaltracker.com. Apple sends review correspondence to the support address.
 
 ## Deploying
 
-Cloudflare Pages, connected to this repo.
+Cloudflare **Workers** (with static assets), connected to this repo. Cloudflare
+now routes new projects through Workers rather than Pages; for a static site the
+two behave the same, and Workers leaves room to add server-rendered routes later
+without migrating.
 
-| Setting | Value |
+Dashboard settings:
+
+| Field | Value |
 |---|---|
-| Root directory | `web` |
+| Path (under Advanced) | `/web` |
 | Build command | `npm run build` |
-| Output directory | `out` |
-| Node version | `22` |
+| Deploy command | `npx wrangler deploy` (default) |
+| Preview command | leave default |
+| `NODE_VERSION` env var | `22` |
+
+There is **no output directory field** — that lives in `wrangler.jsonc` as
+`assets.directory`, pointing at `./out`.
+
+Validate the config locally without deploying:
+
+```bash
+npm run build && npx wrangler deploy --dry-run
+```
 
 Vercel's free Hobby tier forbids commercial use and a landing page for a paid
 app counts, so this is not hosted there.

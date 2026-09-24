@@ -69,7 +69,7 @@ The marketing site is a separate Next.js app in `web/` with its own dependencies
 cd web && npm install && npm run dev
 ```
 
-Deployed to **Cloudflare Pages** (root directory `web`, build `npm run build`, output `out`). Not Vercel — its free tier forbids commercial use. See [web/README.md](web/README.md).
+Deployed to **Cloudflare Workers** with static assets — path `/web`, build `npm run build`, output declared in `web/wrangler.jsonc`. Not Vercel — its free tier forbids commercial use. See [web/README.md](web/README.md).
 
 ---
 
