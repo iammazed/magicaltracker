@@ -1,0 +1,420 @@
+<title>MagicalTracker Wordmarks</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Berkshire+Swash&family=Caveat:wght@700&family=Courgette&family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Grand+Hotel&family=Pacifico&family=Yellowtail&display=swap">
+
+<style>
+  :root {
+    --ground: #f4f7f7;
+    --surface: #ffffff;
+    --surface-alt: #edf2f2;
+    --ink: #12212a;
+    --ink-soft: #52666f;
+    --ink-faint: #7d9099;
+    --line: #d9e3e3;
+    --line-soft: #e8efef;
+    --accent: #00807e;
+    --gold: #b07818;
+    --gold-surface: #fbf3e0;
+    --flag: #9e3b2e;
+    --flag-bg: #fbece9;
+    --good: #1f7a52;
+    --good-bg: #e6f4ec;
+    --shadow: 0 1px 2px rgba(18,33,42,.05), 0 18px 36px -22px rgba(35,19,58,.3);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0c1418;
+      --surface: #131f25;
+      --surface-alt: #18272e;
+      --ink: #e6eeee;
+      --ink-soft: #9db2b8;
+      --ink-faint: #6e858d;
+      --line: #25383f;
+      --line-soft: #1c2c33;
+      --accent: #2fb5af;
+      --gold: #e5b45f;
+      --gold-surface: #2a2313;
+      --flag: #e58a78;
+      --flag-bg: #2c1815;
+      --good: #55c28d;
+      --good-bg: #10281d;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 18px 36px -22px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0c1418;
+    --surface: #131f25;
+    --surface-alt: #18272e;
+    --ink: #e6eeee;
+    --ink-soft: #9db2b8;
+    --ink-faint: #6e858d;
+    --line: #25383f;
+    --line-soft: #1c2c33;
+    --accent: #2fb5af;
+    --gold: #e5b45f;
+    --gold-surface: #2a2313;
+    --flag: #e58a78;
+    --flag-bg: #2c1815;
+    --good: #55c28d;
+    --good-bg: #10281d;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 18px 36px -22px rgba(0,0,0,.7);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Figtree", system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 20px 100px; }
+
+  header { padding: 64px 0 8px; }
+  .eyebrow {
+    font-size: 11px; font-weight: 700; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--ink-faint); margin: 0;
+  }
+  h1 {
+    font-family: "Fraunces", Georgia, serif;
+    font-variation-settings: "opsz" 120;
+    font-weight: 600;
+    font-size: clamp(2.3rem, 6vw, 3.2rem);
+    line-height: 1.05; margin: 14px 0 16px; text-wrap: balance;
+  }
+  .lede { font-size: 1.05rem; color: var(--ink-soft); max-width: 60ch; margin: 0 0 8px; }
+
+  .note {
+    border-left: 3px solid var(--flag);
+    background: var(--flag-bg);
+    padding: 14px 18px; border-radius: 0 8px 8px 0;
+    margin: 26px 0 0; font-size: 14.5px; line-height: 1.6;
+  }
+  .note b { color: var(--flag); }
+
+  h2 {
+    font-family: "Fraunces", Georgia, serif;
+    font-variation-settings: "opsz" 48;
+    font-weight: 600; font-size: 1.5rem;
+    margin: 56px 0 18px;
+  }
+
+  /* ── Candidate card ───────────────────────────────────────────── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    overflow: hidden;
+    margin-bottom: 18px;
+    box-shadow: var(--shadow);
+  }
+  .card-head {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px;
+    padding: 16px 22px 0;
+  }
+  .card-head h3 { margin: 0; font-size: 1.02rem; font-weight: 700; }
+  .card-head .tag {
+    font-size: 10.5px; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; padding: 2px 8px; border-radius: 4px;
+    background: var(--surface-alt); color: var(--ink-faint);
+  }
+  .card-head .tag.pick { background: var(--good-bg); color: var(--good); }
+  .card-note {
+    padding: 8px 22px 16px; margin: 0;
+    font-size: 14px; color: var(--ink-soft); max-width: 62ch;
+  }
+
+  .specimens { display: grid; grid-template-columns: 1fr; }
+  @media (min-width: 680px) { .specimens { grid-template-columns: 1fr 1fr; } }
+
+  .spec {
+    padding: 30px 22px;
+    display: flex; flex-direction: column; gap: 18px;
+    justify-content: center; align-items: flex-start;
+    border-top: 1px solid var(--line-soft);
+    overflow-x: auto;
+  }
+  .spec.light { background: var(--surface); }
+  .spec.dark {
+    background:
+      radial-gradient(120% 90% at 12% 8%, #0b7078 0%, transparent 55%),
+      radial-gradient(110% 80% at 88% 18%, #512663 0%, transparent 58%),
+      linear-gradient(168deg, #1a596e 0%, #2b4063 38%, #342758 68%, #23133a 100%);
+  }
+  @media (min-width: 680px) {
+    .spec.dark { border-left: 1px solid var(--line-soft); }
+  }
+
+  .spec-label {
+    font-size: 10px; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; opacity: .55;
+  }
+  .spec.light .spec-label { color: var(--ink-faint); }
+  .spec.dark .spec-label { color: #fff; }
+
+  /* The lockup: script word + sans word. */
+  .lockup { display: flex; align-items: baseline; gap: 2px; white-space: nowrap; }
+  .lockup .script { font-size: 44px; line-height: 1.1; }
+  .lockup .rest {
+    font-family: "Figtree", sans-serif; font-weight: 600;
+    font-size: 30px; letter-spacing: -.01em;
+  }
+  .lockup.small .script { font-size: 23px; }
+  .lockup.small .rest { font-size: 16px; }
+
+  .spec.light .script { color: var(--accent); }
+  .spec.light .rest { color: var(--ink); }
+  .spec.dark .script { color: var(--gold); }
+  .spec.dark .rest { color: #fff; }
+
+  /* Faces */
+  .f-pacifico  { font-family: "Pacifico", cursive; }
+  .f-courgette { font-family: "Courgette", cursive; }
+  .f-grand     { font-family: "Grand Hotel", cursive; }
+  .f-berkshire { font-family: "Berkshire Swash", cursive; }
+  .f-yellowtail{ font-family: "Yellowtail", cursive; }
+  .f-caveat    { font-family: "Caveat", cursive; font-weight: 700; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; margin-top: 10px; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  th {
+    font-size: 10.5px; font-weight: 700; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--ink-faint);
+    background: var(--surface-alt); border-bottom: 1px solid var(--line);
+  }
+  .t-wrap { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); }
+
+  code {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: .86em; background: var(--surface-alt);
+    border: 1px solid var(--line-soft); border-radius: 4px; padding: .08em .36em;
+  }
+  a { color: var(--accent); text-underline-offset: 2px; }
+  footer {
+    margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line);
+    font-size: 12.5px; color: var(--ink-faint);
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Logo exploration · MagicalTracker</p>
+    <h1>Six ways to set the wordmark</h1>
+    <p class="lede">
+      &ldquo;Magical&rdquo; in a script face, &ldquo;Tracker&rdquo; in Figtree
+      semibold &mdash; the same sans already running on the site. Each candidate
+      is shown at logo scale and at header scale, on the light ground and on the
+      twilight gradient, because the mark has to hold in both.
+    </p>
+
+    <div class="note">
+      <b>The constraint:</b> none of these may read as the Disney script. That
+      mark is spiky, angular and signature-like, with a distinctive looping
+      capital. Everything below is deliberately round, brushy or vintage-travel
+      instead &mdash; adjacent in feeling, clearly separate in form. Waltograph
+      and its lookalikes are off the table entirely.
+    </div>
+  </header>
+
+  <h2>The candidates</h2>
+
+  <!-- 1 -->
+  <div class="card">
+    <div class="card-head">
+      <h3>Pacifico</h3>
+      <span class="tag pick">Recommendation</span>
+    </div>
+    <p class="card-note">
+      Round, warm and thick enough to survive being shrunk to a favicon. The
+      roundness is what puts real distance between it and the Disney script,
+      which is all sharp angles. Widely used, but used because it works, and
+      nothing about it says &ldquo;theme park&rdquo; by itself &mdash; your
+      palette does that job.
+    </p>
+    <div class="specimens">
+      <div class="spec light">
+        <span class="spec-label">On light</span>
+        <span class="lockup"><span class="script f-pacifico">Magical</span><span class="rest">Tracker</span></span>
+        <span class="lockup small"><span class="script f-pacifico">Magical</span><span class="rest">Tracker</span></span>
+      </div>
+      <div class="spec dark">
+        <span class="spec-label">On twilight</span>
+        <span class="lockup"><span class="script f-pacifico">Magical</span><span class="rest">Tracker</span></span>
+        <span class="lockup small"><span class="script f-pacifico">Magical</span><span class="rest">Tracker</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2 -->
+  <div class="card">
+    <div class="card-head">
+      <h3>Grand Hotel</h3>
+      <span class="tag">Vintage travel</span>
+    </div>
+    <p class="card-note">
+      Reads like a 1930s luggage label, which is genuinely on-concept for a
+      passport app. More elegant and less cartoonish than Pacifico, with thinner
+      strokes &mdash; the trade-off is that it loses definition faster at small
+      sizes, so it wants a slightly larger minimum.
+    </p>
+    <div class="specimens">
+      <div class="spec light">
+        <span class="spec-label">On light</span>
+        <span class="lockup"><span class="script f-grand">Magical</span><span class="rest">Tracker</span></span>
+        <span class="lockup small"><span class="script f-grand">Magical</span><span class="rest">Tracker</span></span>
+      </div>
+      <div class="spec dark">
+        <span class="spec-label">On twilight</span>
+        <span class="lockup"><span class="script f-grand">Magical</span><span class="rest">Tracker</span></span>
+        <span class="lockup small"><span class="script f-grand">Magical</span><span class="rest">Tracker</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3 -->
+  <div class="card">
+    <div class="card-head">
+      <h3>Berkshire Swash</h3>
+      <span class="tag">Storybook</span>
+    </div>
+    <p class="card-note">
+      Not a true script &mdash; an upright display face with decorative swashes.
+      The most distinctive option here, and the least likely to be mistaken for
+      anyone else&rsquo;s mark. Its upright stance also makes it the most legible
+      of the whimsical options at small sizes.
+    </p>
+    <div class="specimens">
+      <div class="spec light">
+        <span class="spec-label">On light</span>
+        <span class="lockup"><span class="script f-berkshire">Magical</span><span class="rest">Tracker</span></span>
+        <span class="lockup small"><span class="script f-berkshire">Magical</span><span class="rest">Tracker</span></span>
+      </div>
+      <div class="spec dark">
+        <span class="spec-label">On twilight</span>
+        <span class="lockup"><span class="script f-berkshire">Magical</span><span class="rest">Tracker</span></span>
+        <span class="lockup small"><span class="script f-berkshire">Magical</span><span class="rest">Tracker</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4 -->
+  <div class="card">
+    <div class="card-head">
+      <h3>Courgette</h3>
+      <span class="tag">Friendly, restrained</span>
+    </div>
+    <p class="card-note">
+      The quietest of the six. A brush-ish italic that feels handwritten without
+      demanding attention, which makes it the safest choice if you ever worry the
+      mark is competing with the rest of the interface. Less memorable as a
+      result.
+    </p>
+    <div class="specimens">
+      <div class="spec light">
+        <span class="spec-label">On light</span>
+        <span class="lockup"><span class="script f-courgette">Magical</span><span class="rest">Tracker</span></span>
+        <span class="lockup small"><span class="script f-courgette">Magical</span><span class="rest">Tracker</span></span>
+      </div>
+      <div class="spec dark">
+        <span class="spec-label">On twilight</span>
+        <span class="lockup"><span class="script f-courgette">Magical</span><span class="rest">Tracker</span></span>
+        <span class="lockup small"><span class="script f-courgette">Magical</span><span class="rest">Tracker</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5 -->
+  <div class="card">
+    <div class="card-head">
+      <h3>Yellowtail</h3>
+      <span class="tag">Retro brush</span>
+    </div>
+    <p class="card-note">
+      A flowing brush script with strong contrast between thick and thin strokes.
+      Energetic and nostalgic. Worth a careful look though &mdash; of the six,
+      its slant and connected flow sit closest to signature-style scripts, so
+      it is the one I would want an attorney to glance at.
+    </p>
+    <div class="specimens">
+      <div class="spec light">
+        <span class="spec-label">On light</span>
+        <span class="lockup"><span class="script f-yellowtail">Magical</span><span class="rest">Tracker</span></span>
+        <span class="lockup small"><span class="script f-yellowtail">Magical</span><span class="rest">Tracker</span></span>
+      </div>
+      <div class="spec dark">
+        <span class="spec-label">On twilight</span>
+        <span class="lockup"><span class="script f-yellowtail">Magical</span><span class="rest">Tracker</span></span>
+        <span class="lockup small"><span class="script f-yellowtail">Magical</span><span class="rest">Tracker</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6 -->
+  <div class="card">
+    <div class="card-head">
+      <h3>Caveat Bold</h3>
+      <span class="tag">Handwritten</span>
+    </div>
+    <p class="card-note">
+      Actual handwriting rather than a formal script. Casual, personal, and it
+      suits the &ldquo;made by one person&rdquo; framing on your support page.
+      The most informal option, and the one most likely to read as a note rather
+      than a brand.
+    </p>
+    <div class="specimens">
+      <div class="spec light">
+        <span class="spec-label">On light</span>
+        <span class="lockup"><span class="script f-caveat">Magical</span><span class="rest">Tracker</span></span>
+        <span class="lockup small"><span class="script f-caveat">Magical</span><span class="rest">Tracker</span></span>
+      </div>
+      <div class="spec dark">
+        <span class="spec-label">On twilight</span>
+        <span class="lockup"><span class="script f-caveat">Magical</span><span class="rest">Tracker</span></span>
+        <span class="lockup small"><span class="script f-caveat">Magical</span><span class="rest">Tracker</span></span>
+      </div>
+    </div>
+  </div>
+
+  <h2>How they compare</h2>
+  <div class="t-wrap">
+    <table>
+      <thead>
+        <tr><th>Face</th><th>Character</th><th>Holds up small</th><th>Distance from Disney script</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><b>Pacifico</b></td><td>Warm, round, confident</td><td>Very good &mdash; thick strokes</td><td>Far. Roundness is the opposite of that mark.</td></tr>
+        <tr><td><b>Grand Hotel</b></td><td>Vintage travel label</td><td>Fair &mdash; thins out</td><td>Far. Period-piece rather than signature.</td></tr>
+        <tr><td><b>Berkshire Swash</b></td><td>Storybook, decorative</td><td>Good &mdash; upright</td><td>Farthest. Not a script at all.</td></tr>
+        <tr><td><b>Courgette</b></td><td>Soft, unassuming</td><td>Good</td><td>Far.</td></tr>
+        <tr><td><b>Yellowtail</b></td><td>Retro, energetic</td><td>Fair</td><td>Closest of the six. Worth legal review.</td></tr>
+        <tr><td><b>Caveat Bold</b></td><td>Personal, handwritten</td><td>Fair &mdash; informal shapes</td><td>Far.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>What I would pick</h2>
+  <p class="lede">
+    <b>Pacifico</b>, with <b>Berkshire Swash</b> as the runner-up. Pacifico is
+    warm and unmistakably friendly, survives being scaled down to a favicon or an
+    app icon, and its roundness is the clearest possible signal that you are not
+    imitating anyone. Berkshire Swash is more distinctive and legally the safest,
+    but it is a louder mark that you would have to live with everywhere.
+  </p>
+  <p class="lede">
+    All six are Google Fonts, free for commercial use under the SIL Open Font
+    License, so any of them can ship in the app, on the site, and in your App
+    Store artwork.
+  </p>
+
+  <footer>
+    MagicalTracker wordmark exploration &middot; an independent app, not
+    affiliated with or endorsed by The Walt Disney Company
+  </footer>
+</div>

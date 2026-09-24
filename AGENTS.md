@@ -67,6 +67,25 @@ lightest at ~4.8:1 — passes, but with no margin, so darken for hover/pressed s
 
 ---
 
+## Brand
+
+The wordmark is **"Magical" in Pacifico + "Tracker" in Figtree semibold**. It is
+defined once in `web/components/wordmark.tsx` and used everywhere it appears —
+never hand-roll the lockup, or the header and footer drift apart.
+
+Pacifico is for the wordmark only. It is not a UI font and must not appear in
+body copy, headings, or buttons.
+
+**Never use a face that reads as the Disney script.** Waltograph and its
+lookalikes are off the table entirely, and so is anything spiky, angular and
+signature-like with a looping capital. Pacifico was chosen partly because its
+roundness is the clearest possible signal of distance from that mark. The same
+rule covers artwork: no Mickey silhouettes, no castle shapes, no character art,
+no Disney logos — in the app, on the site, or in App Store screenshots.
+
+The non-affiliation disclaimer appears in the app's About screen, the App Store
+description, and the site footer. It is not optional.
+
 ## Spacing and radius
 
 Use the `Spacing` and `Radius` scales from `src/constants/theme.ts`. No magic numbers.

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Wordmark } from "@/components/wordmark";
 
 /** The brand ramp as a hairline. Its order is the brand's one motif. */
 export function RampRule({ className = "" }: { className?: string }) {
@@ -19,11 +20,8 @@ export function SiteHeader() {
     <header className="sticky top-0 z-40 border-b border-line bg-ground/85 backdrop-blur-md">
       <RampRule />
       <nav className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-3.5">
-        <Link
-          href="/"
-          className="font-display text-[1.35rem] font-semibold leading-none text-ink"
-        >
-          Magical<span className="text-accent">Tracker</span>
+        <Link href="/" aria-label="MagicalTracker home" className="py-1">
+          <Wordmark size="sm" />
         </Link>
         <div className="flex items-center gap-5 text-sm">
           <Link href="/#features" className="text-ink-soft transition-colors hover:text-ink">

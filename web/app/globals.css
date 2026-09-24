@@ -91,6 +91,7 @@
 
   --font-display: var(--font-fraunces), Georgia, serif;
   --font-sans: var(--font-figtree), system-ui, sans-serif;
+  --font-script: var(--font-pacifico), cursive;
 }
 
 html {

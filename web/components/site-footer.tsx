@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Wordmark } from "@/components/wordmark";
 
 const YEAR = new Date().getFullYear();
 
@@ -8,9 +9,7 @@ export function SiteFooter() {
       <div className="mx-auto max-w-5xl px-5 py-12">
         <div className="flex flex-wrap items-start justify-between gap-8">
           <div className="max-w-xs">
-            <p className="font-display text-xl font-semibold leading-none text-ink">
-              Magical<span className="text-accent">Tracker</span>
-            </p>
+            <Wordmark size="md" />
             <p className="mt-2.5 text-sm leading-relaxed text-ink-soft">
               A trip log and achievement passport for Walt Disney World.
             </p>

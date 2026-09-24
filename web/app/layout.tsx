@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, Figtree } from "next/font/google";
+import { Fraunces, Figtree, Pacifico } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
@@ -16,6 +16,15 @@ const display = Fraunces({
 const sans = Figtree({
   variable: "--font-figtree",
   subsets: ["latin"],
+  display: "swap",
+});
+
+// Wordmark only. Round and thick enough to survive a favicon, and its
+// roundness is the clearest signal that it is not imitating the Disney script.
+const script = Pacifico({
+  variable: "--font-pacifico",
+  subsets: ["latin"],
+  weight: "400",
   display: "swap",
 });
 
@@ -49,7 +58,9 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${display.variable} ${sans.variable} font-sans antialiased`}>
+      <body
+        className={`${display.variable} ${sans.variable} ${script.variable} font-sans antialiased`}
+      >
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-accent focus:px-4 focus:py-2 focus:text-on-accent"
