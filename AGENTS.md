@@ -86,6 +86,8 @@ no Disney logos — in the app, on the site, or in App Store screenshots.
 The non-affiliation disclaimer appears in the app's About screen, the App Store
 description, and the site footer. It is not optional.
 
+---
+
 ## Spacing and radius
 
 Use the `Spacing` and `Radius` scales from `src/constants/theme.ts`. No magic numbers.
