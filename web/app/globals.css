@@ -92,6 +92,7 @@
   --font-display: var(--font-fraunces), Georgia, serif;
   --font-sans: var(--font-figtree), system-ui, sans-serif;
   --font-script: var(--font-pacifico), cursive;
+  --font-initial: var(--font-berkshire), cursive;
 }
 
 html {

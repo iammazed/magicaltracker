@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, Figtree, Pacifico } from "next/font/google";
+import { Fraunces, Figtree, Pacifico, Berkshire_Swash } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
@@ -23,6 +23,15 @@ const sans = Figtree({
 // roundness is the clearest signal that it is not imitating the Disney script.
 const script = Pacifico({
   variable: "--font-pacifico",
+  subsets: ["latin"],
+  weight: "400",
+  display: "swap",
+});
+
+// The swashed initial. Upright rather than slanted, which is what lets it sit
+// at 1.6x without fighting the script that follows it.
+const initial = Berkshire_Swash({
+  variable: "--font-berkshire",
   subsets: ["latin"],
   weight: "400",
   display: "swap",
@@ -59,7 +68,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${display.variable} ${sans.variable} ${script.variable} font-sans antialiased`}
+        className={`${display.variable} ${sans.variable} ${script.variable} ${initial.variable} font-sans antialiased`}
       >
         <a
           href="#main"

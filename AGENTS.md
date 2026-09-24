@@ -69,12 +69,28 @@ lightest at ~4.8:1 — passes, but with no margin, so darken for hover/pressed s
 
 ## Brand
 
-The wordmark is **"Magical" in Pacifico + "Tracker" in Figtree semibold**. It is
-defined once in `web/components/wordmark.tsx` and used everywhere it appears —
-never hand-roll the lockup, or the header and footer drift apart.
+The wordmark is a three-part lockup:
 
-Pacifico is for the wordmark only. It is not a UI font and must not appear in
-body copy, headings, or buttons.
+| Part | Face | Size |
+|---|---|---|
+| `M` | Berkshire Swash | 1.6x |
+| `agical` | Pacifico | base |
+| `Tracker` | Figtree semibold | base |
+
+It is defined once in `web/components/wordmark.tsx` and used everywhere it
+appears — never hand-roll it, or the header and footer drift apart.
+
+`agical` and `Tracker` share a font-size on purpose. They will not look
+identically tall, because Figtree's cap height per em exceeds Pacifico's
+x-height, and that mismatch is what keeps the script from reading as an error.
+
+The **app icon, favicon and splash are the Berkshire Swash `M` alone**, in gold
+on the twilight gradient — the same initial that opens the wordmark, so the
+browser tab, the home screen and the logo are visibly one mark. Regenerate them
+with `scripts/` tooling rather than editing the PNGs by hand.
+
+Pacifico and Berkshire Swash are for the wordmark only. Neither is a UI font,
+and neither may appear in body copy, headings, or buttons.
 
 **Never use a face that reads as the Disney script.** Waltograph and its
 lookalikes are off the table entirely, and so is anything spiky, angular and

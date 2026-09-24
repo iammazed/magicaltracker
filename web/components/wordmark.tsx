@@ -2,19 +2,23 @@
  * The wordmark. Defined once and used everywhere it appears, so the header,
  * footer and any future artwork can never drift apart.
  *
- * Construction: "Magical" in Pacifico, "Tracker" in Figtree semibold. The
- * two-weight split is what keeps it legible at header size — a full script
- * wordmark turns to mush below about 20px.
+ * Three parts:
+ *   M       Berkshire Swash, 1.6x — an upright swashed initial
+ *   agical  Pacifico, base size
+ *   Tracker Figtree semibold, base size
  *
- * Pacifico sits on a taller body than Figtree, so the sizes below are not a
- * single ratio applied blindly; each step is tuned so the x-heights read as
- * level.
+ * "agical" and "Tracker" share a font-size by design. They will not look
+ * identically tall — Figtree's cap height per em exceeds Pacifico's x-height —
+ * and that difference is what keeps the script from reading as a mistake.
+ *
+ * Everything is baseline-aligned via `items-baseline`; the small horizontal
+ * nudges below close the gaps the three faces leave in their side bearings.
  */
 
 const SIZES = {
-  sm: { script: "text-[1.45rem]", rest: "text-[1.02rem]", nudge: "-0.06em" },
-  md: { script: "text-[1.75rem]", rest: "text-[1.22rem]", nudge: "-0.06em" },
-  lg: { script: "text-[2.9rem]", rest: "text-[2rem]", nudge: "-0.05em" },
+  sm: { base: "text-[1.02rem]", initial: "text-[1.63rem]" },
+  md: { base: "text-[1.22rem]", initial: "text-[1.95rem]" },
+  lg: { base: "text-[2rem]", initial: "text-[3.2rem]" },
 } as const;
 
 export function Wordmark({
@@ -31,14 +35,17 @@ export function Wordmark({
 }) {
   const s = SIZES[size];
   return (
-    <span className={`inline-flex items-baseline whitespace-nowrap ${className}`}>
+    <span
+      className={`inline-flex items-baseline whitespace-nowrap leading-none ${className}`}
+    >
+      <span className={`font-initial ${s.initial} ${scriptClass}`}>M</span>
       <span
-        className={`font-script leading-none ${s.script} ${scriptClass}`}
-        style={{ marginRight: s.nudge }}
+        className={`font-script ${s.base} ${scriptClass}`}
+        style={{ marginLeft: "0.01em", marginRight: "0.12em" }}
       >
-        Magical
+        agical
       </span>
-      <span className={`font-semibold leading-none tracking-tight ${s.rest} ${restClass}`}>
+      <span className={`font-semibold tracking-tight ${s.base} ${restClass}`}>
         Tracker
       </span>
     </span>
