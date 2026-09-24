@@ -48,6 +48,7 @@ On a network that blocks device-to-device traffic (guest wifi, hotels), use `npx
 
 | Command | Does |
 |---|---|
+| `npm run data:normalize` | Repair Google Sheets export damage (dates, BOM). Run this first. |
 | `npm run validate:data` | Check the CSVs — enums, coordinates, foreign keys, achievement completability |
 | `npm run validate:data -- --strict` | Same, but unverified rows fail. The pre-ship gate. |
 | `npm run db:import` | Validate, then upsert verified CSV rows into Supabase |

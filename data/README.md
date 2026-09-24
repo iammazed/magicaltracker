@@ -22,8 +22,22 @@ wired to the vocabularies below, so an invalid enum cannot be typed. `sub_area` 
 based on the `area_id` you picked in that row, and rows still missing `verified_on` tint red so
 your progress is visible at a glance.
 
-When a batch is done: **File > Save As > CSV UTF-8**, once per tab, over `venues.csv` and
-`resorts.csv` in this folder. Then `npm run validate:data`, then `npm run db:import`.
+When a batch is done, export each tab and drop it in this folder as `venues.csv` /
+`resorts.csv`, then:
+
+```
+npm run data:normalize    # repair what the spreadsheet broke
+npm run validate:data     # catch typos and bad references
+npm run db:import         # push verified rows to Supabase
+```
+
+**`data:normalize` is not optional after a Google Sheets export.** Sheets reformats anything it
+reads as a date, so `2026-09-21` comes back as `9/21/2026` on every row, every time. The
+normalizer converts it back and strips the BOM Excel adds. It is idempotent, so running it on
+clean files does nothing.
+
+On Windows, turn on **File name extensions** in Explorer's View menu before renaming downloads.
+With extensions hidden, typing `resorts.csv` as the new name produces `resorts.csv.csv`.
 
 Plain CSV export is not good enough — it mangles the apostrophe in `'Ohana` and every accented
 character. It must be the UTF-8 variant.
