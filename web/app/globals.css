@@ -11,7 +11,7 @@
 :root {
   --ground: #f4f7f7;
   --surface: #ffffff;
-  --surface-alt: #edf2f2;
+  --surface-alt: #e4eded;
 
   --ink: #12212a;
   --ink-soft: #52666f;
@@ -40,8 +40,8 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --ground: #0c1418;
-    --surface: #131f25;
-    --surface-alt: #18272e;
+    --surface: #18272e;
+    --surface-alt: #223540;
 
     --ink: #e6eeee;
     --ink-soft: #9db2b8;

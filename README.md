@@ -40,6 +40,7 @@ On a network that blocks device-to-device traffic (guest wifi, hotels), use `npx
 | `npx expo start` | Dev server + QR code |
 | `npx expo start --tunnel` | Same, routed through Expo's servers for hostile networks |
 | `npm run typecheck` | `tsc --noEmit` |
+| `npm run check:tokens` | Verify the app and site design tokens still match |
 | `npm run lint` | ESLint |
 | `npm run reset-project` | Blank out the template example screens |
 

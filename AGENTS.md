@@ -39,6 +39,10 @@ invisible to `/theme`, so nobody catches it until a user does.
    pick a value that actually works on a dark ground.
 4. **Check both schemes before calling UI done.** Open `/theme` (dev link on the home screen) and
    flip the phone via Control Center.
+5. **`src/constants/theme.ts` is the source of truth; `web/app/globals.css` mirrors it.** Change
+   a colour in both, then run `npm run check:tokens` — it fails on any mismatch. They have
+   drifted once already, by a few percent lightness on two surfaces: invisible in isolation,
+   annoying to reconcile later.
 
 ### What each group is for
 
