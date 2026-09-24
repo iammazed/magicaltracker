@@ -15,19 +15,30 @@ export function RampRule({ className = "" }: { className?: string }) {
   );
 }
 
+/**
+ * Twilight in both themes, like `.sky`. The wordmark is gold on white, which
+ * needs a dark ground to be legible at all — putting the bar on twilight is
+ * what lets that treatment be the standard rather than a hero-only variant.
+ */
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-ground/85 backdrop-blur-md">
+    <header className="sky-bar sticky top-0 z-40">
       <RampRule />
-      <nav className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-3.5">
+      <nav className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-3">
         <Link href="/" aria-label="MagicalTracker home" className="py-1">
           <Wordmark size="sm" />
         </Link>
         <div className="flex items-center gap-5 text-sm">
-          <Link href="/#features" className="text-ink-soft transition-colors hover:text-ink">
+          <Link
+            href="/#features"
+            className="text-white/70 transition-colors hover:text-white"
+          >
             Features
           </Link>
-          <Link href="/support" className="text-ink-soft transition-colors hover:text-ink">
+          <Link
+            href="/support"
+            className="text-white/70 transition-colors hover:text-white"
+          >
             Support
           </Link>
         </div>

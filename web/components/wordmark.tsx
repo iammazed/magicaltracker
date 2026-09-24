@@ -30,12 +30,16 @@ const SCRIPT_EM = 1.111;
 export function Wordmark({
   size = "sm",
   className = "",
-  scriptClass = "text-accent",
-  restClass = "text-ink",
+  scriptClass = "text-gold-on-dark",
+  restClass = "text-white",
 }: {
   size?: keyof typeof SIZES;
   className?: string;
-  /** Override for dark grounds — e.g. "text-gold". */
+  /**
+   * Defaults are gold + white, which require a dark ground. The header and
+   * footer both sit on twilight for exactly this reason — on --ground the
+   * white would be invisible and the gold would fail contrast.
+   */
   scriptClass?: string;
   restClass?: string;
 }) {

@@ -89,6 +89,20 @@ correct for a script.
 If either face is ever swapped, **re-measure** rather than reusing the number.
 Sizes are written in `em` off the wrapper so the ratios stay readable.
 
+**The wordmark is gold + white, always.** That treatment needs a dark ground,
+so the site header and footer both sit on twilight (`.sky-bar` and `.sky`),
+which are dark in *both* themes. Never put the wordmark on `--ground` or
+`--surface` — the white becomes invisible and the gold fails contrast.
+
+Two contrast rules follow from that, and both are measured:
+
+- Use **`--gold-on-dark` (#E5B45F), not `--gold`**, on `.sky` and `.sky-bar`.
+  `--gold` flips to `#B07818` in light mode and renders near-brown on twilight.
+- **White text on twilight needs at least 70% opacity.** The lightest point of
+  the gradient is `#1A596E`; white at 0.70 gives 4.73:1, and 0.65 gives 4.33:1,
+  which fails AA. Do not reach for `/50` or `/45` because it "looks right" —
+  it does not pass.
+
 The **app icon, favicon and splash are the Berkshire Swash `M` alone**, in gold
 on the twilight gradient — the same initial that opens the wordmark, so the
 browser tab, the home screen and the logo are visibly one mark. Regenerate them
