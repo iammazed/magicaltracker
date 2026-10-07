@@ -238,6 +238,15 @@ diffable, and reviewable; the database is downstream of them.
 - **Imports upsert, never delete.** A truncated CSV cannot wipe the catalog. Rows in the database
   with no CSV match are reported as orphans for you to remove deliberately.
 
+**Catalog scope is decided — do not widen it without being asked.** A venue belongs in
+`venues.csv` if a non-guest can book a table there, regardless of who owns the building;
+guest-only pool bars and club lounges are out. `resorts.csv` is Disney-owned resorts plus the
+Swan, Dolphin and Swan Reserve, and nothing off Walt Disney World property — the Good Neighbor
+programme is explicitly out of scope. Adding a resort adds it to the passport denominator and
+makes 100% harder for every user, which is why Shades of Green (US military eligibility only)
+must never be added without an `is_disney_owned` flag to exclude it from coverage. Full reasoning
+in `data/README.md`.
+
 Some fields are functionally load-bearing rather than descriptive: the eleven World Showcase
 pavilion slugs drive Drinking/Snacking Around the World, and `transport` on resorts drives the
 Transportation Challenge. Wrong value, unearnable badge.

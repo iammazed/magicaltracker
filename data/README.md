@@ -49,6 +49,53 @@ survivable — in which case skip steps 1 through 4 entirely.
 On Windows, turn on **File name extensions** in Explorer's View menu before renaming downloads.
 With extensions hidden, typing `resorts.csv` as the new name produces `resorts.csv.csv`.
 
+## What belongs in the catalog
+
+Two different questions, with two different answers.
+
+### Venues — can a non-guest book a table?
+
+**If anyone can reserve or walk up, it belongs in `venues.csv`.** Ownership of the building is
+irrelevant. That includes restaurants at non-Disney hotels on Walt Disney World property — the
+character breakfast at Four Seasons Resort Orlando qualifies, as do the restaurants at the Swan,
+Dolphin and Swan Reserve.
+
+**Excluded:** venues only registered guests can use — resort pool bars, club-level lounges, and
+hotel restaurants that turn away non-guests. Nobody else can log them, so they would only inflate
+coverage denominators.
+
+A venue at a hotel that is not in `resorts.csv` is fine. Leave `resort_id` blank and set
+`area_id` to the resort area it sits in; `resort_id` is optional precisely for this.
+
+### Resorts — on Walt Disney World property?
+
+`resorts.csv` is currently **Disney-owned resorts plus the Swan, Dolphin and Swan Reserve**,
+which are Marriott-operated but sit on property, use Disney transportation, and are walkable to
+two parks.
+
+**Out of scope entirely:** the Good Neighbor programme. Those hotels are off property, have no
+Disney transportation, and run to the hundreds. Nothing off property goes in this file.
+
+**Deliberately not added yet:** Four Seasons Resort Orlando, Shades of Green, and the Disney
+Springs Resort Area hotels. All are on property, so a future decision could bring them in — but
+they are not needed just to host a venue, and they would distort the resort passport. See below.
+
+### Why the resort line matters
+
+The passport asks "stayed at what percentage of resorts". Anything in `resorts.csv` is in that
+denominator, so adding a resort makes 100% harder for everyone.
+
+**Shades of Green is the clearest case.** It is run by the US Department of Defense for service
+members, retirees and some DoD-affiliated civilians — most people are not *eligible* to stay
+there, not merely unwilling. A denominator containing it can never be completed.
+
+If on-property non-Disney hotels are ever added, they need a flag (`is_disney_owned` or similar)
+and coverage must count only Disney-owned rows. Until then, keeping them out keeps the maths
+honest.
+
+Note that the Swan, Dolphin and Swan Reserve are already in and already count. They carry
+`tier: deluxe`, which is our classification — Disney does not assign them a tier at all.
+
 ## Workflow per row
 
 1. Find the venue on disneyworld.com/dining.
