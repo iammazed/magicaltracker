@@ -20,7 +20,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 export const DATABASE_NAME = 'magicaltracker.db';
 
 /** Bump when the schema below changes, and add a matching step in migrate(). */
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 export async function migrate(db: SQLiteDatabase) {
   // WAL keeps reads fast while a write is in flight, which matters when the
@@ -54,8 +54,43 @@ export async function migrate(db: SQLiteDatabase) {
     version = 1;
   }
 
+  if (version < 2) {
+    // A stay has a range, not a date. Check-out is nullable so someone can
+    // log a stay they are currently on.
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS stays (
+        id         TEXT PRIMARY KEY NOT NULL,
+        resort_id  TEXT NOT NULL,
+        check_in   TEXT NOT NULL,          -- YYYY-MM-DD
+        check_out  TEXT,                   -- null while mid-stay
+        rating     INTEGER,
+        room_type  TEXT,
+        note       TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        synced_at  TEXT
+      );
+      CREATE INDEX IF NOT EXISTS stays_resort_idx ON stays (resort_id);
+      CREATE INDEX IF NOT EXISTS stays_date_idx   ON stays (check_in DESC);
+    `);
+    version = 2;
+  }
+
   await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
 }
+
+export type Stay = {
+  id: string;
+  resort_id: string;
+  check_in: string;
+  check_out: string | null;
+  rating: number | null;
+  room_type: string | null;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+  synced_at: string | null;
+};
 
 export type Visit = {
   id: string;

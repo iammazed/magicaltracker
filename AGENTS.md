@@ -208,6 +208,15 @@ the server, so sync is "send everything where synced_at is null" rather than a g
 per-screen hook means the log-visit modal saves, refreshes its private copy, and every screen
 behind it keeps showing stale data. One store, every screen subscribed.
 
+**Passport denominators have two exclusions, and both exist so 100% stays reachable.** Events are
+out — a seasonal dessert party must not make a park uncompletable for someone who visits in June.
+Permanently-closed venues are out — you cannot eat somewhere that no longer exists. Resort
+coverage counts only `ownership = 'disney-owned'`: Shades of Green is restricted to US military
+eligibility, and partner hotels are a different product.
+
+**Pavilion challenges count pavilions covered, not venues visited.** A drink at either Mexico bar
+completes Mexico. `require: all` over the tagged venues would demand all 47 bars.
+
 Filtering and search happen **in memory**. The catalog is ~400 rows and already loaded, so a
 round trip per keystroke would be slower and would break offline.
 

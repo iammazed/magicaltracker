@@ -8,7 +8,7 @@ import {
   useState,
 } from 'react';
 
-import { todayISO, type Visit } from '@/lib/local-db';
+import { todayISO, type Stay, type Visit } from '@/lib/local-db';
 
 /**
  * The visit log, shared across the whole app.
@@ -32,10 +32,24 @@ type VisitsValue = {
   visits: Visit[];
   byVenue: Map<string, VenueVisitSummary>;
   visitedCount: number;
+  stays: Stay[];
+  byResort: Map<string, { count: number; latest: Stay | null }>;
+  stayedCount: number;
   loading: boolean;
   addVisit: (input: AddVisitInput) => Promise<void>;
   deleteVisit: (id: string) => Promise<void>;
+  addStay: (input: AddStayInput) => Promise<void>;
+  deleteStay: (id: string) => Promise<void>;
   refresh: () => Promise<void>;
+};
+
+export type AddStayInput = {
+  resortId: string;
+  checkIn?: string;
+  checkOut?: string | null;
+  rating?: number | null;
+  roomType?: string | null;
+  note?: string | null;
 };
 
 export type AddVisitInput = {
@@ -60,13 +74,20 @@ function uuid(): string {
 export function VisitsProvider({ children }: { children: React.ReactNode }) {
   const db = useSQLiteContext();
   const [visits, setVisits] = useState<Visit[]>([]);
+  const [stays, setStays] = useState<Stay[]>([]);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    const rows = await db.getAllAsync<Visit>(
-      'SELECT * FROM visits ORDER BY visited_on DESC, created_at DESC',
-    );
-    setVisits(rows);
+    const [v, s] = await Promise.all([
+      db.getAllAsync<Visit>(
+        'SELECT * FROM visits ORDER BY visited_on DESC, created_at DESC',
+      ),
+      db.getAllAsync<Stay>(
+        'SELECT * FROM stays ORDER BY check_in DESC, created_at DESC',
+      ),
+    ]);
+    setVisits(v);
+    setStays(s);
     setLoading(false);
   }, [db]);
 
@@ -105,6 +126,37 @@ export function VisitsProvider({ children }: { children: React.ReactNode }) {
     [db, refresh],
   );
 
+  const addStay = useCallback(
+    async (input: AddStayInput) => {
+      const now = new Date().toISOString();
+      await db.runAsync(
+        `INSERT INTO stays
+           (id, resort_id, check_in, check_out, rating, room_type, note,
+            created_at, updated_at, synced_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
+        uuid(),
+        input.resortId,
+        input.checkIn ?? todayISO(),
+        input.checkOut ?? null,
+        input.rating ?? null,
+        input.roomType ?? null,
+        input.note ?? null,
+        now,
+        now,
+      );
+      await refresh();
+    },
+    [db, refresh],
+  );
+
+  const deleteStay = useCallback(
+    async (id: string) => {
+      await db.runAsync('DELETE FROM stays WHERE id = ?', id);
+      await refresh();
+    },
+    [db, refresh],
+  );
+
   /** venue_id -> { count, latest }. Built once per change, so a 394-row list
    *  does not run 394 lookups on every render. */
   const byVenue = useMemo(() => {
@@ -118,17 +170,32 @@ export function VisitsProvider({ children }: { children: React.ReactNode }) {
     return map;
   }, [visits]);
 
+  const byResort = useMemo(() => {
+    const map = new Map<string, { count: number; latest: Stay | null }>();
+    for (const s of stays) {
+      const cur = map.get(s.resort_id);
+      if (!cur) map.set(s.resort_id, { count: 1, latest: s });
+      else cur.count += 1;
+    }
+    return map;
+  }, [stays]);
+
   const value = useMemo<VisitsValue>(
     () => ({
       visits,
       byVenue,
       visitedCount: byVenue.size,
+      stays,
+      byResort,
+      stayedCount: byResort.size,
       loading,
       addVisit,
       deleteVisit,
+      addStay,
+      deleteStay,
       refresh,
     }),
-    [visits, byVenue, loading, addVisit, deleteVisit, refresh],
+    [visits, byVenue, stays, byResort, loading, addVisit, deleteVisit, addStay, deleteStay, refresh],
   );
 
   return <VisitsContext.Provider value={value}>{children}</VisitsContext.Provider>;
@@ -138,6 +205,15 @@ export function useVisits(): VisitsValue {
   const ctx = useContext(VisitsContext);
   if (!ctx) throw new Error('useVisits must be used inside <VisitsProvider>');
   return ctx;
+}
+
+export function useResortStays(resortId: string) {
+  const { stays, addStay, deleteStay } = useVisits();
+  const forResort = useMemo(
+    () => stays.filter((s) => s.resort_id === resortId),
+    [stays, resortId],
+  );
+  return { stays: forResort, latest: forResort[0] ?? null, addStay, deleteStay };
 }
 
 export function useVenueVisits(venueId: string) {

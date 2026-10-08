@@ -1,253 +1,254 @@
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { useMemo } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ProgressBar } from '@/components/progress-bar';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { VenueRow } from '@/components/venue-row';
-import { BottomTabInset, Radius, Spacing } from '@/constants/theme';
+import { BottomTabInset, BrandRamp, Radius, Spacing } from '@/constants/theme';
+import { usePassport } from '@/hooks/use-passport';
+import { useResorts } from '@/hooks/use-resorts';
 import { useTheme } from '@/hooks/use-theme';
-import { useAreas, useFilteredVenues, useVenues } from '@/hooks/use-venues';
+import { useVenues } from '@/hooks/use-venues';
 import { useVisits } from '@/hooks/use-visits';
 
-/**
- * Chip labels. The full area names ("ESPN Wide World of Sports Resort Area")
- * are right for a detail screen and far too long for a filter chip.
- */
-const SHORT_AREA: Record<string, string> = {
-  'magic-kingdom': 'Magic Kingdom',
-  epcot: 'EPCOT',
-  'hollywood-studios': 'Hollywood Studios',
-  'animal-kingdom': 'Animal Kingdom',
-  'disney-springs': 'Disney Springs',
-  'typhoon-lagoon': 'Typhoon Lagoon',
-  'blizzard-beach': 'Blizzard Beach',
-  boardwalk: 'BoardWalk',
-  'wide-world-of-sports': 'ESPN Sports',
-  'mk-resort-area': 'MK Resorts',
-  'epcot-resort-area': 'EPCOT Resorts',
-  'ak-resort-area': 'AK Resorts',
-  'springs-resort-area': 'Springs Resorts',
-  'sports-resort-area': 'Sports Resorts',
-};
-
-export default function CatalogScreen() {
+export default function HomeScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const { data: venues, loading, error, reload } = useVenues();
-  const { byVenue, visitedCount } = useVisits();
-  const { data: areas } = useAreas();
+  const { data: venues } = useVenues();
+  const { data: resorts } = useResorts();
+  const { visits, stays } = useVisits();
+  const { loading, overall, byArea, resortCoverage, challenges } = usePassport();
 
-  const [search, setSearch] = useState('');
-  const [areaId, setAreaId] = useState<string | null>(null);
-
-  const areaName = useMemo(
-    () => Object.fromEntries(areas.map((a) => [a.id, a.name])),
-    [areas],
+  const venueName = useMemo(
+    () => Object.fromEntries(venues.map((v) => [v.id, v.name])),
+    [venues],
+  );
+  const resortName = useMemo(
+    () => Object.fromEntries(resorts.map((r) => [r.id, r.name])),
+    [resorts],
   );
 
-  const filtered = useFilteredVenues(venues, { search, areaId });
+  /** The five most recent things logged, of either kind. */
+  const recent = useMemo(() => {
+    const items = [
+      ...visits.map((v) => ({
+        key: v.id,
+        date: v.visited_on,
+        title: venueName[v.venue_id] ?? v.venue_id,
+        kind: 'Dining' as const,
+        rating: v.rating,
+      })),
+      ...stays.map((s) => ({
+        key: s.id,
+        date: s.check_in,
+        title: resortName[s.resort_id] ?? s.resort_id,
+        kind: 'Resort' as const,
+        rating: s.rating,
+      })),
+    ];
+    return items.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+  }, [visits, stays, venueName, resortName]);
 
-  /** Only offer areas that actually contain something. */
-  const areaChips = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const v of venues) counts.set(v.area_id, (counts.get(v.area_id) ?? 0) + 1);
-    return areas
-      .filter((a) => counts.has(a.id))
-      .map((a) => ({ ...a, count: counts.get(a.id) ?? 0 }));
-  }, [venues, areas]);
+  const nextChallenge = challenges
+    .filter((c) => !c.complete && c.earned > 0)
+    .sort((a, b) => b.earned / b.target - a.earned / a.target)[0];
+
+  if (loading) {
+    return (
+      <ThemedView style={styles.center}>
+        <ActivityIndicator color={theme.accent} />
+      </ThemedView>
+    );
+  }
+
+  const nothingLogged = visits.length === 0 && stays.length === 0;
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView edges={['top']} style={styles.safe}>
-        <View style={styles.header}>
-          <ThemedText type="title" style={styles.heading}>
-            Dining
-          </ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {loading && venues.length === 0
-              ? 'Loading…'
-              : visitedCount > 0
-                ? `${visitedCount} of ${venues.length} visited` +
-                  (filtered.length !== venues.length ? `  ·  ${filtered.length} shown` : '')
-                : `${venues.length} places`}
-          </ThemedText>
-        </View>
-
-        <TextInput
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Search restaurants and lounges"
-          placeholderTextColor={theme.textFaint}
-          autoCorrect={false}
-          clearButtonMode="while-editing"
-          style={[
-            styles.search,
-            {
-              backgroundColor: theme.backgroundElement,
-              borderColor: theme.border,
-              color: theme.text,
-            },
-          ]}
-        />
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chips}
-          // A horizontal ScrollView in a flex column has no intrinsic height
-          // and will fight the list below it for space. flexGrow 0 makes it
-          // size to its content instead.
-          style={styles.chipScroll}
-        >
-          <Chip
-            label="All"
-            active={areaId === null}
-            onPress={() => setAreaId(null)}
-          />
-          {areaChips.map((a) => (
-            <Chip
-              key={a.id}
-              label={`${SHORT_AREA[a.id] ?? a.name}  ${a.count}`}
-              active={areaId === a.id}
-              onPress={() => setAreaId(areaId === a.id ? null : a.id)}
-            />
-          ))}
-        </ScrollView>
-
-        {error ? (
-          <Empty
-            title="Could not load the catalog"
-            body={error}
-            actionLabel="Try again"
-            onAction={reload}
-          />
-        ) : loading && venues.length === 0 ? (
-          <View style={styles.center}>
-            <ActivityIndicator color={theme.accent} />
+        <ScrollView contentContainerStyle={styles.scroll}>
+          <View style={styles.header}>
+            <ThemedText type="title" style={styles.wordmark}>
+              Magical<ThemedText style={[styles.wordmarkTail, { color: theme.text }]}>Tracker</ThemedText>
+            </ThemedText>
           </View>
-        ) : filtered.length === 0 ? (
-          <Empty
-            title="Nothing matches"
-            body={
-              search
-                ? `No places match “${search}”.`
-                : 'No places in this area yet.'
-            }
-            actionLabel={search || areaId ? 'Clear filters' : undefined}
-            onAction={() => {
-              setSearch('');
-              setAreaId(null);
-            }}
-          />
-        ) : (
-          <FlatList
-            style={styles.listFill}
-            data={filtered}
-            keyExtractor={(v) => v.id}
-            renderItem={({ item }) => (
-              <VenueRow
-                venue={item}
-                areaName={areaName[item.area_id] ?? item.area_id}
-                visitCount={byVenue.get(item.id)?.count ?? 0}
-                onPress={() =>
-                  router.push({ pathname: '/venue/[id]', params: { id: item.id } })
-                }
-              />
-            )}
-            contentContainerStyle={styles.list}
-            keyboardDismissMode="on-drag"
-            refreshControl={
-              <RefreshControl
-                refreshing={loading && venues.length > 0}
-                onRefresh={reload}
-                tintColor={theme.accent}
-              />
-            }
-          />
-        )}
+
+          {nothingLogged ? (
+            <View
+              style={[
+                styles.card,
+                { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+              ]}
+            >
+              <ThemedText type="smallBold">Start your passport</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {venues.length} places to eat and {resorts.length} resorts are
+                loaded. Log somewhere you have already been and the passport
+                starts filling in.
+              </ThemedText>
+              <Pressable
+                onPress={() => router.push('/dining')}
+                accessibilityRole="button"
+                style={[styles.primary, { backgroundColor: theme.accent }]}
+              >
+                <ThemedText type="smallBold" style={{ color: theme.onAccent }}>
+                  Browse dining
+                </ThemedText>
+              </Pressable>
+            </View>
+          ) : (
+            <>
+              {/* ── Headline stats ───────────────────────────────── */}
+              <View style={styles.statRow}>
+                <Stat value={overall.visited} total={overall.total} label="Places eaten" />
+                <Stat
+                  value={resortCoverage.visited}
+                  total={resortCoverage.total}
+                  label="Resorts stayed"
+                />
+                <Stat
+                  value={challenges.filter((c) => c.complete).length}
+                  total={challenges.length}
+                  label="Challenges"
+                  gold
+                />
+              </View>
+
+              {/* ── Top parks ────────────────────────────────────── */}
+              <Section
+                title="Your progress"
+                action="See all"
+                onAction={() => router.push('/passport')}
+              >
+                {byArea.slice(0, 4).map((a, i) => (
+                  <ProgressBar
+                    key={a.id}
+                    label={a.label}
+                    visited={a.visited}
+                    total={a.total}
+                    tone={BrandRamp[i % BrandRamp.length]}
+                  />
+                ))}
+              </Section>
+
+              {/* ── Nearest challenge ────────────────────────────── */}
+              {nextChallenge ? (
+                <Section title="Closest challenge">
+                  <Pressable
+                    onPress={() => router.push('/passport')}
+                    accessibilityRole="button"
+                    style={[
+                      styles.card,
+                      { backgroundColor: theme.goldSurface, borderColor: theme.gold },
+                    ]}
+                  >
+                    <ThemedText type="smallBold">{nextChallenge.title}</ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {nextChallenge.earned} of {nextChallenge.target} ·{' '}
+                      {nextChallenge.target - nextChallenge.earned} to go
+                    </ThemedText>
+                    <ProgressBar
+                      label=""
+                      visited={nextChallenge.earned}
+                      total={nextChallenge.target}
+                      tone="brandViolet"
+                    />
+                  </Pressable>
+                </Section>
+              ) : null}
+
+              {/* ── Recent ───────────────────────────────────────── */}
+              <Section title="Recently logged">
+                {recent.map((r) => (
+                  <View
+                    key={r.key}
+                    style={[styles.recentRow, { borderColor: theme.borderSoft }]}
+                  >
+                    <View style={styles.recentMain}>
+                      <ThemedText type="small" numberOfLines={1}>
+                        {r.title}
+                      </ThemedText>
+                      <ThemedText type="small" themeColor="textFaint">
+                        {r.kind} · {r.date}
+                      </ThemedText>
+                    </View>
+                    {r.rating ? (
+                      <ThemedText type="small" style={{ color: theme.gold }}>
+                        {'★'.repeat(r.rating)}
+                      </ThemedText>
+                    ) : null}
+                  </View>
+                ))}
+              </Section>
+            </>
+          )}
+        </ScrollView>
       </SafeAreaView>
     </ThemedView>
   );
 }
 
-function Chip({
+function Stat({
+  value,
+  total,
   label,
-  active,
-  onPress,
+  gold,
 }: {
+  value: number;
+  total: number;
   label: string;
-  active: boolean;
-  onPress: () => void;
+  gold?: boolean;
 }) {
   const theme = useTheme();
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityState={{ selected: active }}
+    <View
       style={[
-        styles.chip,
-        {
-          backgroundColor: active ? theme.accent : theme.backgroundElement,
-          borderColor: active ? theme.accent : theme.border,
-        },
+        styles.stat,
+        { backgroundColor: theme.backgroundElement, borderColor: theme.border },
       ]}
     >
-      <ThemedText
-        type="small"
-        numberOfLines={1}
-        style={{ color: active ? theme.onAccent : theme.textSecondary }}
-      >
+      <ThemedText style={[styles.statValue, { color: gold ? theme.gold : theme.accent }]}>
+        {value}
+      </ThemedText>
+      <ThemedText type="small" themeColor="textFaint">
+        of {total}
+      </ThemedText>
+      <ThemedText type="small" themeColor="textSecondary" style={styles.statLabel}>
         {label}
       </ThemedText>
-    </Pressable>
+    </View>
   );
 }
 
-function Empty({
+function Section({
   title,
-  body,
-  actionLabel,
+  action,
   onAction,
+  children,
 }: {
   title: string;
-  body: string;
-  actionLabel?: string;
+  action?: string;
   onAction?: () => void;
+  children: React.ReactNode;
 }) {
   const theme = useTheme();
   return (
-    <View style={styles.center}>
-      <ThemedText type="smallBold">{title}</ThemedText>
-      <ThemedText
-        type="small"
-        themeColor="textSecondary"
-        style={styles.emptyBody}
-      >
-        {body}
-      </ThemedText>
-      {actionLabel && onAction ? (
-        <Pressable
-          onPress={onAction}
-          accessibilityRole="button"
-          style={[styles.action, { backgroundColor: theme.accent }]}
-        >
-          <ThemedText type="small" style={{ color: theme.onAccent }}>
-            {actionLabel}
-          </ThemedText>
-        </Pressable>
-      ) : null}
+    <View style={styles.section}>
+      <View style={styles.sectionHead}>
+        <ThemedText type="small" themeColor="textFaint" style={styles.sectionTitle}>
+          {title.toUpperCase()}
+        </ThemedText>
+        {action && onAction ? (
+          <Pressable onPress={onAction} accessibilityRole="button" hitSlop={8}>
+            <ThemedText type="small" style={{ color: theme.accent }}>
+              {action}
+            </ThemedText>
+          </Pressable>
+        ) : null}
+      </View>
+      <View style={styles.sectionBody}>{children}</View>
     </View>
   );
 }
@@ -255,53 +256,49 @@ function Empty({
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safe: { flex: 1 },
-  header: {
-    paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.two,
-    paddingBottom: Spacing.two,
-    gap: 2,
-  },
-  heading: { fontSize: 34, lineHeight: 40 },
-  search: {
-    marginHorizontal: Spacing.three,
-    paddingHorizontal: Spacing.three,
-    height: 42,
-    borderRadius: Radius.medium,
-    borderWidth: StyleSheet.hairlineWidth,
-    fontSize: 16,
-  },
-  chipScroll: { flexGrow: 0, flexShrink: 0 },
-  chips: {
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.three,
-    alignItems: 'center',
-  },
-  chip: {
-    paddingHorizontal: Spacing.three,
-    height: 34,
-    justifyContent: 'center',
-    borderRadius: Radius.pill,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  listFill: { flex: 1 },
-  list: {
-    gap: Spacing.two,
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  scroll: {
     paddingHorizontal: Spacing.three,
     paddingBottom: BottomTabInset + Spacing.five,
+    gap: Spacing.four,
   },
-  center: {
+  header: { paddingTop: Spacing.two },
+  wordmark: { fontSize: 30, lineHeight: 36 },
+  wordmarkTail: { fontSize: 30, lineHeight: 36, fontWeight: '600' },
+  statRow: { flexDirection: 'row', gap: Spacing.two },
+  stat: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.two,
+    borderRadius: Radius.large,
+    borderWidth: StyleSheet.hairlineWidth,
+    gap: 1,
+  },
+  statValue: { fontSize: 28, lineHeight: 32, fontWeight: '700' },
+  statLabel: { textAlign: 'center' },
+  section: { gap: Spacing.two },
+  sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  sectionTitle: { letterSpacing: 1, fontSize: 11, fontWeight: '700' },
+  sectionBody: { gap: Spacing.three },
+  card: {
+    padding: Spacing.three,
+    borderRadius: Radius.large,
+    borderWidth: StyleSheet.hairlineWidth,
     gap: Spacing.two,
-    padding: Spacing.four,
   },
-  emptyBody: { textAlign: 'center', maxWidth: 280 },
-  action: {
-    marginTop: Spacing.two,
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two,
-    borderRadius: Radius.pill,
+  primary: {
+    marginTop: Spacing.one,
+    paddingVertical: Spacing.three,
+    borderRadius: Radius.medium,
+    alignItems: 'center',
   },
+  recentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    paddingBottom: Spacing.two,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  recentMain: { flex: 1, gap: 1 },
 });

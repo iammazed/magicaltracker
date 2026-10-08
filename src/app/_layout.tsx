@@ -27,9 +27,14 @@ export default function RootLayout() {
           <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="venue/[id]" options={{ title: '' }} />
+            <Stack.Screen name="resort/[id]" options={{ title: '' }} />
             <Stack.Screen
               name="log-visit"
               options={{ title: 'Log a visit', presentation: 'modal' }}
+            />
+            <Stack.Screen
+              name="log-stay"
+              options={{ title: 'Log a stay', presentation: 'modal' }}
             />
             <Stack.Screen
               name="theme"
