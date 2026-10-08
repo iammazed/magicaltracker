@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -17,10 +18,13 @@ import { VenueRow } from '@/components/venue-row';
 import { BottomTabInset, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAreas, useFilteredVenues, useVenues } from '@/hooks/use-venues';
+import { useVisits } from '@/hooks/use-visits';
 
 export default function CatalogScreen() {
   const theme = useTheme();
+  const router = useRouter();
   const { data: venues, loading, error, reload } = useVenues();
+  const { byVenue, visitedCount } = useVisits();
   const { data: areas } = useAreas();
 
   const [search, setSearch] = useState('');
@@ -52,7 +56,10 @@ export default function CatalogScreen() {
           <ThemedText type="small" themeColor="textSecondary">
             {loading && venues.length === 0
               ? 'Loading…'
-              : `${filtered.length} of ${venues.length} places`}
+              : visitedCount > 0
+                ? `${visitedCount} of ${venues.length} visited` +
+                  (filtered.length !== venues.length ? `  ·  ${filtered.length} shown` : '')
+                : `${venues.length} places`}
           </ThemedText>
         </View>
 
@@ -123,7 +130,14 @@ export default function CatalogScreen() {
             data={filtered}
             keyExtractor={(v) => v.id}
             renderItem={({ item }) => (
-              <VenueRow venue={item} areaName={areaName[item.area_id] ?? item.area_id} />
+              <VenueRow
+                venue={item}
+                areaName={areaName[item.area_id] ?? item.area_id}
+                visitCount={byVenue.get(item.id)?.count ?? 0}
+                onPress={() =>
+                  router.push({ pathname: '/venue/[id]', params: { id: item.id } })
+                }
+              />
             )}
             contentContainerStyle={styles.list}
             keyboardDismissMode="on-drag"

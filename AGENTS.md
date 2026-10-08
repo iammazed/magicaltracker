@@ -177,6 +177,16 @@ directly, that swap means rewriting every screen instead of one hook.
 at build time by matching the literal text, so `process.env['EXPO_PUBLIC_…']` or destructuring
 silently yields `undefined`. Editing `.env` also needs a full app reload, not just a refresh.
 
+**Visits live in on-device SQLite first** (`src/lib/local-db.ts`), and sync to Supabase once
+accounts exist. Guest mode is not a shortcut: forcing signup before anyone can log anything is
+the biggest install-to-active killer, and a write that needs the network fails in exactly the
+dead zones where people want to log a meal. Every row carries `synced_at`, null until it reaches
+the server, so sync is "send everything where synced_at is null" rather than a guess.
+
+**`useVisits` is a provider, not a plain hook.** Each `useState` call creates its own state, so a
+per-screen hook means the log-visit modal saves, refreshes its private copy, and every screen
+behind it keeps showing stale data. One store, every screen subscribed.
+
 Filtering and search happen **in memory**. The catalog is ~400 rows and already loaded, so a
 round trip per keystroke would be slower and would break offline.
 

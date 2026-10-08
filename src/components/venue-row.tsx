@@ -16,10 +16,13 @@ const SERVICE_LABEL: Record<string, string> = {
 export function VenueRow({
   venue,
   areaName,
+  visitCount = 0,
   onPress,
 }: {
   venue: VenueListItem;
   areaName: string;
+  /** How many times the user has logged this place. 0 = not visited. */
+  visitCount?: number;
   onPress?: () => void;
 }) {
   const theme = useTheme();
@@ -35,7 +38,10 @@ export function VenueRow({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${venue.name}, ${areaName}`}
+      accessibilityLabel={
+        `${venue.name}, ${areaName}` +
+        (visitCount ? `, visited ${visitCount} time${visitCount > 1 ? 's' : ''}` : '')
+      }
       style={({ pressed }) => [
         styles.row,
         {
@@ -46,6 +52,13 @@ export function VenueRow({
     >
       <View style={styles.main}>
         <View style={styles.titleLine}>
+          {visitCount > 0 ? (
+            <View style={[styles.tick, { backgroundColor: theme.accent }]}>
+              <ThemedText style={[styles.tickMark, { color: theme.onAccent }]}>
+                {visitCount > 1 ? visitCount : '✓'}
+              </ThemedText>
+            </View>
+          ) : null}
           <ThemedText type="smallBold" numberOfLines={1} style={styles.name}>
             {venue.name}
           </ThemedText>
@@ -98,6 +111,14 @@ const styles = StyleSheet.create({
     borderRadius: Radius.small,
   },
   badgeText: { fontSize: 9, fontWeight: '700', letterSpacing: 0.6 },
+  tick: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tickMark: { fontSize: 11, fontWeight: '700', lineHeight: 14 },
   status: {
     paddingHorizontal: Spacing.two,
     paddingVertical: 2,

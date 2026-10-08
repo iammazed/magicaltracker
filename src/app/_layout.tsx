@@ -1,8 +1,11 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { SQLiteProvider } from 'expo-sqlite';
 import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { VisitsProvider } from '@/hooks/use-visits';
+import { DATABASE_NAME, migrate } from '@/lib/local-db';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -17,15 +20,24 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="theme"
-          options={{ title: 'Design tokens', presentation: 'modal' }}
-        />
-      </Stack>
-    </ThemeProvider>
+    <SQLiteProvider databaseName={DATABASE_NAME} onInit={migrate}>
+      <VisitsProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <AnimatedSplashOverlay />
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="venue/[id]" options={{ title: '' }} />
+            <Stack.Screen
+              name="log-visit"
+              options={{ title: 'Log a visit', presentation: 'modal' }}
+            />
+            <Stack.Screen
+              name="theme"
+              options={{ title: 'Design tokens', presentation: 'modal' }}
+            />
+          </Stack>
+        </ThemeProvider>
+      </VisitsProvider>
+    </SQLiteProvider>
   );
 }
