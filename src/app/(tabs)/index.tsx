@@ -20,6 +20,27 @@ import { useTheme } from '@/hooks/use-theme';
 import { useAreas, useFilteredVenues, useVenues } from '@/hooks/use-venues';
 import { useVisits } from '@/hooks/use-visits';
 
+/**
+ * Chip labels. The full area names ("ESPN Wide World of Sports Resort Area")
+ * are right for a detail screen and far too long for a filter chip.
+ */
+const SHORT_AREA: Record<string, string> = {
+  'magic-kingdom': 'Magic Kingdom',
+  epcot: 'EPCOT',
+  'hollywood-studios': 'Hollywood Studios',
+  'animal-kingdom': 'Animal Kingdom',
+  'disney-springs': 'Disney Springs',
+  'typhoon-lagoon': 'Typhoon Lagoon',
+  'blizzard-beach': 'Blizzard Beach',
+  boardwalk: 'BoardWalk',
+  'wide-world-of-sports': 'ESPN Sports',
+  'mk-resort-area': 'MK Resorts',
+  'epcot-resort-area': 'EPCOT Resorts',
+  'ak-resort-area': 'AK Resorts',
+  'springs-resort-area': 'Springs Resorts',
+  'sports-resort-area': 'Sports Resorts',
+};
+
 export default function CatalogScreen() {
   const theme = useTheme();
   const router = useRouter();
@@ -84,6 +105,10 @@ export default function CatalogScreen() {
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.chips}
+          // A horizontal ScrollView in a flex column has no intrinsic height
+          // and will fight the list below it for space. flexGrow 0 makes it
+          // size to its content instead.
+          style={styles.chipScroll}
         >
           <Chip
             label="All"
@@ -93,7 +118,7 @@ export default function CatalogScreen() {
           {areaChips.map((a) => (
             <Chip
               key={a.id}
-              label={`${a.name} (${a.count})`}
+              label={`${SHORT_AREA[a.id] ?? a.name}  ${a.count}`}
               active={areaId === a.id}
               onPress={() => setAreaId(areaId === a.id ? null : a.id)}
             />
@@ -127,6 +152,7 @@ export default function CatalogScreen() {
           />
         ) : (
           <FlatList
+            style={styles.listFill}
             data={filtered}
             keyExtractor={(v) => v.id}
             renderItem={({ item }) => (
@@ -180,6 +206,7 @@ function Chip({
     >
       <ThemedText
         type="small"
+        numberOfLines={1}
         style={{ color: active ? theme.onAccent : theme.textSecondary }}
       >
         {label}
@@ -243,17 +270,21 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     fontSize: 16,
   },
+  chipScroll: { flexGrow: 0, flexShrink: 0 },
   chips: {
     gap: Spacing.two,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.three,
+    alignItems: 'center',
   },
   chip: {
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two - 2,
+    height: 34,
+    justifyContent: 'center',
     borderRadius: Radius.pill,
     borderWidth: StyleSheet.hairlineWidth,
   },
+  listFill: { flex: 1 },
   list: {
     gap: Spacing.two,
     paddingHorizontal: Spacing.three,
