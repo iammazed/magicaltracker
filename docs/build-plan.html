@@ -684,8 +684,11 @@ Postgres materialized view, refreshed hourly by pg_cron
       <pre><code><span class="cmt">// "Eaten at 50% of Magic Kingdom restaurants"</span>
 { <span class="str">"type"</span>: <span class="str">"venue_coverage"</span>, <span class="str">"scope"</span>: <span class="str">"area"</span>, <span class="str">"area_id"</span>: <span class="str">"mk"</span>, <span class="str">"threshold"</span>: 0.5 }
 
-<span class="cmt">// "Drinking Around the World" — all 11 World Showcase pavilions</span>
-{ <span class="str">"type"</span>: <span class="str">"venue_set"</span>, <span class="str">"tag"</span>: <span class="str">"world_showcase_bar"</span>, <span class="str">"require"</span>: <span class="str">"all"</span> }
+<span class="cmt">// "Drinking Around the World" — one tagged venue in each of the 11</span>
+<span class="cmt">// pavilions. NOT every tagged venue: that would be 47 bars.</span>
+{ <span class="str">"type"</span>: <span class="str">"sub_area_coverage"</span>, <span class="str">"area_id"</span>: <span class="str">"epcot"</span>,
+  <span class="str">"tag"</span>: <span class="str">"world-showcase-bar"</span>, <span class="str">"require"</span>: <span class="str">"all-of"</span>,
+  <span class="str">"sub_areas"</span>: [<span class="str">"mexico"</span>, <span class="str">"norway"</span>, … 9 more] }
 
 <span class="cmt">// "Transportation Challenge" — 4 modes within one trip</span>
 { <span class="str">"type"</span>: <span class="str">"trip_scoped_set"</span>, <span class="str">"field"</span>: <span class="str">"transport"</span>,

@@ -228,6 +228,19 @@ The eleven World Showcase pavilions are load-bearing: **Drinking Around the Worl
 **Snacking Around the World** are computed from them. If a pavilion slug is wrong, the
 achievement cannot be completed.
 
+Both achievements count **pavilions covered, not venues visited** — one tagged venue in each of
+the eleven is enough. So tag *every* qualifying venue, not one per country: someone who drinks
+at La Cava del Tequila and someone who drinks at Choza de Margarita have both done Mexico, and
+both must count.
+
+- `world-showcase-bar` — any World Showcase venue serving alcohol (47 rows)
+- `world-showcase-snack` — any you can grab food from without a sit-down meal: kiosks, carts,
+  snack stands, quick service (23 rows)
+
+Events count toward these. The event exclusion applies only to coverage *percentages*, where a
+seasonal party would make a park uncompletable; a tequila tasting in Mexico is unambiguously a
+drink in Mexico.
+
 ### `tags`
 
 Pipe-delimited. These drive achievements, so they are functional, not descriptive:
