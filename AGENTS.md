@@ -136,6 +136,18 @@ Sibling groups get laid out with flex `gap`, not per-element margins.
 | `data/` | Source-of-truth CSVs for the venue/resort catalog |
 | `docs/` | Planning docs |
 
+### Expo CLI reaches into web/
+
+Running `npx expo install` or similar from the repo root can rewrite
+`web/tsconfig.json` — it finds the file, assumes it belongs to an Expo project, adds
+`"extends": "expo/tsconfig.base"`, and reformats the JSON.
+
+**That change is always wrong.** `web/` is Next.js and must not inherit Expo's compiler
+settings. It does not break the build, which is exactly why it is easy to commit by accident.
+
+If `git status` shows `web/tsconfig.json` modified after an expo command you did not aim at the
+website, just `git checkout -- web/tsconfig.json`.
+
 ### Routing
 
 ```
