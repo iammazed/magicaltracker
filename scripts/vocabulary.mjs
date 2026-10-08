@@ -45,14 +45,15 @@ export const SUB_AREAS = {
   epcot: [
     'world-celebration', 'world-discovery', 'world-nature',
     'mexico', 'norway', 'china', 'germany', 'italy', 'american-adventure',
-    'japan', 'morocco', 'france', 'united-kingdom', 'canada',
+    'japan', 'morocco', 'france', 'united-kingdom', 'canada', 'outpost',
   ],
   'hollywood-studios': [
     'hollywood-blvd', 'echo-lake', 'commissary-lane', 'grand-avenue',
     'galaxys-edge', 'toy-story-land', 'sunset-blvd', 'animation-courtyard',
+    'pixar-plaza',
   ],
   'animal-kingdom': [
-    'oasis', 'discovery-island', 'pandora', 'africa',
+    'main-entrance', 'oasis', 'discovery-island', 'pandora', 'africa',
     'rafiki-planet-watch', 'asia', 'dinoland',
   ],
   'disney-springs': ['marketplace', 'the-landing', 'town-center', 'west-side'],
@@ -61,7 +62,7 @@ export const SUB_AREAS = {
 /** The eleven pavilions. Drinking/Snacking Around the World read these. */
 export const WORLD_SHOWCASE = [
   'mexico', 'norway', 'china', 'germany', 'italy', 'american-adventure',
-  'japan', 'morocco', 'france', 'united-kingdom', 'canada',
+  'japan', 'morocco', 'france', 'united-kingdom', 'canada', 'outpost',
 ];
 
 export const TAGS = [
@@ -69,12 +70,17 @@ export const TAGS = [
   'breakfast', 'lunch', 'dinner', 'mobile-order', 'outdoor-seating',
 ];
 
-export const TRANSPORT = ['monorail', 'skyliner', 'bus', 'boat', 'walk'];
+export const TRANSPORT = ['monorail', 'skyliner', 'bus', 'boat', 'walk', 'shuttle'];
 export const STATUS = ['open', 'seasonal', 'temporarily-closed', 'permanently-closed'];
 export const RESORT_TIERS = ['value', 'moderate', 'deluxe', 'villa', 'campground'];
-export const VENUE_KINDS = ['restaurant', 'lounge', 'snack', 'cart'];
+export const VENUE_KINDS = [
+  'restaurant', 'lounge', 'snack', 'cart', 'kiosk', 'food-truck', 'event',
+];
 export const SERVICE_TYPES = ['quick', 'table', 'lounge', 'snack'];
-export const DINING_STYLES = ['a-la-carte', 'buffet', 'family-style', 'prix-fixe'];
+export const DINING_STYLES = ['a-la-carte', 'buffet', 'family-style', 'prix-fixe', 'snack'];
+
+/** Who runs the hotel. Resort coverage counts only `disney-owned`. */
+export const OWNERSHIP = ['disney-owned', 'partner'];
 
 /** Walt Disney World property, generously bounded. Mirrored as a CHECK
  *  constraint in src/db/schema.ts — keep the two in sync. */
@@ -82,14 +88,27 @@ export const BOUNDS = { latMin: 28.28, latMax: 28.44, lngMin: -81.65, lngMax: -8
 
 export const VENUE_COLUMNS = [
   'id', 'name', 'destination_id', 'area_id', 'sub_area', 'resort_id', 'venue_kind',
-  'service_type', 'dining_style', 'cuisine', 'price_tier', 'accepts_reservations',
-  'is_character_dining', 'is_signature', 'status', 'lat', 'lng', 'menu_url',
-  'description', 'tags', 'verified_on', 'source_url',
+  'service_type', 'dining_style', 'cuisine', 'price_tier', 'reservations_recommended',
+  'is_character_dinner_dining', 'is_character_breakfast_dining', 'is_signature',
+  'status', 'lat', 'lng',
+  'dinner_menu_url', 'lunch_menu_url', 'breakfast_menu_url', 'snack_menu_url',
+  'lounge_menu_url',
+  'description', 'tags', 'keywords', 'verified_on', 'source_url',
+];
+
+/** Columns that hold a pipe-separated list rather than a single value. */
+export const MULTI_VALUE_COLUMNS = ['service_type', 'dining_style', 'tags', 'keywords'];
+
+/** Every meal-period menu column, so callers do not hard-code the list. */
+export const MENU_COLUMNS = [
+  'dinner_menu_url', 'lunch_menu_url', 'breakfast_menu_url', 'snack_menu_url',
+  'lounge_menu_url',
 ];
 
 export const RESORT_COLUMNS = [
   'id', 'name', 'destination_id', 'area_id', 'tier', 'transport', 'transport_notes',
-  'lat', 'lng', 'official_url', 'description', 'status', 'verified_on', 'source_url',
+  'ownership', 'lat', 'lng', 'official_url', 'description', 'status', 'verified_on',
+  'source_url',
 ];
 
 /* ── CSV parsing ──────────────────────────────────────────────────────── */

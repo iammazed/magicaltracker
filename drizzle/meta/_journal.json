@@ -15,6 +15,20 @@
       "when": 1790277839140,
       "tag": "0001_icy_steel_serpent",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791486832050,
+      "tag": "0002_drop_old_venue_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791486842938,
+      "tag": "0003_add_new_venue_columns",
+      "breakpoints": true
     }
   ]
 }

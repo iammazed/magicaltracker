@@ -88,6 +88,7 @@ COLS = {
     "destination": ["wdw"],
     "transport": VOCAB["transport"],
     "tags": VOCAB["tags"],
+    "ownership": VOCAB["own"],
 }
 
 col_i = 1
@@ -174,38 +175,54 @@ GATE = ("THE GATE. Format YYYY-MM-DD.\n\nFill this in ONLY after reading the off
         "disneyworld.com page. Rows without it are refused by npm run db:import.")
 
 build("Venues", vh, {
-    "id": 24, "name": 32, "destination_id": 13, "area_id": 19, "sub_area": 19,
-    "resort_id": 22, "venue_kind": 13, "service_type": 13, "dining_style": 13,
-    "cuisine": 16, "price_tier": 9, "accepts_reservations": 13,
-    "is_character_dining": 13, "is_signature": 11, "status": 13,
-    "lat": 12, "lng": 12, "menu_url": 34, "description": 46, "tags": 24,
-    "verified_on": 12, "source_url": 34,
+    "id": 30, "name": 34, "destination_id": 13, "area_id": 19, "sub_area": 19,
+    "resort_id": 24, "venue_kind": 13, "service_type": 16, "dining_style": 18,
+    "cuisine": 16, "price_tier": 9, "reservations_recommended": 14,
+    "is_character_dinner_dining": 14, "is_character_breakfast_dining": 14,
+    "is_signature": 11, "status": 15, "lat": 12, "lng": 12,
+    "dinner_menu_url": 30, "lunch_menu_url": 30, "breakfast_menu_url": 30,
+    "snack_menu_url": 30, "lounge_menu_url": 30,
+    "description": 48, "tags": 26, "keywords": 40,
+    "verified_on": 12, "source_url": 30,
 }, TEAL, venue_rows, [
     ("destination_id", "=destination", True, None),
     ("area_id", "=areas", True, None),
     ("sub_area", '=INDIRECT(SUBSTITUTE($E2,"-",""))', False,
-     "Choices depend on the area picked in this row. Leave blank for resort venues."),
+     "Choices depend on the area picked in this row. Single value only. "
+     "Leave blank for resort venues."),
     ("venue_kind", "=venue_kind", True, None),
-    ("service_type", "=service_type", True, None),
-    ("dining_style", "=dining_style", True, None),
     ("status", "=status", True, None),
-    ("price_tier", "=price_tier", True, None),
-    ("accepts_reservations", "=yesno", True, None),
-    ("is_character_dining", "=yesno", True, None),
+    ("price_tier", "=price_tier", True,
+     "Single value 1-4. For a price range, use the LOWER value."),
+    ("reservations_recommended", "=yesno", True, None),
+    ("is_character_dinner_dining", "=yesno", True, None),
+    ("is_character_breakfast_dining", "=yesno", True, None),
     ("is_signature", "=yesno", True, None),
 ], {
-    "tags": "Pipe-separated, no spaces:  lunch|dinner\n\nAllowed:\n  " + "\n  ".join(VOCAB["tags"]),
-    "lat": ("Drop a pin in Google Maps at the actual building, right-click, copy "
-            "coordinates.\n\nMust fall inside 28.28 to 28.44. A geocoding API returns "
-            "the park entrance, not the venue."),
-    "description": ("One or two sentences IN YOUR OWN WORDS.\n\nNever paste Disney "
-                    "marketing copy - that is a copyright issue separate from trademark."),
+    # service_type and dining_style accept several values, so a single-select
+    # dropdown would be wrong; the allowed values live in the header comment.
+    "service_type": "Pipe-separated, no spaces:  quick|table\n\nAllowed:\n  "
+                    + "\n  ".join(VOCAB["service"]),
+    "dining_style": "Pipe-separated, no spaces.\n\nAllowed:\n  "
+                    + "\n  ".join(VOCAB["styles"]),
+    "cuisine": "Required for everything except venue_kind = event.",
+    "tags": "CONTROLLED - drives achievements. A typo here breaks a badge.\n\nAllowed:\n  "
+            + "\n  ".join(VOCAB["tags"]),
+    "keywords": "FREE TEXT - search only, never read by the achievement engine.\n"
+                "Pipe-separated:  alcohol|wine|cocktails",
+    "lat": "Drop a pin in Google Maps at the actual building, right-click, copy "
+           "coordinates.\n\nMust fall inside 28.28 to 28.44. A geocoding API returns "
+           "the park entrance, not the venue.",
+    "description": "One or two sentences IN YOUR OWN WORDS.\n\nNever paste Disney "
+                   "marketing copy - that is a copyright issue separate from trademark.",
+    "dinner_menu_url": "One URL per meal period. At least one of the five must be "
+                       "filled; the validator warns when all are empty.",
     "verified_on": GATE,
 })
 
 build("Resorts", rh, {
     "id": 26, "name": 38, "destination_id": 13, "area_id": 22, "tier": 12,
-    "transport": 24, "transport_notes": 42, "lat": 12, "lng": 12,
+    "transport": 24, "transport_notes": 42, "ownership": 18, "lat": 12, "lng": 12,
     "official_url": 34, "description": 46, "status": 13, "verified_on": 12,
     "source_url": 34,
 }, VIOLET, resort_rows, [
@@ -214,6 +231,8 @@ build("Resorts", rh, {
      "Resort areas only: mk-resort-area, epcot-resort-area, ak-resort-area, "
      "springs-resort-area, sports-resort-area"),
     ("tier", "=resort_tier", True, None),
+    ("ownership", "=ownership", True,
+     "disney-owned counts toward resort coverage; partner does not."),
     ("status", "=status", True, None),
 ], {
     "transport": ("Pipe-separated, no spaces:  monorail|boat|bus\n\nAllowed:\n  "

@@ -17,8 +17,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  AREA_ROWS, DINING_STYLES, RESORT_COLUMNS, RESORT_TIERS, SERVICE_TYPES,
-  STATUS, SUB_AREAS, TAGS, TRANSPORT, VENUE_COLUMNS, VENUE_KINDS,
+  AREA_ROWS, DINING_STYLES, OWNERSHIP, RESORT_COLUMNS, RESORT_TIERS,
+  SERVICE_TYPES, STATUS, SUB_AREAS, TAGS, TRANSPORT, VENUE_COLUMNS, VENUE_KINDS,
 } from './vocabulary.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -35,6 +35,7 @@ const payload = {
   styles: DINING_STYLES,
   venueCols: VENUE_COLUMNS,
   resortCols: RESORT_COLUMNS,
+  own: OWNERSHIP,
 };
 
 const tmp = join(mkdtempSync(join(tmpdir(), 'mt-vocab-')), 'vocab.json');

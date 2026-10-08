@@ -48,9 +48,23 @@ export const transportMode = pgEnum('transport_mode', [
   'bus',
   'boat',
   'walk',
+  /** A hotel's own shuttle, which is NOT Disney bus transportation — the
+   *  Transportation Challenge must require `bus` specifically. */
+  'shuttle',
 ]);
 
-export const venueKind = pgEnum('venue_kind', ['restaurant', 'lounge', 'snack', 'cart']);
+export const venueKind = pgEnum('venue_kind', [
+  'restaurant',
+  'lounge',
+  'snack',
+  'cart',
+  'kiosk',
+  'food-truck',
+  /** Ticketed, scheduled experiences. Deliberately EXCLUDED from coverage
+   *  percentages — a seasonal dessert party must not make 100% of a park
+   *  unreachable for anyone who visits in June. */
+  'event',
+]);
 
 export const serviceType = pgEnum('service_type', ['quick', 'table', 'lounge', 'snack']);
 
@@ -59,7 +73,11 @@ export const diningStyle = pgEnum('dining_style', [
   'buffet',
   'family-style',
   'prix-fixe',
+  'snack',
 ]);
+
+/** Who operates the hotel. Resort coverage counts only `disney-owned`. */
+export const ownership = pgEnum('ownership', ['disney-owned', 'partner']);
 
 export const catalogStatus = pgEnum('catalog_status', [
   'open',
@@ -136,6 +154,7 @@ export const resorts = pgTable(
       .references(() => areas.id, { onDelete: 'restrict' }),
     name: text('name').notNull(),
     tier: resortTier('tier').notNull(),
+    ownership: ownership('ownership').notNull().default('disney-owned'),
 
     /** Drives the Transportation Challenge achievement — must be accurate. */
     transport: transportMode('transport').array().notNull(),
@@ -196,24 +215,45 @@ export const venues = pgTable(
 
     name: text('name').notNull(),
     venueKind: venueKind('venue_kind').notNull(),
-    serviceType: serviceType('service_type').notNull(),
-    diningStyle: diningStyle('dining_style'),
-    cuisine: text('cuisine').notNull(),
+
+    /** Arrays: a venue can genuinely be both quick and table service, and can
+     *  offer more than one dining style. */
+    serviceType: serviceType('service_type').array().notNull(),
+    diningStyle: diningStyle('dining_style').array().notNull().default(sql`'{}'`),
+
+    /** Null only for events, which have no cuisine. */
+    cuisine: text('cuisine'),
     priceTier: smallint('price_tier').notNull(),
 
-    acceptsReservations: boolean('accepts_reservations').notNull().default(false),
-    isCharacterDining: boolean('is_character_dining').notNull().default(false),
+    reservationsRecommended: boolean('reservations_recommended').notNull().default(false),
+    /** Split because the two are booked separately and people care which. */
+    isCharacterDinnerDining: boolean('is_character_dinner_dining').notNull().default(false),
+    isCharacterBreakfastDining: boolean('is_character_breakfast_dining').notNull().default(false),
     isSignature: boolean('is_signature').notNull().default(false),
 
     status: catalogStatus('status').notNull().default('open'),
 
     lat: doublePrecision('lat'),
     lng: doublePrecision('lng'),
-    menuUrl: text('menu_url'),
+
+    /** Disney publishes a different menu per meal period, so one URL per
+     *  period rather than one per venue. A venue needs at least one. */
+    dinnerMenuUrl: text('dinner_menu_url'),
+    lunchMenuUrl: text('lunch_menu_url'),
+    breakfastMenuUrl: text('breakfast_menu_url'),
+    snackMenuUrl: text('snack_menu_url'),
+    loungeMenuUrl: text('lounge_menu_url'),
+
     description: text('description'),
 
-    /** Achievement tags: world-showcase-bar, character-dining, signature, … */
+    /** CONTROLLED. Drives achievements — world-showcase-bar, character-dining,
+     *  signature. Every value must exist in scripts/vocabulary.mjs. */
     tags: text('tags').array().notNull().default(sql`'{}'::text[]`),
+
+    /** FREE-FORM. Search and filtering only — cuisine words, 'alcohol',
+     *  'bakery'. Never read by the achievement engine, so a typo here is
+     *  cosmetic rather than a broken badge. */
+    keywords: text('keywords').array().notNull().default(sql`'{}'::text[]`),
 
     ...provenance,
     ...timestamps,
@@ -225,6 +265,8 @@ export const venues = pgTable(
     index('venues_service_type_idx').on(t.serviceType),
     index('venues_status_idx').on(t.status),
     index('venues_tags_idx').using('gin', t.tags),
+    index('venues_keywords_idx').using('gin', t.keywords),
+    index('venues_kind_idx').on(t.venueKind),
 
     check('venues_price_tier_range', sql`${t.priceTier} between 1 and 4`),
     check(

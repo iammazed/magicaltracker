@@ -15,9 +15,9 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  AREAS, BOUNDS, DINING_STYLES, PARKS, RESORT_AREAS, RESORT_COLUMNS, RESORT_TIERS,
-  SERVICE_TYPES, STATUS, SUB_AREAS, TAGS, TRANSPORT, VENUE_COLUMNS, VENUE_KINDS,
-  WORLD_SHOWCASE, readTable,
+  AREAS, BOUNDS, DINING_STYLES, MENU_COLUMNS, OWNERSHIP, PARKS, RESORT_AREAS,
+  RESORT_COLUMNS, RESORT_TIERS, SERVICE_TYPES, STATUS, SUB_AREAS, TAGS, TRANSPORT,
+  VENUE_COLUMNS, VENUE_KINDS, WORLD_SHOWCASE, readTable,
 } from './vocabulary.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -139,6 +139,7 @@ for (const { rec, line } of resortTable.records) {
   checkEnum(f, line, id, rec, 'destination_id', ['wdw']);
   checkEnum(f, line, id, rec, 'area_id', RESORT_AREAS);
   checkEnum(f, line, id, rec, 'tier', RESORT_TIERS);
+  checkEnum(f, line, id, rec, 'ownership', OWNERSHIP);
   checkEnum(f, line, id, rec, 'status', STATUS);
   checkPipeList(f, line, id, rec, 'transport', TRANSPORT, { required: true });
   checkCoords(f, line, id, rec);
@@ -158,19 +159,31 @@ for (const { rec, line } of venueTable.records) {
   else if (venueIds.has(id)) err(f, line, id, 'duplicate id');
   else venueIds.add(id);
 
-  checkRequired(f, line, id, rec, ['name', 'cuisine']);
+  checkRequired(f, line, id, rec, ['name']);
+  // Events have no cuisine; everything you actually eat at does.
+  if (rec.venue_kind !== 'event' && !rec.cuisine) {
+    err(f, line, id, '"cuisine" is required for anything that is not an event');
+  }
   checkEnum(f, line, id, rec, 'destination_id', ['wdw']);
   checkEnum(f, line, id, rec, 'area_id', AREAS);
   checkEnum(f, line, id, rec, 'venue_kind', VENUE_KINDS);
-  checkEnum(f, line, id, rec, 'service_type', SERVICE_TYPES);
-  checkEnum(f, line, id, rec, 'dining_style', DINING_STYLES, { required: false });
+  checkPipeList(f, line, id, rec, 'service_type', SERVICE_TYPES, { required: true });
+  checkPipeList(f, line, id, rec, 'dining_style', DINING_STYLES);
   checkEnum(f, line, id, rec, 'status', STATUS);
   checkEnum(f, line, id, rec, 'price_tier', ['1', '2', '3', '4']);
-  checkBool(f, line, id, rec, 'accepts_reservations');
-  checkBool(f, line, id, rec, 'is_character_dining');
+  checkBool(f, line, id, rec, 'reservations_recommended');
+  checkBool(f, line, id, rec, 'is_character_dinner_dining');
+  checkBool(f, line, id, rec, 'is_character_breakfast_dining');
   checkBool(f, line, id, rec, 'is_signature');
   checkCoords(f, line, id, rec);
-  checkUrl(f, line, id, rec, 'menu_url');
+  // A venue needs at least one menu, but not all five. Validate the shape of
+  // whichever are present, and warn only when every one is empty.
+  for (const col of MENU_COLUMNS) {
+    if (rec[col]) checkUrl(f, line, id, rec, col);
+  }
+  if (!MENU_COLUMNS.some((c) => rec[c])) {
+    warn(f, line, id, 'no menu URL in any meal period');
+  }
   checkPipeList(f, line, id, rec, 'tags', TAGS);
   checkVerified(f, line, id, rec);
   if (!rec.description) warn(f, line, id, '"description" is empty — write one in your own words');
@@ -193,14 +206,16 @@ for (const { rec, line } of venueTable.records) {
   }
 
   const tags = (rec.tags || '').split('|');
-  if (rec.is_character_dining === 'TRUE' && !tags.includes('character-dining')) {
-    warn(f, line, id, 'is_character_dining is TRUE but the "character-dining" tag is missing');
+  const character = rec.is_character_dinner_dining === 'TRUE'
+    || rec.is_character_breakfast_dining === 'TRUE';
+  if (character && !tags.includes('character-dining')) {
+    warn(f, line, id, 'character dining is TRUE but the "character-dining" tag is missing');
   }
   if (rec.is_signature === 'TRUE' && !tags.includes('signature')) {
     warn(f, line, id, 'is_signature is TRUE but the "signature" tag is missing');
   }
-  if (rec.service_type === 'quick' && rec.accepts_reservations === 'TRUE') {
-    warn(f, line, id, 'quick service that accepts reservations — unusual, worth re-checking');
+  if (rec.service_type === 'quick' && rec.reservations_recommended === 'TRUE') {
+    warn(f, line, id, 'quick service with reservations recommended — unusual, worth re-checking');
   }
 
   if (tags.includes('world-showcase-bar')) {

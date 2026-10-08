@@ -117,24 +117,50 @@ Note that the Swan, Dolphin and Swan Reserve are already in and already count. T
 | `name` | yes | exact official name |
 | `destination_id` | yes | `wdw` |
 | `area_id` | yes | see areas below |
-| `sub_area` | no | see sub-areas below; blank for resort venues |
+| `sub_area` | no | single value; see sub-areas below; blank for resort venues |
 | `resort_id` | no | must match an `id` in `resorts.csv`; blank for in-park venues |
-| `venue_kind` | yes | `restaurant` · `lounge` · `snack` · `cart` |
-| `service_type` | yes | `quick` · `table` · `lounge` · `snack` |
-| `dining_style` | no | `a-la-carte` · `buffet` · `family-style` · `prix-fixe` |
-| `cuisine` | yes | free text, but reuse existing values — this drives a filter |
-| `price_tier` | yes | `1`–`4` (matches Disney's $ – $$$$) |
-| `accepts_reservations` | yes | `TRUE` / `FALSE` |
-| `is_character_dining` | yes | `TRUE` / `FALSE` |
+| `venue_kind` | yes | `restaurant` · `lounge` · `snack` · `cart` · `kiosk` · `food-truck` · `event` |
+| `service_type` | yes | **pipe-delimited**: `quick` · `table` · `lounge` · `snack` |
+| `dining_style` | no | **pipe-delimited**: `a-la-carte` · `buffet` · `family-style` · `prix-fixe` · `snack` |
+| `cuisine` | yes, except `event` | free text, but reuse existing values — this drives a filter |
+| `price_tier` | yes | single `1`–`4`. For a range, use the lower value. |
+| `reservations_recommended` | yes | `TRUE` / `FALSE` |
+| `is_character_dinner_dining` | yes | `TRUE` / `FALSE` |
+| `is_character_breakfast_dining` | yes | `TRUE` / `FALSE` |
 | `is_signature` | yes | `TRUE` / `FALSE` |
 | `status` | yes | `open` · `seasonal` · `temporarily-closed` · `permanently-closed` |
-| `lat` | yes | decimal degrees, 6 dp, ~`28.3` – `28.4` |
-| `lng` | yes | decimal degrees, 6 dp, ~`-81.6` – `-81.5` |
-| `menu_url` | yes | official disneyworld.com URL |
+| `lat` / `lng` | yes | decimal degrees, inside 28.28–28.44 / −81.65–−81.45 |
+| `dinner_menu_url` | — | official disneyworld.com URL |
+| `lunch_menu_url` | — | " |
+| `breakfast_menu_url` | — | " |
+| `snack_menu_url` | — | " |
+| `lounge_menu_url` | — | " |
 | `description` | yes | 1–2 sentences, **your own words** |
-| `tags` | no | pipe-delimited, see tags below |
+| `tags` | no | **controlled**, pipe-delimited — see tags below |
+| `keywords` | no | **free text**, pipe-delimited — search only |
 | `verified_on` | yes | `YYYY-MM-DD` — the gate |
-| `source_url` | yes | the page you verified against |
+| `source_url` | no | the page you verified against |
+
+Disney publishes a different menu per meal period, so there are five URL columns rather than
+one. **At least one must be filled**; the validator warns when all five are empty.
+
+### `tags` vs `keywords`
+
+**`tags` is a controlled list and drives achievements.** Only the values below are allowed, and
+a typo is an error, because a wrong tag makes a badge unearnable.
+
+**`keywords` is free text and drives search only.** Cuisine words, `alcohol`, `bakery`,
+`cocktails` — anything useful. Nothing reads it except search, so a typo here is cosmetic.
+
+If you are unsure which column something belongs in: **would an achievement ever depend on it?**
+If no, it is a keyword.
+
+### `venue_kind: event`
+
+Ticketed, scheduled experiences — dessert parties, Candlelight Processional, the California
+Grill fireworks party. **Events are excluded from coverage percentages**, so a seasonal dessert
+party can never make 100% of a park unreachable for someone who visits in June. They remain
+fully loggable and rateable, and `cuisine` is not required for them.
 
 ## resorts.csv
 
@@ -145,7 +171,8 @@ Note that the Swan, Dolphin and Swan Reserve are already in and already count. T
 | `destination_id` | yes | `wdw` |
 | `area_id` | yes | a resort area (below) |
 | `tier` | yes | `value` · `moderate` · `deluxe` · `villa` · `campground` |
-| `transport` | yes | pipe-delimited: `monorail` · `skyliner` · `bus` · `boat` · `walk` |
+| `transport` | yes | pipe-delimited: `monorail` · `skyliner` · `bus` · `boat` · `walk` · `shuttle` |
+| `ownership` | yes | `disney-owned` · `partner` |
 | `transport_notes` | no | free text, e.g. "Walk or boat to EPCOT and Hollywood Studios" |
 | `lat` / `lng` | yes | as above |
 | `official_url` | yes | disneyworld.com resort page |
