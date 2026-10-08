@@ -1,105 +1,262 @@
-import * as Device from 'expo-device';
-import { Link } from 'expo-router';
-import { Platform, StyleSheet } from 'react-native';
+import { useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { VenueRow } from '@/components/venue-row';
+import { BottomTabInset, Radius, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+import { useAreas, useFilteredVenues, useVenues } from '@/hooks/use-venues';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
+export default function CatalogScreen() {
+  const theme = useTheme();
+  const { data: venues, loading, error, reload } = useVenues();
+  const { data: areas } = useAreas();
+
+  const [search, setSearch] = useState('');
+  const [areaId, setAreaId] = useState<string | null>(null);
+
+  const areaName = useMemo(
+    () => Object.fromEntries(areas.map((a) => [a.id, a.name])),
+    [areas],
   );
-}
 
-export default function HomeScreen() {
+  const filtered = useFilteredVenues(venues, { search, areaId });
+
+  /** Only offer areas that actually contain something. */
+  const areaChips = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const v of venues) counts.set(v.area_id, (counts.get(v.area_id) ?? 0) + 1);
+    return areas
+      .filter((a) => counts.has(a.id))
+      .map((a) => ({ ...a, count: counts.get(a.id) ?? 0 }));
+  }, [venues, areas]);
+
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;MagicalTracker!
+      <SafeAreaView edges={['top']} style={styles.safe}>
+        <View style={styles.header}>
+          <ThemedText type="title" style={styles.heading}>
+            Dining
           </ThemedText>
-        </ThemedView>
+          <ThemedText type="small" themeColor="textSecondary">
+            {loading && venues.length === 0
+              ? 'Loading…'
+              : `${filtered.length} of ${venues.length} places`}
+          </ThemedText>
+        </View>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search restaurants and lounges"
+          placeholderTextColor={theme.textFaint}
+          autoCorrect={false}
+          clearButtonMode="while-editing"
+          style={[
+            styles.search,
+            {
+              backgroundColor: theme.backgroundElement,
+              borderColor: theme.border,
+              color: theme.text,
+            },
+          ]}
+        />
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chips}
+        >
+          <Chip
+            label="All"
+            active={areaId === null}
+            onPress={() => setAreaId(null)}
           />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
+          {areaChips.map((a) => (
+            <Chip
+              key={a.id}
+              label={`${a.name} (${a.count})`}
+              active={areaId === a.id}
+              onPress={() => setAreaId(areaId === a.id ? null : a.id)}
+            />
+          ))}
+        </ScrollView>
+
+        {error ? (
+          <Empty
+            title="Could not load the catalog"
+            body={error}
+            actionLabel="Try again"
+            onAction={reload}
           />
-        </ThemedView>
-
-        {__DEV__ ? (
-          <Link href="/theme">
-            <ThemedText type="linkPrimary">Design tokens →</ThemedText>
-          </Link>
-        ) : null}
-
-        {Platform.OS === 'web' && <WebBadge />}
+        ) : loading && venues.length === 0 ? (
+          <View style={styles.center}>
+            <ActivityIndicator color={theme.accent} />
+          </View>
+        ) : filtered.length === 0 ? (
+          <Empty
+            title="Nothing matches"
+            body={
+              search
+                ? `No places match “${search}”.`
+                : 'No places in this area yet.'
+            }
+            actionLabel={search || areaId ? 'Clear filters' : undefined}
+            onAction={() => {
+              setSearch('');
+              setAreaId(null);
+            }}
+          />
+        ) : (
+          <FlatList
+            data={filtered}
+            keyExtractor={(v) => v.id}
+            renderItem={({ item }) => (
+              <VenueRow venue={item} areaName={areaName[item.area_id] ?? item.area_id} />
+            )}
+            contentContainerStyle={styles.list}
+            keyboardDismissMode="on-drag"
+            refreshControl={
+              <RefreshControl
+                refreshing={loading && venues.length > 0}
+                onRefresh={reload}
+                tintColor={theme.accent}
+              />
+            }
+          />
+        )}
       </SafeAreaView>
     </ThemedView>
   );
 }
 
+function Chip({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      style={[
+        styles.chip,
+        {
+          backgroundColor: active ? theme.accent : theme.backgroundElement,
+          borderColor: active ? theme.accent : theme.border,
+        },
+      ]}
+    >
+      <ThemedText
+        type="small"
+        style={{ color: active ? theme.onAccent : theme.textSecondary }}
+      >
+        {label}
+      </ThemedText>
+    </Pressable>
+  );
+}
+
+function Empty({
+  title,
+  body,
+  actionLabel,
+  onAction,
+}: {
+  title: string;
+  body: string;
+  actionLabel?: string;
+  onAction?: () => void;
+}) {
+  const theme = useTheme();
+  return (
+    <View style={styles.center}>
+      <ThemedText type="smallBold">{title}</ThemedText>
+      <ThemedText
+        type="small"
+        themeColor="textSecondary"
+        style={styles.emptyBody}
+      >
+        {body}
+      </ThemedText>
+      {actionLabel && onAction ? (
+        <Pressable
+          onPress={onAction}
+          accessibilityRole="button"
+          style={[styles.action, { backgroundColor: theme.accent }]}
+        >
+          <ThemedText type="small" style={{ color: theme.onAccent }}>
+            {actionLabel}
+          </ThemedText>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
+  container: { flex: 1 },
+  safe: { flex: 1 },
+  header: {
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+    paddingTop: Spacing.two,
+    paddingBottom: Spacing.two,
+    gap: 2,
+  },
+  heading: { fontSize: 34, lineHeight: 40 },
+  search: {
+    marginHorizontal: Spacing.three,
+    paddingHorizontal: Spacing.three,
+    height: 42,
+    borderRadius: Radius.medium,
+    borderWidth: StyleSheet.hairlineWidth,
+    fontSize: 16,
+  },
+  chips: {
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.three,
+  },
+  chip: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two - 2,
+    borderRadius: Radius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  list: {
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    paddingBottom: BottomTabInset + Spacing.five,
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.two,
+    padding: Spacing.four,
+  },
+  emptyBody: { textAlign: 'center', maxWidth: 280 },
+  action: {
+    marginTop: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.two,
+    borderRadius: Radius.pill,
   },
 });

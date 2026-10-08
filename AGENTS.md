@@ -163,6 +163,23 @@ that. When a valid-looking href fails to typecheck, read the generated union rat
 
 ---
 
+## App data layer
+
+**Every read of catalog data goes through a hook in `src/hooks/`.** No screen imports
+`src/lib/supabase.ts` directly.
+
+That indirection is the whole point: today `useVenues()` fetches from Supabase, and when the
+offline layer lands it becomes a read from on-device SQLite with background sync. Park wifi is
+bad enough that logging a meal must not depend on having bars. If screens query Supabase
+directly, that swap means rewriting every screen instead of one hook.
+
+`process.env.EXPO_PUBLIC_*` must be written as **static dot notation**. Metro substitutes these
+at build time by matching the literal text, so `process.env['EXPO_PUBLIC_…']` or destructuring
+silently yields `undefined`. Editing `.env` also needs a full app reload, not just a refresh.
+
+Filtering and search happen **in memory**. The catalog is ~400 rows and already loaded, so a
+round trip per keystroke would be slower and would break offline.
+
 ## Database
 
 Schema lives in `src/db/schema.ts`. Migrations are generated, never hand-written.
