@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { Radius, Spacing } from '@/constants/theme';
+import { AreaTone, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { VenueListItem } from '@/hooks/use-venues';
 
@@ -17,12 +17,15 @@ export function VenueRow({
   venue,
   areaName,
   visitCount = 0,
+  planned,
   onPress,
 }: {
   venue: VenueListItem;
   areaName: string;
   /** How many times the user has logged this place. 0 = not visited. */
   visitCount?: number;
+  /** Undefined outside trip-planning mode; true/false while choosing. */
+  planned?: boolean;
   onPress?: () => void;
 }) {
   const theme = useTheme();
@@ -50,6 +53,7 @@ export function VenueRow({
         },
       ]}
     >
+      <View style={[styles.stripe, { backgroundColor: theme[AreaTone[venue.area_id] ?? 'brandTeal'] }]} />
       <View style={styles.main}>
         <View style={styles.titleLine}>
           {visitCount > 0 ? (
@@ -81,6 +85,20 @@ export function VenueRow({
         </ThemedText>
       </View>
 
+      {planned !== undefined ? (
+        <View
+          style={[
+            styles.pick,
+            planned
+              ? { backgroundColor: theme.gold, borderColor: theme.gold }
+              : { borderColor: theme.border },
+          ]}
+        >
+          <ThemedText style={[styles.pickMark, { color: planned ? '#23133A' : theme.textFaint }]}>
+            {planned ? '✓' : '+'}
+          </ThemedText>
+        </View>
+      ) : null}
       {venue.status !== 'open' ? (
         <View style={[styles.status, { borderColor: theme.warning }]}>
           <ThemedText type="small" style={{ color: theme.warning }}>
@@ -97,11 +115,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
-    paddingHorizontal: Spacing.three,
+    paddingRight: Spacing.three,
     paddingVertical: Spacing.three,
     borderRadius: Radius.large,
     borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
   },
+  // A colour per area, so a park reads the same here as on the passport.
+  stripe: { width: 5, alignSelf: 'stretch', marginVertical: -Spacing.three },
   main: { flex: 1, gap: 3 },
   titleLine: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   name: { flexShrink: 1 },
@@ -119,6 +140,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tickMark: { fontSize: 11, fontWeight: '700', lineHeight: 14 },
+  pick: {
+    width: 28, height: 28, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  pickMark: { fontSize: 14, fontWeight: '700', lineHeight: 18 },
   status: {
     paddingHorizontal: Spacing.two,
     paddingVertical: 2,

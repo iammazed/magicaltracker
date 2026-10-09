@@ -102,6 +102,49 @@ export const BrandRamp = [
   'brandViolet',
 ] as const satisfies readonly ThemeColor[];
 
+/** Just the ramp tokens, for anything that colours a sequence. */
+export type RampToken = (typeof BrandRamp)[number];
+
+/**
+ * The twilight gradient, lifted from the website's `.sky`. Dark in BOTH
+ * themes on purpose — it is dusk, not a surface. Always use white text on it.
+ */
+export const SkyGradient = ['#1A596E', '#2B4063', '#342758', '#23133A'] as const;
+
+/**
+ * A colour per area, so a park reads the same everywhere it appears — chip,
+ * progress bar, venue row stripe. Colour carrying identity rather than
+ * decoration is what stops the whole app being one shade of teal.
+ *
+ * The values are ramp token NAMES, resolved through useTheme() so they flip
+ * correctly between light and dark.
+ */
+export const AreaTone: Record<string, RampToken> = {
+  'magic-kingdom': 'brandBlue',
+  epcot: 'brandTeal',
+  'hollywood-studios': 'brandViolet',
+  'animal-kingdom': 'brandTealDeep',
+  'disney-springs': 'brandIndigo',
+  'typhoon-lagoon': 'brandTeal',
+  'blizzard-beach': 'brandBlue',
+  boardwalk: 'brandNavy',
+  'wide-world-of-sports': 'brandNavy',
+  'mk-resort-area': 'brandBlue',
+  'epcot-resort-area': 'brandTeal',
+  'ak-resort-area': 'brandTealDeep',
+  'springs-resort-area': 'brandIndigo',
+  'sports-resort-area': 'brandNavy',
+};
+
+/** Resort tiers get their own scale, deepening with price. */
+export const TierTone: Record<string, RampToken> = {
+  value: 'brandTeal',
+  moderate: 'brandBlue',
+  deluxe: 'brandIndigo',
+  villa: 'brandViolet',
+  campground: 'brandTealDeep',
+};
+
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */

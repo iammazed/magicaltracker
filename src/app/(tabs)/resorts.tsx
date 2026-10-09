@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { BottomTabInset, Radius, Spacing } from '@/constants/theme';
+import { BottomTabInset, Radius, Spacing, TierTone } from '@/constants/theme';
 import {
   TIER_LABEL,
   TRANSPORT_LABEL,
@@ -152,6 +152,7 @@ function ResortRow({
         },
       ]}
     >
+      <View style={[styles.stripe, { backgroundColor: theme[TierTone[resort.tier] ?? 'brandTeal'] }]} />
       <View style={styles.rowMain}>
         <View style={styles.titleLine}>
           {stayCount > 0 ? (
@@ -246,12 +247,17 @@ const styles = StyleSheet.create({
     paddingBottom: BottomTabInset + Spacing.five,
   },
   row: {
-    paddingHorizontal: Spacing.three,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    paddingRight: Spacing.three,
     paddingVertical: Spacing.three,
     borderRadius: Radius.large,
     borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
   },
-  rowMain: { gap: 3 },
+  stripe: { width: 5, alignSelf: 'stretch', marginVertical: -Spacing.three },
+  rowMain: { flex: 1, gap: 3 },
   titleLine: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   name: { flexShrink: 1 },
   tick: { width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },

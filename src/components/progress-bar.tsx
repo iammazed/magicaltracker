@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { Spacing, type RampToken } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -20,7 +20,7 @@ export function ProgressBar({
   visited: number;
   total: number;
   /** A brand-ramp token, e.g. 'brandBlue'. Defaults to the accent. */
-  tone?: 'brandTeal' | 'brandTealDeep' | 'brandBlue' | 'brandNavy' | 'brandIndigo' | 'brandViolet';
+  tone?: RampToken;
 }) {
   const theme = useTheme();
   const pct = total ? visited / total : 0;

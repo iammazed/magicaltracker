@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ProgressBar } from '@/components/progress-bar';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { BottomTabInset, BrandRamp, Radius, Spacing } from '@/constants/theme';
+import { AreaTone, BottomTabInset, Radius, Spacing } from '@/constants/theme';
 import { type Challenge, usePassport } from '@/hooks/use-passport';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -60,13 +60,13 @@ export default function PassportScreen() {
 
           {/* ── Per park / area ──────────────────────────────────── */}
           <Section title="By area">
-            {byArea.map((a, i) => (
+            {byArea.map((a) => (
               <ProgressBar
                 key={a.id}
                 label={a.label}
                 visited={a.visited}
                 total={a.total}
-                tone={BrandRamp[i % BrandRamp.length]}
+                tone={AreaTone[a.id] ?? 'brandTeal'}
               />
             ))}
           </Section>

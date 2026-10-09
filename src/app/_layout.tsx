@@ -4,6 +4,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { TripsProvider } from '@/hooks/use-trips';
 import { VisitsProvider } from '@/hooks/use-visits';
 import { DATABASE_NAME, migrate } from '@/lib/local-db';
 
@@ -22,12 +23,18 @@ export default function RootLayout() {
   return (
     <SQLiteProvider databaseName={DATABASE_NAME} onInit={migrate}>
       <VisitsProvider>
+        <TripsProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <AnimatedSplashOverlay />
           <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="venue/[id]" options={{ title: '' }} />
             <Stack.Screen name="resort/[id]" options={{ title: '' }} />
+            <Stack.Screen name="trip/[id]" options={{ title: '' }} />
+            <Stack.Screen
+              name="new-trip"
+              options={{ title: 'New trip', presentation: 'modal' }}
+            />
             <Stack.Screen
               name="log-visit"
               options={{ title: 'Log a visit', presentation: 'modal' }}
@@ -42,6 +49,7 @@ export default function RootLayout() {
             />
           </Stack>
         </ThemeProvider>
+        </TripsProvider>
       </VisitsProvider>
     </SQLiteProvider>
   );

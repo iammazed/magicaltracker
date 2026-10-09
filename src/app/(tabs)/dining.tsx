@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -18,6 +18,7 @@ import { VenueRow } from '@/components/venue-row';
 import { BottomTabInset, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAreas, useFilteredVenues, useVenues } from '@/hooks/use-venues';
+import { useTrips } from '@/hooks/use-trips';
 import { useVisits } from '@/hooks/use-visits';
 
 /**
@@ -46,6 +47,15 @@ export default function CatalogScreen() {
   const router = useRouter();
   const { data: venues, loading, error, reload } = useVenues();
   const { byVenue, visitedCount } = useVisits();
+  // When arriving from a trip, tapping a row adds to that trip's dining list
+  // instead of opening the venue.
+  const { addToTrip } = useLocalSearchParams<{ addToTrip?: string }>();
+  const { trips, plansFor, addPlan, removePlan } = useTrips();
+  const planning = trips.find((t) => t.id === addToTrip) ?? null;
+  const plannedIds = useMemo(
+    () => new Set(planning ? plansFor(planning.id).map((p) => p.venue_id) : []),
+    [planning, plansFor],
+  );
   const { data: areas } = useAreas();
 
   const [search, setSearch] = useState('');
@@ -72,10 +82,12 @@ export default function CatalogScreen() {
       <SafeAreaView edges={['top']} style={styles.safe}>
         <View style={styles.header}>
           <ThemedText type="title" style={styles.heading}>
-            Dining
+            {planning ? 'Add to trip' : 'Dining'}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            {loading && venues.length === 0
+            {planning
+              ? `${plannedIds.size} on ${planning.name} · tap to add or remove`
+              : loading && venues.length === 0
               ? 'Loading…'
               : visitedCount > 0
                 ? `${visitedCount} of ${venues.length} visited` +
@@ -160,9 +172,15 @@ export default function CatalogScreen() {
                 venue={item}
                 areaName={areaName[item.area_id] ?? item.area_id}
                 visitCount={byVenue.get(item.id)?.count ?? 0}
-                onPress={() =>
-                  router.push({ pathname: '/venue/[id]', params: { id: item.id } })
-                }
+                planned={planning ? plannedIds.has(item.id) : undefined}
+                onPress={() => {
+                  if (planning) {
+                    if (plannedIds.has(item.id)) void removePlan(planning.id, item.id);
+                    else void addPlan(planning.id, item.id);
+                  } else {
+                    router.push({ pathname: '/venue/[id]', params: { id: item.id } });
+                  }
+                }}
               />
             )}
             contentContainerStyle={styles.list}
@@ -176,6 +194,17 @@ export default function CatalogScreen() {
             }
           />
         )}
+        {planning ? (
+          <Pressable
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            style={[styles.doneBar, { backgroundColor: theme.accent }]}
+          >
+            <ThemedText type="smallBold" style={{ color: theme.onAccent }}>
+              Done · {plannedIds.size} on {planning.name}
+            </ThemedText>
+          </Pressable>
+        ) : null}
       </SafeAreaView>
     </ThemedView>
   );
@@ -285,6 +314,13 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
   },
   listFill: { flex: 1 },
+  doneBar: {
+    marginHorizontal: Spacing.three,
+    marginBottom: BottomTabInset,
+    paddingVertical: Spacing.three,
+    borderRadius: Radius.medium,
+    alignItems: 'center',
+  },
   list: {
     gap: Spacing.two,
     paddingHorizontal: Spacing.three,

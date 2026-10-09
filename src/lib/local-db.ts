@@ -20,7 +20,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 export const DATABASE_NAME = 'magicaltracker.db';
 
 /** Bump when the schema below changes, and add a matching step in migrate(). */
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 export async function migrate(db: SQLiteDatabase) {
   // WAL keeps reads fast while a write is in flight, which matters when the
@@ -76,8 +76,62 @@ export async function migrate(db: SQLiteDatabase) {
     version = 2;
   }
 
+  if (version < 3) {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS trips (
+        id         TEXT PRIMARY KEY NOT NULL,
+        name       TEXT NOT NULL,
+        start_date TEXT NOT NULL,          -- YYYY-MM-DD
+        end_date   TEXT NOT NULL,
+        resort_id  TEXT,                   -- where you are staying, if decided
+        note       TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        synced_at  TEXT
+      );
+      CREATE INDEX IF NOT EXISTS trips_start_idx ON trips (start_date);
+
+      -- The planning list: places you WANT to go on a given trip, which is a
+      -- different thing from a logged visit.
+      CREATE TABLE IF NOT EXISTS trip_plans (
+        id         TEXT PRIMARY KEY NOT NULL,
+        trip_id    TEXT NOT NULL,
+        venue_id   TEXT NOT NULL,
+        booked     INTEGER NOT NULL DEFAULT 0,
+        note       TEXT,
+        created_at TEXT NOT NULL,
+        synced_at  TEXT,
+        UNIQUE (trip_id, venue_id)
+      );
+      CREATE INDEX IF NOT EXISTS trip_plans_trip_idx ON trip_plans (trip_id);
+    `);
+    version = 3;
+  }
+
   await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
 }
+
+export type Trip = {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  resort_id: string | null;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+  synced_at: string | null;
+};
+
+export type TripPlan = {
+  id: string;
+  trip_id: string;
+  venue_id: string;
+  booked: number;
+  note: string | null;
+  created_at: string;
+  synced_at: string | null;
+};
 
 export type Stay = {
   id: string;
