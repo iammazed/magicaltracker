@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { LegalShell, TODO } from "@/components/legal-shell";
+import { LegalShell } from "@/components/legal-shell";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
@@ -11,12 +11,12 @@ export default function TermsPage() {
   return (
     <LegalShell
       title="Terms of Service"
-      updated={<TODO>[EFFECTIVE DATE]</TODO>}
+      updated="7 October 2026"
       intro="These terms cover the MagicalTracker iPhone app and magicaltracker.com. By using either, you agree to them."
     >
       <p>
-        The service is operated by <TODO>[LEGAL ENTITY NAME]</TODO>,{" "}
-        <TODO>[BUSINESS ADDRESS]</TODO> (&ldquo;we&rdquo;, &ldquo;us&rdquo;).
+        The service is operated by Grey Fox Creations LLC, 114 Saint Francis Lane, Wenonah, NJ 08090{" "}
+        (&ldquo;we&rdquo;, &ldquo;us&rdquo;).
       </p>
 
       <h2>Using the app</h2>
@@ -138,7 +138,7 @@ export default function TermsPage() {
       <h2>Governing law</h2>
       <p>
         These terms are governed by the laws of{" "}
-        <TODO>[STATE / JURISDICTION]</TODO>, without regard to conflict of law
+        New Jersey, without regard to conflict of law
         rules.
       </p>
 

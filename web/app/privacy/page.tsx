@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { LegalShell, TODO } from "@/components/legal-shell";
+import { LegalShell } from "@/components/legal-shell";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -11,13 +11,13 @@ export default function PrivacyPage() {
   return (
     <LegalShell
       title="Privacy Policy"
-      updated={<TODO>[EFFECTIVE DATE]</TODO>}
+      updated="7 October 2026"
       intro="MagicalTracker keeps a record of your Walt Disney World trips. This policy explains exactly what that means for your data — what is collected, why, who else can see it, and how to get rid of it."
     >
       <p>
         This policy applies to the MagicalTracker iPhone app and to
         magicaltracker.com. The service is operated by{" "}
-        <TODO>[LEGAL ENTITY NAME]</TODO>, <TODO>[BUSINESS ADDRESS]</TODO>.
+        Grey Fox Creations LLC, 114 Saint Francis Lane, Wenonah, NJ 08090.
       </p>
 
       <h2>What we collect</h2>
@@ -124,7 +124,7 @@ export default function PrivacyPage() {
         Your content is kept as long as your account exists, because the point of
         the app is a record that survives across years and trips. Diagnostic and
         analytics data is retained for{" "}
-        <TODO>[RETENTION PERIOD, e.g. 12 months]</TODO>.
+        12 months.
       </p>
 
       <h2>Deleting your data</h2>
@@ -147,7 +147,7 @@ export default function PrivacyPage() {
         your data, correct it, delete it, or object to certain processing. You
         can do most of this directly in the app; for anything else, contact us
         and we will respond within{" "}
-        <TODO>[RESPONSE WINDOW, e.g. 30 days]</TODO>.
+        30 days.
       </p>
       <p>
         Data is stored on servers in the United States. If you use the app from
