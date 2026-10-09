@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useBrandFonts } from '@/hooks/use-brand-fonts';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -43,9 +44,15 @@ export function Wordmark({
   restColor?: string;
 }) {
   const theme = useTheme();
+  const { ready } = useBrandFonts();
   const base = SIZES[size];
   const script = scriptColor ?? theme.gold;
   const rest = restColor ?? theme.text;
+
+  // Naming a family that is not registered yet is how you get an invisible or
+  // mis-measured wordmark, so until the faces land this renders in the system
+  // face at the same sizes. It is wrong for a frame, never missing.
+  const face = (name: string) => (ready ? name : undefined);
 
   return (
     <View
@@ -56,7 +63,7 @@ export function Wordmark({
     >
       <Text
         style={{
-          fontFamily: 'BerkshireSwash_400Regular',
+          fontFamily: face('BerkshireSwash_400Regular'),
           fontSize: base * INITIAL,
           color: script,
         }}
@@ -65,7 +72,7 @@ export function Wordmark({
       </Text>
       <Text
         style={{
-          fontFamily: 'Pacifico_400Regular',
+          fontFamily: face('Pacifico_400Regular'),
           fontSize: base * SCRIPT,
           color: script,
           // Mirrors the 0.01em / 0.11em optical nudges on the web lockup.
@@ -77,7 +84,7 @@ export function Wordmark({
       </Text>
       <Text
         style={{
-          fontFamily: 'Figtree_600SemiBold',
+          fontFamily: face('Figtree_600SemiBold'),
           fontSize: base,
           color: rest,
           letterSpacing: -0.3,
