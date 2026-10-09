@@ -317,8 +317,10 @@ no reason to ask for.
 
 ## Dates
 
-**Never ask anyone to type a date.** `DateRangePicker` is the arrive/depart control and
-`src/lib/calendar.ts` holds the arithmetic. A typed date is the one input where a mistake is
+**Never ask anyone to type a date.** `DateField` is a box the size of a text field that opens a
+small calendar when tapped, and `src/lib/calendar.ts` holds the arithmetic. The calendar is a
+`Modal`, not an absolutely-positioned popover — a popover inside the home screen's ScrollView
+would be clipped by it and would scroll away from the field it belongs to. A typed date is the one input where a mistake is
 silent and consequential: `2027-04-31` does not exist, `2072-04-03` is a plausible slip, and a
 countdown that is wrong rather than broken is a countdown nobody questions. A grid cannot produce
 a date that does not exist.
@@ -329,8 +331,13 @@ with `Date.UTC`, read back with `getUTC*`, and a date stays a date rather than b
 instant. The single exception is "today", which must be genuinely local — `todayISO()` in
 `local-db.ts` — because someone planning at 11pm in Florida means today.
 
-The month grid is **always six rows**, never five. A grid that changes height as you page makes
-everything below it jump, and in the inline planner that moves the Create button under your thumb.
+The month grid is **always six rows**, never five, so the card does not resize under your thumb
+mid-tap as you page through months.
+
+**The depart field's minimum is the arrive date**, so a trip that ends before it starts is simply
+not offerable rather than being validated after the fact. Picking an arrival later than an
+existing departure clears the departure instead of silently keeping a choice that would be
+rejected at save time.
 
 `src/lib/calendar.ts` is pure and has no React in it, so it is testable headlessly — leap years,
 year boundaries, the DST change, and all 132 months of a decade checked contiguous. Compile it

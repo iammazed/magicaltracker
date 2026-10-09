@@ -1,5 +1,5 @@
 /**
- * Date maths for the range picker.
+ * Date maths for the date pickers.
  *
  * Everything here is pure and string-in, string-out on `YYYY-MM-DD`, which is
  * what the database stores and what the rest of the app passes around.
@@ -57,6 +57,8 @@ export function parseISO(iso: string): { year: number; month: number; day: numbe
   return { year, month, day };
 }
 
+/** Zero-padded ISO dates also compare correctly with `<` directly, which is
+ *  what the grid does inline — no helper needed for that. */
 export function isValidISO(iso: string): boolean {
   return parseISO(iso) !== null;
 }
@@ -85,8 +87,7 @@ export function monthLabel({ year, month }: YearMonth): string {
  * Six weeks of cells, padded with the neighbouring months.
  *
  * Always six rows, never five or four. A grid that changes height as you page
- * through months makes everything below it jump, which in an inline widget on
- * the home screen means the Create button moves under your thumb.
+ * through months makes the calendar card resize under your thumb mid-tap.
  */
 export function monthGrid({ year, month }: YearMonth): DayCell[][] {
   const firstWeekday = new Date(Date.UTC(year, month, 1)).getUTCDay();
@@ -127,20 +128,4 @@ export function formatShort(iso: string): string {
   if (!parsed) return '';
   const date = new Date(Date.UTC(parsed.year, parsed.month, parsed.day));
   return `${DAYS_SHORT[date.getUTCDay()]}, ${MONTHS[parsed.month].slice(0, 3)} ${parsed.day}`;
-}
-
-/** `2027-04-03` -> `Sat, Apr 3, 2027`, for when the year is not obvious. */
-export function formatLong(iso: string): string {
-  const parsed = parseISO(iso);
-  if (!parsed) return '';
-  return `${formatShort(iso)}, ${parsed.year}`;
-}
-
-/** Inclusive string compare works on zero-padded ISO dates. */
-export function isBefore(a: string, b: string): boolean {
-  return a < b;
-}
-
-export function isWithin(iso: string, startISO: string, endISO: string): boolean {
-  return iso > startISO && iso < endISO;
 }

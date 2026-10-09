@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
-import { DateRangePicker } from '@/components/date-range-picker';
+import { DateField } from '@/components/date-field';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing, TierTone } from '@/constants/theme';
 import { TIER_LABEL, useResorts } from '@/hooks/use-resorts';
@@ -120,39 +120,43 @@ export function TripPlanner({
 
   return (
     <View style={styles.container}>
-      <DateRangePicker
-        start={start}
-        end={end}
-        minISO={today}
-        onChange={(s, e) => {
-          setStart(s);
-          setEnd(e);
-        }}
-      />
+      <View style={styles.dateRow}>
+        <DateField
+          label="Arrive"
+          value={start}
+          placeholder="Pick a date"
+          minISO={today}
+          onChange={(iso) => {
+            setStart(iso);
+            // A new arrival after the current departure would leave the trip
+            // ending before it starts, so that choice is dropped rather than
+            // silently kept and rejected at save time.
+            if (end && end < iso) setEnd(null);
+          }}
+        />
+        <DateField
+          label="Depart"
+          value={end}
+          placeholder={start ? 'Pick a date' : 'Arrive first'}
+          // Cannot depart before arriving, so the calendar simply will not
+          // offer those days.
+          minISO={start ?? today}
+          disabled={!start}
+          onChange={setEnd}
+        />
+      </View>
 
-      {/* Everything below the dates only appears once there are dates. An
-          empty form with four fields reads as work; one that grows as you
-          answer reads as progress. */}
+      {start && end ? (
+        <ThemedText type="small" themeColor="textSecondary">
+          {nights} {nights === 1 ? 'night' : 'nights'} · {formatShort(start)} to{' '}
+          {formatShort(end)}
+        </ThemedText>
+      ) : null}
+
+      {/* The rest only appears once there are dates. An empty four-field form
+          reads as work; one that grows as you answer reads as progress. */}
       {start && end ? (
         <>
-          <View style={[styles.chosenDates, { borderColor: theme.borderSoft }]}>
-            <View style={styles.chosenDate}>
-              <ThemedText type="small" themeColor="textFaint" style={styles.chosenLabel}>
-                ARRIVE
-              </ThemedText>
-              <ThemedText type="smallBold">{formatShort(start)}</ThemedText>
-            </View>
-            <ThemedText type="small" themeColor="textFaint">
-              {nights} {nights === 1 ? 'night' : 'nights'}
-            </ThemedText>
-            <View style={[styles.chosenDate, styles.chosenRight]}>
-              <ThemedText type="small" themeColor="textFaint" style={styles.chosenLabel}>
-                DEPART
-              </ThemedText>
-              <ThemedText type="smallBold">{formatShort(end)}</ThemedText>
-            </View>
-          </View>
-
           <Field label="Trip name" hint={name.trim() ? undefined : 'Using the dates'}>
             <TextInput
               value={name}
@@ -304,18 +308,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     fontSize: 16,
   },
-  chosenDates: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.two,
-    paddingVertical: Spacing.two,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  chosenDate: { gap: 1 },
-  chosenRight: { alignItems: 'flex-end' },
-  chosenLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1 },
+  dateRow: { flexDirection: 'row', gap: Spacing.two },
   chosenResort: {
     flexDirection: 'row',
     alignItems: 'center',
