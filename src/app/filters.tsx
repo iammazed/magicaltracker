@@ -2,10 +2,13 @@ import { Stack, useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { PremiumTeaser } from '@/components/premium-gate';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Radius, Spacing } from '@/constants/theme';
 import { useCatalogFilters } from '@/hooks/use-catalog-filters';
+import { useNearby } from '@/hooks/use-nearby';
+import { usePremium } from '@/hooks/use-premium';
 import { useTheme } from '@/hooks/use-theme';
 import { activeFilterCount, useVenues } from '@/hooks/use-venues';
 import { useVisits } from '@/hooks/use-visits';
@@ -47,6 +50,8 @@ export default function FiltersScreen() {
   const { filters, set, togglePrice, clear } = useCatalogFilters();
   const { data: venues } = useVenues();
   const { byVenue } = useVisits();
+  const { isPremium } = usePremium();
+  const nearby = useNearby();
 
   const active = activeFilterCount(filters);
 
@@ -186,6 +191,30 @@ export default function FiltersScreen() {
               />
             ))}
           </View>
+        </Section>
+
+        <Section title="Sort">
+          {isPremium ? (
+            <Toggle
+              label="Nearest to me first"
+              sub={
+                nearby.status === 'denied'
+                  ? 'Location permission is off — allow it in Settings'
+                  : nearby.status === 'unavailable'
+                    ? 'Location services are unavailable'
+                    : nearby.enabled
+                      ? 'Using your current position'
+                      : 'Uses your location once, only while the app is open'
+              }
+              value={nearby.enabled}
+              onToggle={() => {
+                if (nearby.enabled) nearby.disable();
+                else void nearby.enable();
+              }}
+            />
+          ) : (
+            <PremiumTeaser feature="nearby" />
+          )}
         </Section>
 
         <Section title="Only show">

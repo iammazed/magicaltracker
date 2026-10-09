@@ -34,7 +34,23 @@
         }
       ],
       "expo-sqlite",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-sharing",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "MagicalTracker needs access to your photos only when you choose to attach one to a visit you are logging. Photos stay on your device.",
+          "cameraPermission": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "MagicalTracker uses your location while the app is open to sort restaurants by how close they are. It is never used in the background and never leaves your device.",
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

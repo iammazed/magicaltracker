@@ -1,10 +1,14 @@
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
+import { PremiumGate } from '@/components/premium-gate';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Radius, Spacing } from '@/constants/theme';
+import { usePremium } from '@/hooks/use-premium';
 import { useTheme } from '@/hooks/use-theme';
 import { useVisits } from '@/hooks/use-visits';
 import { todayISO } from '@/lib/local-db';
@@ -19,12 +23,55 @@ export default function LogVisitScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { addVisit } = useVisits();
+  const { isPremium } = usePremium();
 
   const [visitedOn, setVisitedOn] = useState(todayISO());
   const [rating, setRating] = useState<number | null>(null);
   const [wouldReturn, setWouldReturn] = useState<boolean | null>(null);
   const [partySize, setPartySize] = useState('');
+  const [note, setNote] = useState('');
+  const [dishes, setDishes] = useState<string[]>([]);
+  const [dish, setDish] = useState('');
+  const [photos, setPhotos] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+
+  const addDish = () => {
+    const next = dish.trim();
+    if (!next || dishes.includes(next)) return setDish('');
+    setDishes((d) => [...d, next]);
+    setDish('');
+  };
+
+  /**
+   * Photos are copied into the app's own directory by the picker and stored as
+   * local URIs. They are never uploaded — Supabase Storage comes with accounts.
+   * Permission is requested at the point of use, which is both what Apple
+   * expects and the only point at which the reason is obvious.
+   */
+  const pickPhotos = async () => {
+    const { granted } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!granted) {
+      Alert.alert(
+        'Photo access is off',
+        'Allow photo access in Settings to attach pictures to a visit.',
+      );
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      selectionLimit: 6,
+      quality: 0.7,
+    });
+    if (result.canceled) return;
+    setPhotos((existing) => {
+      const merged = [...existing];
+      for (const asset of result.assets) {
+        if (!merged.includes(asset.uri)) merged.push(asset.uri);
+      }
+      return merged.slice(0, 6);
+    });
+  };
 
   const dateValid = /^\d{4}-\d{2}-\d{2}$/.test(visitedOn);
   const future = dateValid && visitedOn > todayISO();
@@ -38,6 +85,11 @@ export default function LogVisitScreen() {
       rating,
       wouldReturn,
       partySize: partySize ? Number(partySize) : null,
+      // Guarded as well as gated. If the gate ever regressed, a free user
+      // still could not write a premium field by reaching this call.
+      note: isPremium && note.trim() ? note.trim() : null,
+      dishes: isPremium ? dishes : null,
+      photos: isPremium ? photos : null,
     });
     router.back();
   };
@@ -140,6 +192,114 @@ export default function LogVisitScreen() {
             ]}
           />
         </Field>
+
+        {/* ── Premium depth ──────────────────────────────────────── */}
+        <PremiumGate feature="notes">
+          <Field label="Notes" hint="Optional">
+            <TextInput
+              value={note}
+              onChangeText={setNote}
+              placeholder="What was it actually like?"
+              placeholderTextColor={theme.textFaint}
+              multiline
+              style={[
+                styles.input,
+                styles.multiline,
+                {
+                  backgroundColor: theme.backgroundElement,
+                  borderColor: theme.border,
+                  color: theme.text,
+                },
+              ]}
+            />
+          </Field>
+        </PremiumGate>
+
+        <PremiumGate feature="dishes">
+          <Field label="Dishes ordered" hint="Optional">
+            <View style={styles.dishRow}>
+              <TextInput
+                value={dish}
+                onChangeText={setDish}
+                onSubmitEditing={addDish}
+                placeholder="Add a dish"
+                placeholderTextColor={theme.textFaint}
+                returnKeyType="done"
+                style={[
+                  styles.input,
+                  styles.dishInput,
+                  {
+                    backgroundColor: theme.backgroundElement,
+                    borderColor: theme.border,
+                    color: theme.text,
+                  },
+                ]}
+              />
+              <Pressable
+                onPress={addDish}
+                accessibilityRole="button"
+                accessibilityLabel="Add dish"
+                style={[styles.addDish, { backgroundColor: theme.accent }]}
+              >
+                <ThemedText type="smallBold" style={{ color: theme.onAccent }}>
+                  Add
+                </ThemedText>
+              </Pressable>
+            </View>
+            {dishes.length ? (
+              <View style={styles.pills}>
+                {dishes.map((d) => (
+                  <Pressable
+                    key={d}
+                    onPress={() => setDishes((all) => all.filter((x) => x !== d))}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove ${d}`}
+                    style={[
+                      styles.pill,
+                      { backgroundColor: theme.backgroundSelected, borderColor: theme.border },
+                    ]}
+                  >
+                    <ThemedText type="small">{d}</ThemedText>
+                    <ThemedText type="small" themeColor="textFaint">
+                      ✕
+                    </ThemedText>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+          </Field>
+        </PremiumGate>
+
+        <PremiumGate feature="photos">
+          <Field label="Photos" hint="Optional">
+            <View style={styles.pills}>
+              {photos.map((uri) => (
+                <Pressable
+                  key={uri}
+                  onPress={() => setPhotos((all) => all.filter((x) => x !== uri))}
+                  accessibilityRole="button"
+                  accessibilityLabel="Remove photo"
+                >
+                  <Image source={{ uri }} style={styles.thumb} contentFit="cover" />
+                </Pressable>
+              ))}
+              {photos.length < 6 ? (
+                <Pressable
+                  onPress={pickPhotos}
+                  accessibilityRole="button"
+                  style={[styles.addPhoto, { borderColor: theme.border }]}
+                >
+                  <ThemedText style={{ color: theme.accent, fontSize: 22 }}>+</ThemedText>
+                </Pressable>
+              ) : null}
+            </View>
+            <ThemedText type="small" themeColor="textFaint">
+              {photos.length
+                ? 'Tap a photo to remove it. Stored on this device only.'
+                : 'Up to six, stored on this device only.'}
+            </ThemedText>
+          </Field>
+        </PremiumGate>
 
         <Pressable
           onPress={save}
@@ -249,6 +409,34 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     borderRadius: Radius.medium,
     alignItems: 'center',
+  },
+  multiline: { height: 96, paddingTop: Spacing.two, textAlignVertical: 'top' },
+  dishRow: { flexDirection: 'row', gap: Spacing.two },
+  dishInput: { flex: 1 },
+  addDish: {
+    paddingHorizontal: Spacing.three,
+    justifyContent: 'center',
+    borderRadius: Radius.medium,
+  },
+  pills: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: Radius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  thumb: { width: 64, height: 64, borderRadius: Radius.medium },
+  addPhoto: {
+    width: 64,
+    height: 64,
+    borderRadius: Radius.medium,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   footnote: { textAlign: 'center', lineHeight: 18 },
 });

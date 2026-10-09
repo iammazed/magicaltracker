@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import {
@@ -16,6 +17,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { menuLinks, useVenue } from '@/hooks/use-venue';
 import { useVenueVisits } from '@/hooks/use-visits';
+import { jsonList } from '@/lib/local-db';
 import { formatArray, formatCuisine, formatSubArea, titleCase } from '@/lib/labels';
 
 const SERVICE_LABEL: Record<string, string> = {
@@ -117,7 +119,9 @@ export default function VenueDetailScreen() {
                 >
                   <View style={styles.visitMain}>
                     <ThemedText type="smallBold">
-                      {v.visited_on}
+                      {/* An onboarding backfill has today's date as a
+                          placeholder, so showing it would be a small lie. */}
+                      {v.date_exact ? v.visited_on : 'Visited — date not set'}
                       {i === 0 && visits.length > 1 ? '  (most recent)' : ''}
                     </ThemedText>
                     <ThemedText type="small" themeColor="textSecondary">
@@ -127,7 +131,34 @@ export default function VenueDetailScreen() {
                         : v.would_return
                           ? '  ·  Would return'
                           : '  ·  Would not return'}
+                      {v.party_size ? `  ·  Party of ${v.party_size}` : ''}
                     </ThemedText>
+
+                    {/* Premium detail. Rendered whenever it exists rather than
+                        behind another premium check: a user who lapses must
+                        still be able to read what they already wrote. */}
+                    {jsonList(v.dishes).length ? (
+                      <ThemedText type="small" themeColor="textSecondary">
+                        {jsonList(v.dishes).join(', ')}
+                      </ThemedText>
+                    ) : null}
+                    {v.note ? (
+                      <ThemedText type="small" themeColor="textFaint" style={styles.visitNote}>
+                        {v.note}
+                      </ThemedText>
+                    ) : null}
+                    {jsonList(v.photos).length ? (
+                      <View style={styles.visitPhotos}>
+                        {jsonList(v.photos).map((uri) => (
+                          <Image
+                            key={uri}
+                            source={{ uri }}
+                            style={styles.visitThumb}
+                            contentFit="cover"
+                          />
+                        ))}
+                      </View>
+                    ) : null}
                   </View>
                   <Pressable
                     onPress={() => void deleteVisit(v.id)}
@@ -281,6 +312,9 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
+  visitNote: { lineHeight: 18, fontStyle: 'italic' },
+  visitPhotos: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two, marginTop: Spacing.one },
+  visitThumb: { width: 56, height: 56, borderRadius: Radius.small },
   visitMain: { flex: 1, gap: 2 },
   primary: {
     marginTop: Spacing.two,

@@ -23,6 +23,21 @@ import { Colors } from '@/constants/theme';
  *    measured differently from its neighbours. Only the colour may differ
  *    between default and selected.
  *
+ * 3. `disableAutomaticContentInsets`, which is the one that was actually still
+ *    moving the bar. iOS applies its automatic inset and its scroll-edge
+ *    appearance to the FIRST scroll view inside each screen — and on Dining
+ *    and Resorts that is the horizontal filter-chip strip, not the list below
+ *    it. So on two of the four tabs the bar was reacting to a strip that never
+ *    scrolls vertically, and on the other two to the real content, which is
+ *    why it behaved differently depending on which tab you landed on. Every
+ *    screen already pads its own bottom by `BottomTabInset`, so taking the
+ *    automatic behaviour away costs nothing and makes all four identical.
+ *    It is a per-Trigger prop, not a navigator one, so it goes on all four.
+ *
+ * `disableTransparentOnScrollEdge` goes with it: without it the bar's
+ * background still fades in and out as content passes under it, which is the
+ * same inconsistency by another route.
+ *
  * Note which props actually apply where, because several are silently inert:
  * `indicatorColor` is Android/web only, and on iOS `backgroundColor`,
  * `blurEffect` and `shadowColor` apply to iOS 18 and earlier only — iOS 26
@@ -39,6 +54,7 @@ export default function AppTabs() {
   return (
     <NativeTabs
       minimizeBehavior="never"
+      disableTransparentOnScrollEdge
       backgroundColor={colors.background}
       iconColor={{ default: colors.textFaint, selected: colors.accent }}
       labelStyle={{
@@ -47,7 +63,7 @@ export default function AppTabs() {
       }}
       // Android only — the Material 3 active indicator. Inert on iOS.
       {...Platform.select({ android: { indicatorColor: colors.backgroundSelected }, default: {} })}>
-      <NativeTabs.Trigger name="index">
+      <NativeTabs.Trigger name="index" disableAutomaticContentInsets>
         <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           sf={{ default: 'house', selected: 'house.fill' }}
@@ -55,7 +71,7 @@ export default function AppTabs() {
         />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="dining">
+      <NativeTabs.Trigger name="dining" disableAutomaticContentInsets>
         <NativeTabs.Trigger.Label>Dining</NativeTabs.Trigger.Label>
         {/* `fork.knife` has no `.fill` variant in SF Symbols, so this is the
             one tab whose glyph cannot thicken on selection. The colour change
@@ -67,7 +83,7 @@ export default function AppTabs() {
         />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="resorts">
+      <NativeTabs.Trigger name="resorts" disableAutomaticContentInsets>
         <NativeTabs.Trigger.Label>Resorts</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           sf={{ default: 'bed.double', selected: 'bed.double.fill' }}
@@ -75,7 +91,7 @@ export default function AppTabs() {
         />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="passport">
+      <NativeTabs.Trigger name="passport" disableAutomaticContentInsets>
         <NativeTabs.Trigger.Label>Passport</NativeTabs.Trigger.Label>
         {/* `medal` rather than `rosette`: rosette has no fill variant either,
             and a medal reads straight onto the Bronze/Silver/Gold tiers. */}

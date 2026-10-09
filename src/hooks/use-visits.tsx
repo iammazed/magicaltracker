@@ -37,6 +37,11 @@ type VisitsValue = {
   stayedCount: number;
   loading: boolean;
   addVisit: (input: AddVisitInput) => Promise<void>;
+  /** Bulk backfill for onboarding. Returns how many were new. */
+  addVisitsBulk: (
+    venueIds: string[],
+    options?: { dateExact?: boolean },
+  ) => Promise<number>;
   deleteVisit: (id: string) => Promise<void>;
   addStay: (input: AddStayInput) => Promise<void>;
   deleteStay: (id: string) => Promise<void>;
@@ -58,6 +63,12 @@ export type AddVisitInput = {
   rating?: number | null;
   wouldReturn?: boolean | null;
   partySize?: number | null;
+  /** Premium. Stored as a JSON array. */
+  dishes?: string[] | null;
+  /** Premium. Local file URIs, stored as a JSON array. */
+  photos?: string[] | null;
+  /** False for an onboarding backfill, where the date is a placeholder. */
+  dateExact?: boolean;
   note?: string | null;
 };
 
@@ -101,8 +112,8 @@ export function VisitsProvider({ children }: { children: React.ReactNode }) {
       await db.runAsync(
         `INSERT INTO visits
            (id, venue_id, visited_on, rating, would_return, party_size, note,
-            created_at, updated_at, synced_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
+            dishes, photos, date_exact, created_at, updated_at, synced_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
         uuid(),
         input.venueId,
         input.visitedOn ?? todayISO(),
@@ -110,10 +121,65 @@ export function VisitsProvider({ children }: { children: React.ReactNode }) {
         input.wouldReturn == null ? null : input.wouldReturn ? 1 : 0,
         input.partySize ?? null,
         input.note ?? null,
+        input.dishes?.length ? JSON.stringify(input.dishes) : null,
+        input.photos?.length ? JSON.stringify(input.photos) : null,
+        input.dateExact === false ? 0 : 1,
         now,
         now,
       );
       await refresh();
+    },
+    [db, refresh],
+  );
+
+  /**
+   * Onboarding writes 20-odd visits at once.
+   *
+   * One transaction and one prepared statement, then a single refresh — the
+   * alternative is 20 separate `addVisit` calls, each re-reading the whole
+   * visit table and re-rendering every subscribed screen.
+   *
+   * Venues the user has already logged are skipped rather than duplicated,
+   * which matters because onboarding can be re-run from Settings.
+   */
+  const addVisitsBulk = useCallback(
+    async (venueIds: string[], { dateExact = false }: { dateExact?: boolean } = {}) => {
+      // Asked of the database rather than of `byVenue`, both because that
+      // state is declared further down this file and because a query cannot be
+      // stale. Multiple visits per venue are legal, so there is no unique
+      // constraint to lean on here.
+      const existing = await db.getAllAsync<{ venue_id: string }>(
+        'SELECT DISTINCT venue_id FROM visits',
+      );
+      const already = new Set(existing.map((r) => r.venue_id));
+      const fresh = venueIds.filter((id) => !already.has(id));
+      if (!fresh.length) return 0;
+
+      const now = new Date().toISOString();
+      const stmt = await db.prepareAsync(
+        `INSERT INTO visits
+           (id, venue_id, visited_on, rating, would_return, party_size, note,
+            dishes, photos, date_exact, created_at, updated_at, synced_at)
+         VALUES (?, ?, ?, NULL, NULL, NULL, NULL, NULL, NULL, ?, ?, ?, NULL)`,
+      );
+      try {
+        await db.withTransactionAsync(async () => {
+          for (const venueId of fresh) {
+            await stmt.executeAsync([
+              uuid(),
+              venueId,
+              todayISO(),
+              dateExact ? 1 : 0,
+              now,
+              now,
+            ]);
+          }
+        });
+      } finally {
+        await stmt.finalizeAsync();
+      }
+      await refresh();
+      return fresh.length;
     },
     [db, refresh],
   );
@@ -190,12 +256,14 @@ export function VisitsProvider({ children }: { children: React.ReactNode }) {
       stayedCount: byResort.size,
       loading,
       addVisit,
+      addVisitsBulk,
       deleteVisit,
       addStay,
       deleteStay,
       refresh,
     }),
-    [visits, byVenue, stays, byResort, loading, addVisit, deleteVisit, addStay, deleteStay, refresh],
+    [visits, byVenue, stays, byResort, loading, addVisit, addVisitsBulk, deleteVisit,
+     addStay, deleteStay, refresh],
   );
 
   return <VisitsContext.Provider value={value}>{children}</VisitsContext.Provider>;

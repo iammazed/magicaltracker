@@ -18,6 +18,7 @@ import { VenueMap } from '@/components/venue-map';
 import { VenueRow } from '@/components/venue-row';
 import { BottomTabInset, Radius, Spacing } from '@/constants/theme';
 import { useCatalogFilters } from '@/hooks/use-catalog-filters';
+import { useNearby } from '@/hooks/use-nearby';
 import { useTheme } from '@/hooks/use-theme';
 import { useTrips } from '@/hooks/use-trips';
 import {
@@ -27,6 +28,7 @@ import {
   useVenues,
 } from '@/hooks/use-venues';
 import { useVisits } from '@/hooks/use-visits';
+import { formatDistance, metresBetween, sortByDistance } from '@/lib/cluster';
 
 /**
  * Chip labels. The full area names ("ESPN Wide World of Sports Resort Area")
@@ -77,8 +79,26 @@ export default function CatalogScreen() {
     [areas],
   );
 
-  const filtered = useFilteredVenues(venues, filters, byVenue);
+  const matched = useFilteredVenues(venues, filters, byVenue);
   const refinements = activeFilterCount(filters);
+
+  // Nearest-first when the user has turned it on. Sorting here rather than
+  // inside `useFilteredVenues` keeps filtering and ordering separate, and the
+  // map reads the same array so both views agree.
+  const nearby = useNearby();
+  const filtered = useMemo(
+    () => (nearby.enabled && nearby.coords ? sortByDistance(matched, nearby.coords) : matched),
+    [matched, nearby.enabled, nearby.coords],
+  );
+
+  const distanceFor = useMemo(() => {
+    const from = nearby.coords;
+    if (!nearby.enabled || !from) return undefined;
+    return (v: { lat: number | null; lng: number | null }) =>
+      v.lat == null || v.lng == null
+        ? undefined
+        : formatDistance(metresBetween(from, { latitude: v.lat, longitude: v.lng }));
+  }, [nearby.enabled, nearby.coords]);
 
   const visitedIds = useMemo(() => new Set(byVenue.keys()), [byVenue]);
 
@@ -252,6 +272,7 @@ export default function CatalogScreen() {
                 venue={item}
                 areaName={areaName[item.area_id] ?? item.area_id}
                 visitCount={byVenue.get(item.id)?.count ?? 0}
+                distance={distanceFor?.(item)}
                 planned={planning ? plannedIds.has(item.id) : undefined}
                 onPress={() => {
                   if (planning) {

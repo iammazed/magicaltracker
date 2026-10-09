@@ -13,6 +13,8 @@ import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { BrandFontsProvider } from '@/hooks/use-brand-fonts';
 import { CatalogProvider } from '@/hooks/use-catalog';
 import { CatalogFiltersProvider } from '@/hooks/use-catalog-filters';
+import { NearbyProvider } from '@/hooks/use-nearby';
+import { PremiumProvider } from '@/hooks/use-premium';
 import { TripsProvider } from '@/hooks/use-trips';
 import { VisitsProvider } from '@/hooks/use-visits';
 import { DATABASE_NAME, migrate } from '@/lib/local-db';
@@ -63,6 +65,8 @@ export default function RootLayout() {
       onError={(e) => console.error('[local-db] init failed:', e)}
     >
       <BrandFontsProvider>
+      <PremiumProvider>
+      <NearbyProvider>
       <CatalogProvider>
         <CatalogFiltersProvider>
         <VisitsProvider>
@@ -91,6 +95,22 @@ export default function RootLayout() {
                 options={{ title: 'Filters', presentation: 'modal' }}
               />
               <Stack.Screen
+                name="paywall"
+                options={{ title: '', presentation: 'modal' }}
+              />
+              <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+              {/* Full screen, no header, not dismissable by a swipe: it is the
+                  first thing a new install shows and backing out of it halfway
+                  would leave the passport half-seeded with no way back in. */}
+              <Stack.Screen
+                name="onboarding"
+                options={{
+                  headerShown: false,
+                  presentation: 'fullScreenModal',
+                  gestureEnabled: false,
+                }}
+              />
+              <Stack.Screen
                 name="theme"
                 options={{ title: 'Design tokens', presentation: 'modal' }}
               />
@@ -100,6 +120,8 @@ export default function RootLayout() {
         </VisitsProvider>
         </CatalogFiltersProvider>
       </CatalogProvider>
+      </NearbyProvider>
+      </PremiumProvider>
       </BrandFontsProvider>
     </SQLiteProvider>
   );

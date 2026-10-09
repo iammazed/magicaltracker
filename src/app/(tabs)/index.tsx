@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -9,7 +9,9 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Wordmark } from '@/components/wordmark';
 import { AreaTone, BottomTabInset, Radius, Spacing } from '@/constants/theme';
+import { useOnboarding } from '@/hooks/use-onboarding';
 import { usePassport } from '@/hooks/use-passport';
+import { FREE_TRIP_LIMIT, usePremium } from '@/hooks/use-premium';
 import { useResorts } from '@/hooks/use-resorts';
 import { useTheme } from '@/hooks/use-theme';
 import { daysUntil, tripStatus, useTrips } from '@/hooks/use-trips';
@@ -31,6 +33,31 @@ export default function HomeScreen() {
   const { visits, stays } = useVisits();
   const { activeTrip, trips, plansFor, loading: tripsLoading } = useTrips();
   const { loading, overall, byArea, resortCoverage, challenges } = usePassport();
+  const { isPremium } = usePremium();
+  const { done: onboarded, loading: onboardingLoading } = useOnboarding();
+
+  /**
+   * First run goes to the quick-start pass.
+   *
+   * `replace`, not `push`: onboarding is not somewhere you go back to. Guarded
+   * on `onboarded === false` rather than on falsiness, because the hook returns
+   * null until it has read the setting and a null would redirect on the first
+   * frame of every single launch.
+   */
+  useEffect(() => {
+    if (!onboardingLoading && onboarded === false) router.replace('/onboarding');
+  }, [onboardingLoading, onboarded, router]);
+
+  /**
+   * Free users get one trip. Not a hard stop on a feature they have already
+   * used — an existing trip stays fully editable — just a limit on starting
+   * another, which is the moment the upgrade is actually worth something.
+   */
+  const atTripLimit = !isPremium && trips.length >= FREE_TRIP_LIMIT;
+  const planTrip = () =>
+    atTripLimit
+      ? router.push({ pathname: '/paywall', params: { feature: 'trips' } })
+      : router.push('/new-trip');
 
   const resortName = useMemo(
     () => Object.fromEntries(resorts.map((r) => [r.id, r.name])),
@@ -46,10 +73,13 @@ export default function HomeScreen() {
       ...visits.map((v) => ({
         key: v.id, date: v.visited_on, title: venueName[v.venue_id] ?? v.venue_id,
         kind: 'Dining' as const, rating: v.rating,
+        // Onboarding backfills carry today's date as a placeholder. Sorting by
+        // it is fine; printing it is not.
+        dateKnown: !!v.date_exact,
       })),
       ...stays.map((s) => ({
         key: s.id, date: s.check_in, title: resortName[s.resort_id] ?? s.resort_id,
-        kind: 'Resort' as const, rating: s.rating,
+        kind: 'Resort' as const, rating: s.rating, dateKnown: true,
       })),
     ];
     return items.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 4);
@@ -59,7 +89,7 @@ export default function HomeScreen() {
     .filter((c) => !c.complete && c.earned > 0)
     .sort((a, b) => b.earned / b.target - a.earned / a.target)[0];
 
-  if (loading || tripsLoading) {
+  if (loading || tripsLoading || onboardingLoading) {
     return (
       <ThemedView style={styles.center}>
         <ActivityIndicator color={theme.accent} />
@@ -77,18 +107,16 @@ export default function HomeScreen() {
           {/* ── Wordmark ─────────────────────────────────────────── */}
           <View style={styles.masthead}>
             <Wordmark size="md" />
-            {__DEV__ ? (
-              <Pressable
-                onPress={() => router.push('/theme')}
-                accessibilityRole="button"
-                accessibilityLabel="Design tokens"
-                hitSlop={10}
-              >
-                <ThemedText type="small" themeColor="textFaint">
-                  tokens
-                </ThemedText>
-              </Pressable>
-            ) : null}
+            <Pressable
+              onPress={() => router.push('/settings')}
+              accessibilityRole="button"
+              accessibilityLabel="Settings"
+              hitSlop={10}
+            >
+              <ThemedText type="small" themeColor="textFaint">
+                Settings
+              </ThemedText>
+            </Pressable>
           </View>
 
           {/* ── The trip, or the absence of one ──────────────────── */}
@@ -156,7 +184,7 @@ export default function HomeScreen() {
 
           {/* ── Plan a trip. Always here, always in the same place. ─ */}
           <Pressable
-            onPress={() => router.push('/new-trip')}
+            onPress={planTrip}
             accessibilityRole="button"
             style={({ pressed }) => [
               styles.planCta,
@@ -167,6 +195,11 @@ export default function HomeScreen() {
               {trips.length ? 'Plan another trip' : 'Plan a trip'}
             </ThemedText>
           </Pressable>
+          {atTripLimit ? (
+            <ThemedText type="small" themeColor="textFaint" style={styles.limitNote}>
+              Free covers one trip at a time. Premium plans as many as you like.
+            </ThemedText>
+          ) : null}
 
           {/* ── Quick actions ────────────────────────────────────── */}
           <View style={styles.actions}>
@@ -229,7 +262,7 @@ export default function HomeScreen() {
                     <View style={styles.recentMain}>
                       <ThemedText type="small" numberOfLines={1}>{r.title}</ThemedText>
                       <ThemedText type="small" themeColor="textFaint">
-                        {r.kind} · {r.date}
+                        {r.kind} · {r.dateKnown ? r.date : 'date not set'}
                       </ThemedText>
                     </View>
                     {r.rating ? (
@@ -307,6 +340,7 @@ function Section({
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safe: { flex: 1 },
+  limitNote: { textAlign: 'center', marginTop: -Spacing.two },
   masthead: {
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between', marginBottom: -Spacing.two,

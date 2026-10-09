@@ -213,6 +213,14 @@ differing only in colour. Leave them unset and the platform may pick a different
 selected item, so that label — and anything drawn around it — measures differently from its
 neighbours.
 
+**`disableAutomaticContentInsets` belongs on every Trigger.** iOS applies its automatic inset and
+its scroll-edge appearance to the FIRST scroll view in each screen — and on Dining and Resorts
+that is the horizontal filter-chip strip, not the list under it. So the bar tracked a strip that
+never scrolls vertically on two tabs and the real content on the other two, which is why it moved
+differently depending on which tab you landed on. Every screen pads its own bottom by
+`BottomTabInset` already, so taking the automatic behaviour away costs nothing. It is a
+per-Trigger prop; setting it on `NativeTabs` does not typecheck.
+
 Several NativeTabs props are silently inert on the platform you are probably testing:
 `indicatorColor`, `rippleColor`, `disableIndicator` and `labelVisibilityMode` are **Android/web
 only**, and on iOS `backgroundColor`, `blurEffect` and `shadowColor` apply to **iOS 18 and
@@ -269,6 +277,68 @@ pipe-separated values because filters and the achievement engine need them that 
 (`titleCase`, `formatCuisine`, `formatList`, `formatSubArea`), so a fix lands once instead of in
 every screen that happens to show the field. Pipes become commas; pipes are storage, not UI.
 
+## Premium
+
+**Everything gated reads `isPremium` from `src/hooks/use-premium.tsx`, and nothing reads a store
+SDK.** When RevenueCat is wired up, only `resolveEntitlement` in that file changes — every gate,
+trigger and badge stays as written. Until then the entitlement is false for everyone, with a
+`__DEV__`-only override stored in `app_settings`; `setSimulated` refuses to act in a release
+build, because shipping a switch that unlocks premium is the business model behind a tap.
+
+**Never paywall data entry.** Unlimited check-offs, unlimited ratings, the whole catalog, search,
+the map and the passport percentages are free, permanently. Every rating a free user logs is what
+makes a Top 10, trending and recommendations possible later, so charging for logging would starve
+the thing that eventually makes premium worth buying. Premium sells depth and convenience:
+notes, dishes, photos, trips past the first, near-me, export.
+
+**Gate with `PremiumGate`, which shows what is behind the gate rather than hiding it.** A feature
+nobody can see is a feature nobody buys, and a field that silently vanishes reads as a bug while a
+labelled locked one reads as an upgrade. The paywall is always triggered contextually and opens
+naming the feature that sent you there — never as a launch interstitial.
+
+**Gate and guard.** The screens gate the UI, and the save path checks `isPremium` again before
+writing a premium column. If a gate ever regressed, a free user still could not write the field.
+
+**Premium content already written stays readable after a lapse.** The venue screen renders notes,
+dishes and photos whenever they exist rather than behind a second check — taking away something
+someone wrote is a different act from declining to let them write more.
+
+Three things on the paywall are not optional and Apple rejects for each: a visible **Restore
+Purchases** button, **price and renewal terms** at the purchase point rather than behind a link,
+and reachable **terms and privacy** links. In-app **account deletion** becomes mandatory the
+moment accounts exist.
+
+**Permission strings are reviewed by a human.** `app.json` spells out what is collected, why, and
+that it is optional, for photos and location. Location is foreground-only and taken as a single
+reading at the point of use — background location is a second, much harder permission the app has
+no reason to ask for.
+
+---
+
+## Onboarding
+
+**The first-run pass is the retention play, not a nicety.** A new install gets "which of these
+have you eaten at?" over two dozen well-known places, and thirty seconds later has a populated
+passport, a percentage and usually a tier. The alternative is an empty grid and a "Log your first
+visit" button.
+
+**Those picks are computed, never typed.** `src/lib/onboarding-picks.ts` scores venues from flags
+already verified in the catalog — signature, character dining, reservations, table service — with
+a score floor and a per-area cap so the list spans the property. A hand-written list of famous
+restaurants is exactly where a place that closed in 2019 gets in. It is a *recognisability proxy*
+standing in for popularity data that does not exist yet; swap it for real counts when
+`venue_stats` has them.
+
+**Onboarding visits carry `date_exact = 0`.** Nobody remembers when they ate somewhere years ago,
+so those rows get today's date as a sort key and every screen that would print it shows "date not
+set" instead. Inventing a date the user later sees and does not recognise is worse than admitting
+the gap.
+
+**"Has onboarding run?" is stored, not inferred.** "Has any visit been logged?" looks like the
+same question: someone who genuinely skipped would otherwise be asked again on every launch.
+
+---
+
 **Large challenges are tiered** — Bronze 25%, Silver 50%, Gold 75%, Platinum 100% — because "4
 of 61" reads as hopeless where "16 more for Silver" reads as a next step. Pavilion challenges
 stay all-or-nothing: eleven countries is a small complete set, and nobody claims a partial
@@ -310,6 +380,16 @@ of 366.
 
 Filtering and search happen **in memory**. The catalog is ~400 rows and already loaded, so a
 round trip per keystroke would be slower and would break offline.
+
+## Export
+
+Every text field goes through the RFC 4180 quoting in `src/lib/export-csv.ts`, not just the ones
+that look risky — a venue description with a comma is the normal case here. A value starting `=`,
+`+`, `-` or `@` is prefixed with an apostrophe, because a spreadsheet will otherwise evaluate a
+restaurant note as a formula. Exports are written to the cache directory, not documents: the file
+exists to be handed to another app, and iOS reclaims it on its own.
+
+---
 
 ## Database
 

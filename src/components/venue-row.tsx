@@ -18,6 +18,7 @@ export function VenueRow({
   venue,
   areaName,
   visitCount = 0,
+  distance,
   planned,
   onPress,
 }: {
@@ -25,6 +26,8 @@ export function VenueRow({
   areaName: string;
   /** How many times the user has logged this place. 0 = not visited. */
   visitCount?: number;
+  /** Pre-formatted, e.g. "450 ft". Only set while nearest-first is on. */
+  distance?: string;
   /** Undefined outside trip-planning mode; true/false while choosing. */
   planned?: boolean;
   onPress?: () => void;
@@ -78,6 +81,12 @@ export function VenueRow({
           {areaName}
           {venue.sub_area ? ` · ${formatSubArea(venue.sub_area)}` : ''}
         </ThemedText>
+
+        {distance ? (
+          <ThemedText type="small" style={{ color: theme.accent, fontSize: 12 }}>
+            {distance} away
+          </ThemedText>
+        ) : null}
 
         <ThemedText type="small" themeColor="textFaint" numberOfLines={1}>
           {[formatCuisine(venue.cuisine), service, price]

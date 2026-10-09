@@ -2,6 +2,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ProgressBar } from '@/components/progress-bar';
+import { SkyCard, Stars } from '@/components/sky-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import {
@@ -11,7 +12,7 @@ import {
   Spacing,
   type RampToken,
 } from '@/constants/theme';
-import { type Challenge, usePassport } from '@/hooks/use-passport';
+import { type Challenge, type Coverage, usePassport } from '@/hooks/use-passport';
 import { titleCase } from '@/lib/labels';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -55,26 +56,41 @@ export default function PassportScreen() {
           </View>
 
           {/* ── Headline number ──────────────────────────────────── */}
-          <View
-            style={[
-              styles.hero,
-              { backgroundColor: theme.backgroundElement, borderColor: theme.border },
-            ]}
-          >
-            <ThemedText style={[styles.heroPct, { color: theme.accent }]}>
-              {Math.round(overall.pct * 100)}
-              <ThemedText style={[styles.heroSign, { color: theme.accent }]}>%</ThemedText>
-            </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary" style={styles.heroCaption}>
-              of Walt Disney World dining eaten through
-            </ThemedText>
-            {overall.visited === 0 ? (
-              <ThemedText type="small" themeColor="textFaint" style={styles.heroCaption}>
-                Log your first visit from the Dining tab and this starts filling.
+          <SkyCard style={styles.hero}>
+            <Stars />
+            <View style={styles.heroInner}>
+              <ThemedText style={styles.heroPct}>
+                {Math.round(overall.pct * 100)}
+                <ThemedText style={styles.heroSign}>%</ThemedText>
               </ThemedText>
-            ) : null}
-          </View>
+              <ThemedText style={styles.heroCaption}>
+                of Walt Disney World dining eaten through
+              </ThemedText>
+              <View style={styles.heroStats}>
+                <HeroStat value={overall.visited} total={overall.total} label="Places" />
+                <HeroStat
+                  value={resortCoverage.visited}
+                  total={resortCoverage.total}
+                  label="Resorts"
+                />
+                <HeroStat value={earned} total={challenges.length} label="Earned" />
+              </View>
+              {overall.visited === 0 ? (
+                <ThemedText style={styles.heroHint}>
+                  Log your first visit from the Dining tab and this starts filling.
+                </ThemedText>
+              ) : null}
+            </View>
+          </SkyCard>
 
+          {/* ── Areas at a glance, in their own colours ───────────── */}
+          <Section title="Where you have eaten">
+            <View style={styles.areaGrid}>
+              {byArea.map((a) => (
+                <AreaTile key={a.id} area={a} />
+              ))}
+            </View>
+          </Section>
 
           <Section title="Resorts">
             <ProgressBar
@@ -120,6 +136,61 @@ export default function PassportScreen() {
   );
 }
 
+function HeroStat({
+  value,
+  total,
+  label,
+}: {
+  value: number;
+  total: number;
+  label: string;
+}) {
+  return (
+    <View style={styles.heroStat}>
+      <ThemedText style={styles.heroStatValue}>
+        {value}
+        <ThemedText style={styles.heroStatTotal}> / {total}</ThemedText>
+      </ThemedText>
+      <ThemedText style={styles.heroStatLabel}>{label.toUpperCase()}</ThemedText>
+    </View>
+  );
+}
+
+/**
+ * One area, in that area's own colour.
+ *
+ * The passport read as one long column of identical grey cards, which made
+ * fourteen different places look like one undifferentiated list. These use the
+ * same `AreaTone` mapping as the dining rows and the map pins, so a park is the
+ * same colour everywhere in the app.
+ */
+function AreaTile({ area }: { area: Coverage }) {
+  const theme = useTheme();
+  const tone = theme[AreaTone[area.id] ?? 'brandTeal'];
+  const pct = Math.round(area.pct * 100);
+
+  return (
+    <View style={[styles.areaTile, { borderColor: tone, backgroundColor: theme.backgroundElement }]}>
+      {/* A filled bar behind the text, sized to the percentage — the tile is
+          its own progress indicator rather than needing a separate one. */}
+      <View
+        style={[styles.areaFill, { backgroundColor: tone, width: `${Math.max(pct, 2)}%` }]}
+      />
+      <View style={styles.areaTileInner}>
+        <ThemedText type="small" numberOfLines={2} style={styles.areaName}>
+          {area.label}
+        </ThemedText>
+        <View style={styles.areaNumbers}>
+          <ThemedText style={[styles.areaPct, { color: tone }]}>{pct}%</ThemedText>
+          <ThemedText type="small" themeColor="textFaint" style={styles.areaCount}>
+            {area.visited}/{area.total}
+          </ThemedText>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 function ChallengeCard({
   challenge: c,
   tone,
@@ -129,6 +200,7 @@ function ChallengeCard({
 }) {
   const theme = useTheme();
   const medalColor = c.tier ? TIER_COLOR[c.tier.name] : null;
+  const stripe = tone ? theme[tone] : theme.brandIndigo;
 
   return (
     <View
@@ -140,6 +212,9 @@ function ChallengeCard({
         },
       ]}
     >
+      {/* The same colour spine the dining rows use, so a challenge for a park
+          is visibly the same park. */}
+      <View style={[styles.cardStripe, { backgroundColor: stripe }]} />
       <View style={styles.cardHead}>
         <View
           style={[
@@ -218,26 +293,70 @@ const styles = StyleSheet.create({
   },
   header: { paddingTop: Spacing.two, gap: 2 },
   heading: { fontSize: 34, lineHeight: 40 },
-  hero: {
-    alignItems: 'center',
-    paddingVertical: Spacing.four,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Radius.large,
-    borderWidth: StyleSheet.hairlineWidth,
-    gap: Spacing.one,
+  hero: { minHeight: 190 },
+  heroInner: { padding: Spacing.four, alignItems: 'center', gap: Spacing.one },
+  // Literals, because the sky gradient is the same dark in both schemes —
+  // theme text tokens would invert and vanish on it.
+  heroPct: { color: '#E5B45F', fontSize: 64, lineHeight: 68, fontWeight: '700' },
+  heroSign: { color: '#E5B45F', fontSize: 30, fontWeight: '700' },
+  heroCaption: {
+    color: 'rgba(255,255,255,0.82)',
+    fontSize: 14,
+    textAlign: 'center',
   },
-  heroPct: { fontSize: 64, lineHeight: 68, fontWeight: '700' },
-  heroSign: { fontSize: 30, fontWeight: '700' },
-  heroCaption: { textAlign: 'center' },
+  heroHint: {
+    color: 'rgba(255,255,255,0.62)',
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: Spacing.two,
+  },
+  heroStats: {
+    flexDirection: 'row',
+    gap: Spacing.four,
+    marginTop: Spacing.three,
+    paddingTop: Spacing.three,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255,255,255,0.18)',
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+  },
+  heroStat: { alignItems: 'center', gap: 1 },
+  heroStatValue: { color: '#ffffff', fontSize: 17, fontWeight: '700' },
+  heroStatTotal: { color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: '400' },
+  heroStatLabel: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  areaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  areaTile: {
+    width: '48.5%',
+    borderRadius: Radius.medium,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
+    minHeight: 74,
+  },
+  // Sits behind the text at low opacity, so the tile itself is the bar.
+  areaFill: { position: 'absolute', left: 0, top: 0, bottom: 0, opacity: 0.22 },
+  areaTileInner: { padding: Spacing.two + 2, gap: 2 },
+  areaName: { fontSize: 12, lineHeight: 15 },
+  areaNumbers: { flexDirection: 'row', alignItems: 'baseline', gap: Spacing.two },
+  areaPct: { fontSize: 20, lineHeight: 24, fontWeight: '700' },
+  areaCount: { fontSize: 11 },
   section: { gap: Spacing.two },
   sectionTitle: { letterSpacing: 1, fontSize: 11, fontWeight: '700' },
   sectionBody: { gap: Spacing.three },
   card: {
     padding: Spacing.three,
+    paddingLeft: Spacing.three + 5,
     borderRadius: Radius.large,
     borderWidth: StyleSheet.hairlineWidth,
     gap: Spacing.two,
+    overflow: 'hidden',
   },
+  cardStripe: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 5 },
   cardHead: { flexDirection: 'row', gap: Spacing.three, alignItems: 'flex-start' },
   cardMain: { flex: 1, gap: 2 },
   medal: {

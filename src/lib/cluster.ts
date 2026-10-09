@@ -141,3 +141,54 @@ export function zoomInto(viewport: Viewport, lat: number, lng: number): Viewport
     longitudeDelta: Math.max(viewport.longitudeDelta / 3, MIN_CLUSTER_DELTA / 2),
   };
 }
+
+/* ── Distance ─────────────────────────────────────────────────────────── */
+
+const EARTH_RADIUS_M = 6_371_000;
+const toRad = (deg: number) => (deg * Math.PI) / 180;
+
+/**
+ * Metres between two points, by the haversine formula.
+ *
+ * Exact enough at Walt Disney World scale — the error against a proper
+ * ellipsoidal calculation over four miles is centimetres, and the answer is
+ * being used to order a restaurant list.
+ */
+export function metresBetween(a: Coords, b: Coords): number {
+  const dLat = toRad(b.latitude - a.latitude);
+  const dLng = toRad(b.longitude - a.longitude);
+  const lat1 = toRad(a.latitude);
+  const lat2 = toRad(b.latitude);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * EARTH_RADIUS_M * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+export type Coords = { latitude: number; longitude: number };
+
+/**
+ * "450 ft" / "0.8 mi".
+ *
+ * Imperial, with no locale switch. Walt Disney World is in Florida and the
+ * overwhelming majority of its guests think in feet and miles; a metric
+ * reading would be the surprising one. Feet below a quarter mile, because
+ * "0.04 mi" tells nobody anything.
+ */
+export function formatDistance(metres: number): string {
+  const feet = metres * 3.28084;
+  if (feet < 1_320) return `${Math.round(feet / 10) * 10} ft`;
+  return `${(metres / 1609.344).toFixed(1)} mi`;
+}
+
+/** Sorts a copy by distance from `from`, with un-placed items last. */
+export function sortByDistance<T extends Positioned>(items: T[], from: Coords): T[] {
+  return [...items].sort((a, b) => {
+    if (a.lat == null || a.lng == null) return 1;
+    if (b.lat == null || b.lng == null) return -1;
+    return (
+      metresBetween(from, { latitude: a.lat, longitude: a.lng }) -
+      metresBetween(from, { latitude: b.lat, longitude: b.lng })
+    );
+  });
+}

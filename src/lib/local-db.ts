@@ -22,7 +22,7 @@ import { CATALOG_DDL, seedCatalogIfNeeded } from '@/lib/catalog-db';
 export const DATABASE_NAME = 'magicaltracker.db';
 
 /** Bump when the schema below changes, and add a matching step in migrate(). */
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 
 export async function migrate(db: SQLiteDatabase) {
   // WAL keeps reads fast while a write is in flight, which matters when the
@@ -119,6 +119,30 @@ export async function migrate(db: SQLiteDatabase) {
     version = 4;
   }
 
+  if (version < 5) {
+    await db.execAsync(`
+      -- Small key/value store for things that are settings rather than data:
+      -- whether onboarding has run, the dev premium override. Deliberately
+      -- not AsyncStorage, so there is one place a user's state lives.
+      CREATE TABLE IF NOT EXISTS app_settings (
+        key   TEXT PRIMARY KEY NOT NULL,
+        value TEXT
+      );
+
+      -- Premium depth on a visit. Free users log the visit and the rating;
+      -- these three are what they are paying for.
+      ALTER TABLE visits ADD COLUMN dishes TEXT;        -- JSON array of strings
+      ALTER TABLE visits ADD COLUMN photos TEXT;        -- JSON array of local URIs
+
+      -- Onboarding asks "which of these have you eaten at?" and nobody
+      -- remembers the date. Those rows get today's date with this flag at 0,
+      -- and the UI says "date not set" rather than inventing a day the user
+      -- would later see and not recognise.
+      ALTER TABLE visits ADD COLUMN date_exact INTEGER NOT NULL DEFAULT 1;
+    `);
+    version = 5;
+  }
+
   await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
 
   // After the DDL, never before: seeding inserts into tables version 4 creates.
@@ -170,10 +194,50 @@ export type Visit = {
   would_return: number | null;
   party_size: number | null;
   note: string | null;
+  /** JSON array. Premium. */
+  dishes: string | null;
+  /** JSON array of local file URIs. Premium. */
+  photos: string | null;
+  /** 0 when the date is a placeholder — an onboarding backfill. */
+  date_exact: number;
   created_at: string;
   updated_at: string;
   synced_at: string | null;
 };
+
+/** A stored JSON array column that is somehow not valid JSON must not take the
+ *  screen down with it. */
+export function jsonList(value: string | null | undefined): string[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((v) => typeof v === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+/* ── Settings ─────────────────────────────────────────────────────────── */
+
+export async function getSetting(
+  db: SQLiteDatabase,
+  key: string,
+): Promise<string | null> {
+  const row = await db.getFirstAsync<{ value: string | null }>(
+    'SELECT value FROM app_settings WHERE key = ?',
+    key,
+  );
+  return row?.value ?? null;
+}
+
+export async function setSetting(db: SQLiteDatabase, key: string, value: string) {
+  await db.runAsync(
+    `INSERT INTO app_settings (key, value) VALUES (?, ?)
+     ON CONFLICT (key) DO UPDATE SET value = excluded.value`,
+    key,
+    value,
+  );
+}
 
 /** Today in the device's own timezone — a guest logging dinner at 11pm in
  *  Florida means today, not tomorrow in UTC. */
