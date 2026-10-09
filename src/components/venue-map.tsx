@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 
 import { ThemedText } from '@/components/themed-text';
-import { AreaTone, Radius, Spacing } from '@/constants/theme';
+import { AreaTone, BottomTabInset, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { VenueListItem } from '@/hooks/use-venues';
 import { clusterPins, WDW_REGION, zoomInto, type Viewport } from '@/lib/cluster';
@@ -242,7 +242,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: Spacing.three,
     right: Spacing.three,
-    bottom: Spacing.three,
+    // The map is not a scroll view, so it gets none of the automatic content
+    // inset the tab bar applies to the list. Without this the card sits behind
+    // the tab bar.
+    bottom: BottomTabInset + Spacing.two,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,

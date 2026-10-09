@@ -111,11 +111,19 @@ export default function CatalogScreen() {
       <SafeAreaView edges={['top']} style={styles.safe}>
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <ThemedText type="title" style={styles.heading}>
+            <ThemedText type="title" style={styles.heading} numberOfLines={1}>
               {planning ? 'Add to trip' : 'Dining'}
             </ThemedText>
             {!planning ? (
-              <View style={styles.segment}>
+              <View
+                style={[
+                  styles.segment,
+                  {
+                    backgroundColor: theme.backgroundElement,
+                    borderColor: theme.border,
+                  },
+                ]}
+              >
                 <Segment
                   label="List"
                   active={view === 'list'}
@@ -282,6 +290,15 @@ export default function CatalogScreen() {
   );
 }
 
+/**
+ * One side of the List/Map toggle.
+ *
+ * The first version drew the track transparent and filled the selected side
+ * with `backgroundElement`, which against the screen background is a few
+ * percent of lightness apart — so it did not read as a two-option control at
+ * all, and the unselected side looked like disabled placeholder text. The
+ * selected side is now `accent`, which nothing else in the header uses.
+ */
 function Segment({
   label,
   active,
@@ -295,16 +312,20 @@ function Segment({
   return (
     <Pressable
       onPress={onPress}
-      accessibilityRole="button"
+      accessibilityRole="tab"
       accessibilityState={{ selected: active }}
+      accessibilityLabel={`${label} view`}
       style={[
         styles.segmentItem,
-        active ? { backgroundColor: theme.backgroundElement } : null,
+        active ? { backgroundColor: theme.accent } : null,
       ]}
     >
       <ThemedText
         type="small"
-        style={{ color: active ? theme.text : theme.textFaint }}
+        style={{
+          color: active ? theme.onAccent : theme.textSecondary,
+          fontWeight: active ? '700' : '500',
+        }}
       >
         {label}
       </ThemedText>
@@ -402,12 +423,13 @@ const styles = StyleSheet.create({
   segment: {
     flexDirection: 'row',
     borderRadius: Radius.pill,
-    padding: 2,
-    backgroundColor: 'transparent',
+    padding: 3,
+    gap: 2,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   segmentItem: {
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one + 2,
+    paddingVertical: Spacing.one + 3,
     borderRadius: Radius.pill,
   },
   searchRow: {
