@@ -1,10 +1,9 @@
 import { useMemo } from 'react';
 
+import { useCatalog } from '@/hooks/use-catalog';
 import { useResorts } from '@/hooks/use-resorts';
 import { useVenues } from '@/hooks/use-venues';
 import { useVisits } from '@/hooks/use-visits';
-import { supabase } from '@/lib/supabase';
-import { useEffect, useState } from 'react';
 
 /**
  * The passport.
@@ -99,46 +98,21 @@ function tierProgress(earned: number, total: number) {
   };
 }
 
-/** venue_id -> tags / sub_area, needed for the tag-based challenges but not
- *  worth loading on the list screen. */
-type TagRow = { id: string; tags: string[]; sub_area: string | null; area_id: string };
-
-function useVenueTags() {
-  const [rows, setRows] = useState<TagRow[]>([]);
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const { data } = await supabase
-        .from('venues')
-        .select('id, tags, sub_area, area_id');
-      if (!cancelled) setRows((data ?? []) as unknown as TagRow[]);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-  return rows;
-}
-
 export function usePassport() {
   const { data: venues, loading: venuesLoading } = useVenues();
   const { data: resorts, loading: resortsLoading } = useResorts();
   const { byVenue, byResort } = useVisits();
-  const tagRows = useVenueTags();
+  const { areas } = useCatalog();
 
-  const [areaNames, setAreaNames] = useState<Record<string, string>>({});
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const { data } = await supabase.from('areas').select('id, name, kind');
-      if (cancelled) return;
-      const rows = (data ?? []) as { id: string; name: string; kind: string }[];
-      setAreaNames(Object.fromEntries(rows.map((a) => [a.id, a.name])));
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // The tag-driven challenges read `tags` and `sub_area`, which every catalog
+  // row now carries. This used to be a second query because the list select
+  // omitted those columns to save bandwidth.
+  const tagRows = venues;
+
+  const areaNames = useMemo(
+    () => Object.fromEntries(areas.map((a) => [a.id, a.name])),
+    [areas],
+  );
 
   /** Only places you can actually eat at, and that still exist. */
   const eligible = useMemo(

@@ -1,6 +1,9 @@
-import { BerkshireSwash_400Regular } from '@expo-google-fonts/berkshire-swash';
-import { Figtree_600SemiBold } from '@expo-google-fonts/figtree';
-import { Pacifico_400Regular } from '@expo-google-fonts/pacifico';
+// Imported from the per-weight subpaths, not the package roots. Each package's
+// index.js `require`s every weight it ships, so importing from the root makes
+// Metro bundle all of them — about 800 KB of Figtree the app never renders.
+import { BerkshireSwash_400Regular } from '@expo-google-fonts/berkshire-swash/400Regular';
+import { Figtree_600SemiBold } from '@expo-google-fonts/figtree/600SemiBold';
+import { Pacifico_400Regular } from '@expo-google-fonts/pacifico/400Regular';
 import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { SQLiteProvider } from 'expo-sqlite';
@@ -8,6 +11,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { CatalogProvider } from '@/hooks/use-catalog';
+import { CatalogFiltersProvider } from '@/hooks/use-catalog-filters';
 import { TripsProvider } from '@/hooks/use-trips';
 import { VisitsProvider } from '@/hooks/use-visits';
 import { DATABASE_NAME, migrate } from '@/lib/local-db';
@@ -39,8 +44,10 @@ export default function RootLayout() {
 
   return (
     <SQLiteProvider databaseName={DATABASE_NAME} onInit={migrate}>
-      <VisitsProvider>
-        <TripsProvider>
+      <CatalogProvider>
+        <CatalogFiltersProvider>
+        <VisitsProvider>
+          <TripsProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           {/*
             The overlay stays mounted whatever happens to the fonts — it is
@@ -68,14 +75,20 @@ export default function RootLayout() {
                 options={{ title: 'Log a stay', presentation: 'modal' }}
               />
               <Stack.Screen
+                name="filters"
+                options={{ title: 'Filters', presentation: 'modal' }}
+              />
+              <Stack.Screen
                 name="theme"
                 options={{ title: 'Design tokens', presentation: 'modal' }}
               />
             </Stack>
           ) : null}
         </ThemeProvider>
-        </TripsProvider>
-      </VisitsProvider>
+          </TripsProvider>
+        </VisitsProvider>
+        </CatalogFiltersProvider>
+      </CatalogProvider>
     </SQLiteProvider>
   );
 }

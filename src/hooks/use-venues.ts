@@ -1,117 +1,79 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
-import { supabase } from '@/lib/supabase';
+import { useCatalog } from '@/hooks/use-catalog';
+import type { CatalogArea, CatalogVenue } from '@/lib/catalog-db';
 
 /**
- * The catalog data layer.
+ * The venue half of the catalog.
  *
- * Everything that reads venues goes through this hook, so the SOURCE can
- * change without touching a single screen. Today it fetches from Supabase.
- * When the offline layer lands, this becomes a read from on-device SQLite with
- * background sync — park wifi is bad enough that logging a meal must not
- * depend on having bars — and the screens will not know the difference.
+ * This used to query Supabase on every mount. It now reads from the in-memory
+ * catalog that `CatalogProvider` loaded out of SQLite, which is what makes the
+ * app work in a dead zone — and the screens never knew the difference, which
+ * is exactly what this indirection was for.
  */
 
-/** The columns a list row actually needs. Fetching all 28 wastes bandwidth. */
-const LIST_COLUMNS =
-  'id, name, area_id, sub_area, resort_id, venue_kind, service_type, ' +
-  'cuisine, price_tier, is_signature, status, lat, lng';
+export type VenueListItem = CatalogVenue;
+export type Area = CatalogArea;
 
-export type VenueListItem = {
-  id: string;
-  name: string;
-  area_id: string;
-  sub_area: string | null;
-  resort_id: string | null;
-  venue_kind: string;
-  service_type: string[];
-  cuisine: string | null;
-  price_tier: number;
-  is_signature: boolean;
-  status: string;
-  lat: number | null;
-  lng: number | null;
-};
-
-export type Area = { id: string; name: string; kind: string };
-
-type State<T> = {
-  data: T;
-  loading: boolean;
-  /** User-facing message, already phrased for display. Null when fine. */
-  error: string | null;
-};
-
-function message(e: unknown): string {
-  const raw = e instanceof Error ? e.message : String(e);
-  // Supabase surfaces offline as a bare "Network request failed", which tells
-  // a user in a dead zone nothing useful.
-  if (/network|fetch/i.test(raw)) {
-    return 'Could not reach the server. Check your connection and try again.';
-  }
-  return raw;
-}
+/** Kinds that are not a place you sit down to eat. Kept here because both the
+ *  list filters and the map legend need the same answer. */
+export const EVENT_KIND = 'event';
 
 export function useVenues() {
-  const [state, setState] = useState<State<VenueListItem[]>>({
-    data: [],
-    loading: true,
-    error: null,
-  });
+  const { venues, loading, refreshing, refreshError, refresh } = useCatalog();
 
-  const load = useCallback(async () => {
-    setState((s) => ({ ...s, loading: true, error: null }));
-    try {
-      const { data, error } = await supabase
-        .from('venues')
-        .select(LIST_COLUMNS)
-        .neq('status', 'permanently-closed')
-        .order('name');
+  // Permanently-closed venues stay in the catalog — the passport needs to know
+  // they existed — but nobody browsing dinner wants to see them.
+  const data = useMemo(
+    () => venues.filter((v) => v.status !== 'permanently-closed'),
+    [venues],
+  );
 
-      if (error) throw new Error(error.message);
-      // supabase-js can only infer row types from a select string it can see
-      // literally; LIST_COLUMNS is a variable, so it falls back to a generic
-      // type and the cast has to go through unknown.
-      setState({ data: (data ?? []) as unknown as VenueListItem[], loading: false, error: null });
-    } catch (e) {
-      setState({ data: [], loading: false, error: message(e) });
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  return { ...state, reload: load };
+  return { data, loading, refreshing, error: refreshError, reload: refresh };
 }
 
 export function useAreas() {
-  const [state, setState] = useState<State<Area[]>>({
-    data: [],
-    loading: true,
-    error: null,
-  });
+  const { areas, loading } = useCatalog();
+  return { data: areas, loading, error: null as string | null };
+}
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const { data, error } = await supabase
-        .from('areas')
-        .select('id, name, kind')
-        .order('name');
-      if (cancelled) return;
-      setState({
-        data: (data ?? []) as Area[],
-        loading: false,
-        error: error ? message(new Error(error.message)) : null,
-      });
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+export type VenueFilters = {
+  search: string;
+  areaId: string | null;
+  /** `null` means every kind. `'event'` is how events are reached at all. */
+  kind: string | null;
+  serviceType: string | null;
+  priceTiers: number[];
+  reservationsOnly: boolean;
+  characterOnly: boolean;
+  signatureOnly: boolean;
+  unvisitedOnly: boolean;
+};
 
-  return state;
+export const NO_FILTERS: VenueFilters = {
+  search: '',
+  areaId: null,
+  kind: null,
+  serviceType: null,
+  priceTiers: [],
+  reservationsOnly: false,
+  characterOnly: false,
+  signatureOnly: false,
+  unvisitedOnly: false,
+};
+
+/** How many refinements are on, for the "Filters · 3" badge. Search and area
+ *  are excluded: both have their own visible control on the screen. */
+export function activeFilterCount(f: VenueFilters): number {
+  return (
+    (f.kind ? 1 : 0) +
+    (f.serviceType ? 1 : 0) +
+    (f.priceTiers.length ? 1 : 0) +
+    (f.reservationsOnly ? 1 : 0) +
+    (f.characterOnly ? 1 : 0) +
+    (f.signatureOnly ? 1 : 0) +
+    (f.unvisitedOnly ? 1 : 0)
+  );
 }
 
 /**
@@ -122,17 +84,63 @@ export function useAreas() {
  */
 export function useFilteredVenues(
   venues: VenueListItem[],
-  { search, areaId }: { search: string; areaId: string | null },
+  filters: Partial<VenueFilters>,
+  /** Venue ids the user has already logged. Only needed for `unvisitedOnly`. */
+  visited?: Set<string> | Map<string, unknown>,
 ) {
+  const f = { ...NO_FILTERS, ...filters };
+
   return useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = f.search.trim().toLowerCase();
+
     return venues.filter((v) => {
-      if (areaId && v.area_id !== areaId) return false;
+      if (f.areaId && v.area_id !== f.areaId) return false;
+
+      // With no kind chosen, events are hidden. They are ticketed parties and
+      // festivals, not somewhere you eat, so mixing 26 of them into a dinner
+      // list is noise — but they are one chip away rather than unreachable.
+      if (f.kind) {
+        if (v.venue_kind !== f.kind) return false;
+      } else if (v.venue_kind === EVENT_KIND) return false;
+
+      if (f.serviceType && !v.service_type.includes(f.serviceType)) return false;
+      if (f.priceTiers.length && !f.priceTiers.includes(v.price_tier)) return false;
+      if (f.reservationsOnly && !v.reservations_recommended) return false;
+      if (
+        f.characterOnly &&
+        !v.is_character_dinner_dining &&
+        !v.is_character_breakfast_dining
+      ) {
+        return false;
+      }
+      if (f.signatureOnly && !v.is_signature) return false;
+      if (f.unvisitedOnly && visited && hasVisit(visited, v.id)) return false;
+
       if (!q) return true;
+      // Keywords are free-form search fodder — 'alcohol', 'bakery', a resort
+      // nickname — so they are searchable but never read by the badge engine.
       return (
         v.name.toLowerCase().includes(q) ||
-        (v.cuisine ?? '').toLowerCase().includes(q)
+        (v.cuisine ?? '').toLowerCase().includes(q) ||
+        (v.sub_area ?? '').toLowerCase().includes(q) ||
+        v.keywords.some((k) => k.toLowerCase().includes(q))
       );
     });
-  }, [venues, search, areaId]);
+  }, [
+    venues,
+    visited,
+    f.search,
+    f.areaId,
+    f.kind,
+    f.serviceType,
+    f.priceTiers,
+    f.reservationsOnly,
+    f.characterOnly,
+    f.signatureOnly,
+    f.unvisitedOnly,
+  ]);
+}
+
+function hasVisit(visited: Set<string> | Map<string, unknown>, id: string) {
+  return visited.has(id);
 }

@@ -59,10 +59,20 @@ export const SUB_AREAS = {
   'disney-springs': ['marketplace', 'the-landing', 'town-center', 'west-side'],
 };
 
-/** The eleven pavilions. Drinking/Snacking Around the World read these. */
+/**
+ * The eleven pavilions. Drinking/Snacking Around the World read these, and
+ * `src/hooks/use-passport.ts` holds the same eleven for the app side.
+ *
+ * `outpost` is deliberately NOT here. It is a legal `sub_area` — Refreshment
+ * Outpost sits between Germany and China — but it is not one of the eleven
+ * countries, so counting it would make both challenges need a twelfth stop
+ * that nobody considers part of the set. It was in this list once, and the
+ * effect was the validator reporting Drinking Around the World as
+ * uncompletable forever because no bar would ever be tagged there.
+ */
 export const WORLD_SHOWCASE = [
   'mexico', 'norway', 'china', 'germany', 'italy', 'american-adventure',
-  'japan', 'morocco', 'france', 'united-kingdom', 'canada', 'outpost',
+  'japan', 'morocco', 'france', 'united-kingdom', 'canada',
 ];
 
 export const TAGS = [

@@ -47,10 +47,13 @@
   },
   "scripts": {
     "start": "expo start",
+    "prestart": "node ./scripts/build-catalog-bundle.mjs",
     "reset-project": "node ./scripts/reset-project.js",
     "validate:data": "node ./scripts/validate-data.mjs",
     "data:normalize": "node ./scripts/normalize-csv.mjs",
     "data:workbook": "node ./scripts/build-workbook.mjs",
+    "data:bundle": "node ./scripts/build-catalog-bundle.mjs",
+    "eas-build-post-install": "node ./scripts/build-catalog-bundle.mjs",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",

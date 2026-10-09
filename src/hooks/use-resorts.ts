@@ -1,26 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
-import { supabase } from '@/lib/supabase';
+import { useCatalog } from '@/hooks/use-catalog';
+import type { CatalogResort } from '@/lib/catalog-db';
 
 /**
  * The resort half of the catalog. Mirrors `use-venues` deliberately — same
- * shape, same in-memory filtering, same future swap to on-device SQLite.
+ * shape, same in-memory filtering, and the same read from the on-device
+ * catalog rather than from Supabase.
  */
 
-export type Resort = {
-  id: string;
-  name: string;
-  area_id: string;
-  tier: string;
-  transport: string[];
-  transport_notes: string | null;
-  ownership: string;
-  lat: number | null;
-  lng: number | null;
-  official_url: string | null;
-  description: string | null;
-  status: string;
-};
+export type Resort = CatalogResort;
 
 export const TIER_LABEL: Record<string, string> = {
   value: 'Value',
@@ -40,38 +29,8 @@ export const TRANSPORT_LABEL: Record<string, string> = {
 };
 
 export function useResorts() {
-  const [data, setData] = useState<Resort[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const { data: rows, error: e } = await supabase
-        .from('resorts')
-        .select(
-          'id, name, area_id, tier, transport, transport_notes, ownership, ' +
-            'lat, lng, official_url, description, status',
-        )
-        .order('name');
-      if (cancelled) return;
-      if (e) {
-        setError(
-          /network|fetch/i.test(e.message)
-            ? 'Could not reach the server. Check your connection and try again.'
-            : e.message,
-        );
-      } else {
-        setData((rows ?? []) as unknown as Resort[]);
-      }
-      setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  return { data, loading, error };
+  const { resorts, loading, refreshError } = useCatalog();
+  return { data: resorts, loading, error: refreshError };
 }
 
 export function useResort(id: string | undefined) {

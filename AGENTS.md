@@ -227,13 +227,27 @@ cannot thicken on selection while its neighbours do. Prefer a glyph that fills �
 
 ## App data layer
 
-**Every read of catalog data goes through a hook in `src/hooks/`.** No screen imports
-`src/lib/supabase.ts` directly.
+**Every read of catalog data goes through a hook in `src/hooks/`.** `src/lib/supabase.ts` has
+exactly one importer — `use-catalog.tsx` — and nothing else may import it.
 
-That indirection is the whole point: today `useVenues()` fetches from Supabase, and when the
-offline layer lands it becomes a read from on-device SQLite with background sync. Park wifi is
-bad enough that logging a meal must not depend on having bars. If screens query Supabase
-directly, that swap means rewriting every screen instead of one hook.
+That indirection paid for itself: `useVenues()` fetched from Supabase, and swapping it to a read
+from on-device SQLite touched one file instead of every screen.
+
+**The catalog is local-first, in three layers.** `src/data/catalog.json` ships inside the JS
+bundle, `onInit` seeds SQLite from it before the first render, and a background fetch from
+Supabase overwrites those rows at most once a day. So a cold install in a dead zone has all 394
+venues, and a venue that closes between App Store releases can still be corrected without
+shipping a build.
+
+The bundle version is a **content hash of the CSVs**, which is the floor. A new app release
+carries a new bundle, re-seeds, and discards whatever the last remote fetch left — correct,
+because the bundle is generated from the same CSVs the database is imported from. Regenerate it
+with `npm run data:bundle`; `prestart` and `eas-build-post-install` both run it, so a CSV edit
+cannot reach a build unseen.
+
+**A successful refresh that returns zero rows is treated as an error, not as an instruction.**
+An empty result means something broke upstream — an RLS policy, a bad filter — and wiping every
+restaurant off someone's device in response to it would turn a server mistake into a dead app.
 
 `process.env.EXPO_PUBLIC_*` must be written as **static dot notation**. Metro substitutes these
 at build time by matching the literal text, so `process.env['EXPO_PUBLIC_…']` or destructuring
@@ -267,8 +281,32 @@ Permanently-closed venues are out — you cannot eat somewhere that no longer ex
 coverage counts only `ownership = 'disney-owned'`: Shades of Green is restricted to US military
 eligibility, and partner hotels are a different product.
 
+**Events are hidden unless asked for.** The 26 `venue_kind = 'event'` rows are ticketed parties
+and festivals, not places you sit down to eat, so the default list excludes them and the Type
+filter is the only way in. They are excluded from passport denominators for the same reason — a
+seasonal dessert party must not make a park uncompletable for someone who visits in June.
+
+**The eleven World Showcase pavilions are defined twice and must agree** —
+`scripts/vocabulary.mjs` for the data tooling and `src/hooks/use-passport.ts` for the app.
+`outpost` is a legal `sub_area` but is NOT one of the eleven. It was in the vocabulary list once,
+and the result was the validator reporting Drinking Around the World as permanently uncompletable
+because no bar would ever be tagged in Refreshment Outpost.
+
 **Pavilion challenges count pavilions covered, not venues visited.** A drink at either Mexico bar
 completes Mexico. `require: all` over the tagged venues would demand all 47 bars.
+
+**The map is Apple Maps via `PROVIDER_DEFAULT`, and that is a choice, not a placeholder.** It
+needs no API key and runs in Expo Go, so it works before the Apple Developer Program clears.
+Styled Google Maps needs a key through a config plugin, which needs a development build, which
+needs the paid account.
+
+Two things about markers are load-bearing. `tracksViewChanges` must be `false` on any marker with
+custom children, or the map re-renders every one of them continuously and visibly stutters — it
+is only `true` for the selected pin, which genuinely needs one more frame. And
+`react-native-maps` mounts every `<Marker>` child whether or not it is on screen, so
+`src/lib/cluster.ts` culls to the viewport as well as clustering: without culling the deepest
+zoom mounts all 366 pins at once. Together they keep the mounted count at roughly 14–57 instead
+of 366.
 
 Filtering and search happen **in memory**. The catalog is ~400 rows and already loaded, so a
 round trip per keystroke would be slower and would break offline.

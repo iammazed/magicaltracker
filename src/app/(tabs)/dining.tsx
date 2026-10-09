@@ -14,11 +14,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { VenueMap } from '@/components/venue-map';
 import { VenueRow } from '@/components/venue-row';
 import { BottomTabInset, Radius, Spacing } from '@/constants/theme';
+import { useCatalogFilters } from '@/hooks/use-catalog-filters';
 import { useTheme } from '@/hooks/use-theme';
-import { useAreas, useFilteredVenues, useVenues } from '@/hooks/use-venues';
 import { useTrips } from '@/hooks/use-trips';
+import {
+  activeFilterCount,
+  useAreas,
+  useFilteredVenues,
+  useVenues,
+} from '@/hooks/use-venues';
 import { useVisits } from '@/hooks/use-visits';
 
 /**
@@ -45,7 +52,7 @@ const SHORT_AREA: Record<string, string> = {
 export default function CatalogScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const { data: venues, loading, error, reload } = useVenues();
+  const { data: venues, loading, refreshing, error, reload } = useVenues();
   const { byVenue, visitedCount } = useVisits();
   // When arriving from a trip, tapping a row adds to that trip's dining list
   // instead of opening the venue.
@@ -57,61 +64,114 @@ export default function CatalogScreen() {
     [planning, plansFor],
   );
   const { data: areas } = useAreas();
+  const { filters, set, clear } = useCatalogFilters();
 
-  const [search, setSearch] = useState('');
-  const [areaId, setAreaId] = useState<string | null>(null);
+  // The map is a view of the same filtered set, not a separate screen, so
+  // switching to it never loses the filters you just chose. It is also local
+  // state rather than a route: a tab that remembers it was showing a map is
+  // surprising when you come back to find a restaurant by name.
+  const [view, setView] = useState<'list' | 'map'>('list');
 
   const areaName = useMemo(
     () => Object.fromEntries(areas.map((a) => [a.id, a.name])),
     [areas],
   );
 
-  const filtered = useFilteredVenues(venues, { search, areaId });
+  const filtered = useFilteredVenues(venues, filters, byVenue);
+  const refinements = activeFilterCount(filters);
 
-  /** Only offer areas that actually contain something. */
+  const visitedIds = useMemo(() => new Set(byVenue.keys()), [byVenue]);
+
+  /**
+   * Area chips, counted against every filter EXCEPT the area itself — so the
+   * number on a chip is what you would actually see after tapping it. Counting
+   * raw venues instead would put "EPCOT 61" above a list of 48, because the
+   * other 13 are events the default view hides.
+   */
+  const withoutArea = useFilteredVenues(venues, { ...filters, areaId: null }, byVenue);
   const areaChips = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const v of venues) counts.set(v.area_id, (counts.get(v.area_id) ?? 0) + 1);
+    for (const v of withoutArea) counts.set(v.area_id, (counts.get(v.area_id) ?? 0) + 1);
     return areas
       .filter((a) => counts.has(a.id))
       .map((a) => ({ ...a, count: counts.get(a.id) ?? 0 }));
-  }, [venues, areas]);
+  }, [withoutArea, areas]);
+
+  const subtitle = planning
+    ? `${plannedIds.size} on ${planning.name} · tap to add or remove`
+    : loading && venues.length === 0
+      ? 'Loading…'
+      : visitedCount > 0
+        ? `${visitedCount} of ${venues.length} visited` +
+          (filtered.length !== venues.length ? `  ·  ${filtered.length} shown` : '')
+        : `${venues.length} places`;
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView edges={['top']} style={styles.safe}>
         <View style={styles.header}>
-          <ThemedText type="title" style={styles.heading}>
-            {planning ? 'Add to trip' : 'Dining'}
-          </ThemedText>
+          <View style={styles.headerTop}>
+            <ThemedText type="title" style={styles.heading}>
+              {planning ? 'Add to trip' : 'Dining'}
+            </ThemedText>
+            {!planning ? (
+              <View style={styles.segment}>
+                <Segment
+                  label="List"
+                  active={view === 'list'}
+                  onPress={() => setView('list')}
+                />
+                <Segment
+                  label="Map"
+                  active={view === 'map'}
+                  onPress={() => setView('map')}
+                />
+              </View>
+            ) : null}
+          </View>
           <ThemedText type="small" themeColor="textSecondary">
-            {planning
-              ? `${plannedIds.size} on ${planning.name} · tap to add or remove`
-              : loading && venues.length === 0
-              ? 'Loading…'
-              : visitedCount > 0
-                ? `${visitedCount} of ${venues.length} visited` +
-                  (filtered.length !== venues.length ? `  ·  ${filtered.length} shown` : '')
-                : `${venues.length} places`}
+            {subtitle}
           </ThemedText>
         </View>
 
-        <TextInput
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Search restaurants and lounges"
-          placeholderTextColor={theme.textFaint}
-          autoCorrect={false}
-          clearButtonMode="while-editing"
-          style={[
-            styles.search,
-            {
-              backgroundColor: theme.backgroundElement,
-              borderColor: theme.border,
-              color: theme.text,
-            },
-          ]}
-        />
+        <View style={styles.searchRow}>
+          <TextInput
+            value={filters.search}
+            onChangeText={(t) => set('search', t)}
+            placeholder="Search restaurants and lounges"
+            placeholderTextColor={theme.textFaint}
+            autoCorrect={false}
+            clearButtonMode="while-editing"
+            style={[
+              styles.search,
+              {
+                backgroundColor: theme.backgroundElement,
+                borderColor: theme.border,
+                color: theme.text,
+              },
+            ]}
+          />
+          <Pressable
+            onPress={() => router.push('/filters')}
+            accessibilityRole="button"
+            accessibilityLabel={
+              refinements ? `Filters, ${refinements} active` : 'Filters'
+            }
+            style={[
+              styles.filterButton,
+              refinements
+                ? { backgroundColor: theme.accent, borderColor: theme.accent }
+                : { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+            ]}
+          >
+            <ThemedText
+              type="small"
+              style={{ color: refinements ? theme.onAccent : theme.textSecondary }}
+            >
+              {refinements ? `Filters ${refinements}` : 'Filters'}
+            </ThemedText>
+          </Pressable>
+        </View>
 
         <ScrollView
           horizontal
@@ -124,20 +184,20 @@ export default function CatalogScreen() {
         >
           <Chip
             label="All"
-            active={areaId === null}
-            onPress={() => setAreaId(null)}
+            active={filters.areaId === null}
+            onPress={() => set('areaId', null)}
           />
           {areaChips.map((a) => (
             <Chip
               key={a.id}
               label={`${SHORT_AREA[a.id] ?? a.name}  ${a.count}`}
-              active={areaId === a.id}
-              onPress={() => setAreaId(areaId === a.id ? null : a.id)}
+              active={filters.areaId === a.id}
+              onPress={() => set('areaId', filters.areaId === a.id ? null : a.id)}
             />
           ))}
         </ScrollView>
 
-        {error ? (
+        {error && venues.length === 0 ? (
           <Empty
             title="Could not load the catalog"
             body={error}
@@ -148,18 +208,30 @@ export default function CatalogScreen() {
           <View style={styles.center}>
             <ActivityIndicator color={theme.accent} />
           </View>
+        ) : view === 'map' && !planning ? (
+          <VenueMap
+            venues={filtered}
+            visitedIds={visitedIds}
+            areaName={(id) => areaName[id] ?? id}
+            onOpen={(v) => router.push({ pathname: '/venue/[id]', params: { id: v.id } })}
+          />
         ) : filtered.length === 0 ? (
           <Empty
             title="Nothing matches"
             body={
-              search
-                ? `No places match “${search}”.`
-                : 'No places in this area yet.'
+              filters.search
+                ? `No places match “${filters.search}”.`
+                : refinements
+                  ? 'No places match these filters.'
+                  : 'No places in this area yet.'
             }
-            actionLabel={search || areaId ? 'Clear filters' : undefined}
+            actionLabel={
+              filters.search || filters.areaId || refinements ? 'Clear filters' : undefined
+            }
             onAction={() => {
-              setSearch('');
-              setAreaId(null);
+              clear();
+              set('search', '');
+              set('areaId', null);
             }}
           />
         ) : (
@@ -187,7 +259,7 @@ export default function CatalogScreen() {
             keyboardDismissMode="on-drag"
             refreshControl={
               <RefreshControl
-                refreshing={loading && venues.length > 0}
+                refreshing={refreshing}
                 onRefresh={reload}
                 tintColor={theme.accent}
               />
@@ -207,6 +279,36 @@ export default function CatalogScreen() {
         ) : null}
       </SafeAreaView>
     </ThemedView>
+  );
+}
+
+function Segment({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      style={[
+        styles.segmentItem,
+        active ? { backgroundColor: theme.backgroundElement } : null,
+      ]}
+    >
+      <ThemedText
+        type="small"
+        style={{ color: active ? theme.text : theme.textFaint }}
+      >
+        {label}
+      </ThemedText>
+    </Pressable>
   );
 }
 
@@ -290,14 +392,43 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.two,
     gap: 2,
   },
-  heading: { fontSize: 34, lineHeight: 40 },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.two,
+  },
+  heading: { fontSize: 34, lineHeight: 40, flexShrink: 1 },
+  segment: {
+    flexDirection: 'row',
+    borderRadius: Radius.pill,
+    padding: 2,
+    backgroundColor: 'transparent',
+  },
+  segmentItem: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one + 2,
+    borderRadius: Radius.pill,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.three,
+  },
   search: {
-    marginHorizontal: Spacing.three,
+    flex: 1,
     paddingHorizontal: Spacing.three,
     height: 42,
     borderRadius: Radius.medium,
     borderWidth: StyleSheet.hairlineWidth,
     fontSize: 16,
+  },
+  filterButton: {
+    paddingHorizontal: Spacing.three,
+    height: 42,
+    justifyContent: 'center',
+    borderRadius: Radius.medium,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   chipScroll: { flexGrow: 0, flexShrink: 0 },
   chips: {

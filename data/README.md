@@ -228,6 +228,12 @@ The eleven World Showcase pavilions are load-bearing: **Drinking Around the Worl
 **Snacking Around the World** are computed from them. If a pavilion slug is wrong, the
 achievement cannot be completed.
 
+**`outpost` is not one of the eleven.** Refreshment Outpost sits between Germany and China and is
+a perfectly legal `sub_area`, but it is not a country pavilion, so never put a `world-showcase-*`
+tag on it — the validator will reject it, and the app would ignore it anyway. The slug was in the
+pavilion list once and the result was the validator calling Drinking Around the World
+permanently uncompletable, because no bar would ever be tagged there.
+
 Both achievements count **pavilions covered, not venues visited** — one tagged venue in each of
 the eleven is enough. So tag *every* qualifying venue, not one per country: someone who drinks
 at La Cava del Tequila and someone who drinks at Choza de Margarita have both done Mexico, and

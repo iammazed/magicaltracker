@@ -1,5 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import { CATALOG_DDL, seedCatalogIfNeeded } from '@/lib/catalog-db';
+
 /**
  * On-device store for the user's own data.
  *
@@ -20,7 +22,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 export const DATABASE_NAME = 'magicaltracker.db';
 
 /** Bump when the schema below changes, and add a matching step in migrate(). */
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 export async function migrate(db: SQLiteDatabase) {
   // WAL keeps reads fast while a write is in flight, which matters when the
@@ -108,7 +110,21 @@ export async function migrate(db: SQLiteDatabase) {
     version = 3;
   }
 
+  if (version < 4) {
+    // Read-only replicas of the catalog. They live in the same database as the
+    // user's rows so there is one file, one connection and one migration
+    // ladder — but they are `catalog_`-prefixed because re-seeding truncates
+    // them, and nothing here may ever do that to a visit.
+    await db.execAsync(CATALOG_DDL);
+    version = 4;
+  }
+
   await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
+
+  // After the DDL, never before: seeding inserts into tables version 4 creates.
+  // This runs inside `onInit`, so it completes before the first render and
+  // every catalog read can assume the tables are populated.
+  await seedCatalogIfNeeded(db);
 }
 
 export type Trip = {

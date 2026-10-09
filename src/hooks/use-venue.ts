@@ -1,35 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 
-import { supabase } from '@/lib/supabase';
+import { useCatalog } from '@/hooks/use-catalog';
+import type { CatalogVenue } from '@/lib/catalog-db';
 
-/** Every column the detail screen shows. */
-export type VenueDetail = {
-  id: string;
-  name: string;
-  area_id: string;
-  sub_area: string | null;
-  resort_id: string | null;
-  venue_kind: string;
-  service_type: string[];
-  dining_style: string[];
-  cuisine: string | null;
-  price_tier: number;
-  reservations_recommended: boolean;
-  is_character_dinner_dining: boolean;
-  is_character_breakfast_dining: boolean;
-  is_signature: boolean;
-  status: string;
-  lat: number | null;
-  lng: number | null;
-  dinner_menu_url: string | null;
-  lunch_menu_url: string | null;
-  breakfast_menu_url: string | null;
-  snack_menu_url: string | null;
-  lounge_menu_url: string | null;
-  description: string | null;
-  tags: string[];
-  keywords: string[];
-};
+/**
+ * One venue, for the detail screen.
+ *
+ * This used to be three Supabase round trips — the venue, then its area name,
+ * then its resort name — which meant opening a restaurant in a dead zone
+ * showed an error. Everything it needs is in the on-device catalog, so the
+ * screen now resolves synchronously from data already in memory.
+ */
+
+export type VenueDetail = CatalogVenue;
 
 export type VenueContext = {
   areaName: string | null;
@@ -37,63 +20,26 @@ export type VenueContext = {
 };
 
 export function useVenue(id: string | undefined) {
-  const [venue, setVenue] = useState<VenueDetail | null>(null);
-  const [context, setContext] = useState<VenueContext>({
-    areaName: null,
-    resortName: null,
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { venues, areas, resorts, loading } = useCatalog();
 
-  useEffect(() => {
-    if (!id) return;
-    let cancelled = false;
+  const venue = useMemo(
+    () => (id ? venues.find((v) => v.id === id) ?? null : null),
+    [venues, id],
+  );
 
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const { data, error: e } = await supabase
-          .from('venues')
-          .select('*')
-          .eq('id', id)
-          .single();
-        if (e) throw new Error(e.message);
-        if (cancelled) return;
-
-        const v = data as unknown as VenueDetail;
-        setVenue(v);
-
-        // Resolve the human-readable names in one round trip each, rather
-        // than embedding joins the list screen does not need.
-        const [area, resort] = await Promise.all([
-          supabase.from('areas').select('name').eq('id', v.area_id).maybeSingle(),
-          v.resort_id
-            ? supabase.from('resorts').select('name').eq('id', v.resort_id).maybeSingle()
-            : Promise.resolve({ data: null }),
-        ]);
-        if (cancelled) return;
-        setContext({
-          areaName: (area.data as { name: string } | null)?.name ?? null,
-          resortName: (resort.data as { name: string } | null)?.name ?? null,
-        });
-      } catch (err) {
-        if (cancelled) return;
-        const raw = err instanceof Error ? err.message : String(err);
-        setError(
-          /network|fetch/i.test(raw)
-            ? 'Could not reach the server. Check your connection and try again.'
-            : raw,
-        );
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
+  const context = useMemo<VenueContext>(() => {
+    if (!venue) return { areaName: null, resortName: null };
+    return {
+      areaName: areas.find((a) => a.id === venue.area_id)?.name ?? null,
+      resortName: venue.resort_id
+        ? resorts.find((r) => r.id === venue.resort_id)?.name ?? null
+        : null,
     };
-  }, [id]);
+  }, [venue, areas, resorts]);
+
+  // A missing venue after loading is a genuine error — a stale link, or an id
+  // that left the catalog in a refresh.
+  const error = !loading && id && !venue ? 'That place is no longer in the catalog.' : null;
 
   return { venue, context, loading, error };
 }
