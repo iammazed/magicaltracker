@@ -4,9 +4,26 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ProgressBar } from '@/components/progress-bar';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { AreaTone, BottomTabInset, Radius, Spacing } from '@/constants/theme';
+import {
+  AreaTone,
+  BottomTabInset,
+  Radius,
+  Spacing,
+  type RampToken,
+} from '@/constants/theme';
 import { type Challenge, usePassport } from '@/hooks/use-passport';
+import { titleCase } from '@/lib/labels';
 import { useTheme } from '@/hooks/use-theme';
+
+// Medal colours are literal, not theme tokens: bronze is bronze in both
+// themes, and a tier that changed colour with the OS would stop reading
+// as a medal.
+const TIER_COLOR: Record<string, string> = {
+  Bronze: '#B08D57',
+  Silver: '#A8B2BC',
+  Gold: '#E5B45F',
+  Platinum: '#8FD6D2',
+};
 
 export default function PassportScreen() {
   const theme = useTheme();
@@ -58,18 +75,6 @@ export default function PassportScreen() {
             ) : null}
           </View>
 
-          {/* ── Per park / area ──────────────────────────────────── */}
-          <Section title="By area">
-            {byArea.map((a) => (
-              <ProgressBar
-                key={a.id}
-                label={a.label}
-                visited={a.visited}
-                total={a.total}
-                tone={AreaTone[a.id] ?? 'brandTeal'}
-              />
-            ))}
-          </Section>
 
           <Section title="Resorts">
             <ProgressBar
@@ -84,11 +89,30 @@ export default function PassportScreen() {
             </ThemedText>
           </Section>
 
-          {/* ── Challenges ───────────────────────────────────────── */}
+          {/* All-or-nothing first — those are the ones people chase. */}
           <Section title="Challenges">
-            {challenges.map((c) => (
-              <ChallengeCard key={c.id} challenge={c} />
-            ))}
+            {challenges
+              .filter((c) => !c.tiered)
+              .map((c) => (
+                <ChallengeCard key={c.id} challenge={c} />
+              ))}
+            {challenges
+              .filter((c) => c.tiered && !c.id.startsWith('area-'))
+              .map((c) => (
+                <ChallengeCard key={c.id} challenge={c} />
+              ))}
+          </Section>
+
+          <Section title="Eat through each area">
+            {challenges
+              .filter((c) => c.id.startsWith('area-'))
+              .map((c) => (
+                <ChallengeCard
+                  key={c.id}
+                  challenge={c}
+                  tone={AreaTone[c.id.replace('area-', '')] ?? 'brandTeal'}
+                />
+              ))}
           </Section>
         </ScrollView>
       </SafeAreaView>
@@ -96,15 +120,23 @@ export default function PassportScreen() {
   );
 }
 
-function ChallengeCard({ challenge: c }: { challenge: Challenge }) {
+function ChallengeCard({
+  challenge: c,
+  tone,
+}: {
+  challenge: Challenge;
+  tone?: RampToken;
+}) {
   const theme = useTheme();
+  const medalColor = c.tier ? TIER_COLOR[c.tier.name] : null;
+
   return (
     <View
       style={[
         styles.card,
         {
           backgroundColor: c.complete ? theme.goldSurface : theme.backgroundElement,
-          borderColor: c.complete ? theme.gold : theme.border,
+          borderColor: c.complete ? theme.gold : medalColor ?? theme.border,
         },
       ]}
     >
@@ -112,35 +144,52 @@ function ChallengeCard({ challenge: c }: { challenge: Challenge }) {
         <View
           style={[
             styles.medal,
-            c.complete
-              ? { backgroundColor: theme.gold }
+            medalColor
+              ? { backgroundColor: medalColor }
               : { borderColor: theme.border, borderWidth: StyleSheet.hairlineWidth },
           ]}
         >
           <ThemedText
-            style={[styles.medalMark, { color: c.complete ? '#ffffff' : theme.textFaint }]}
+            style={[styles.medalMark, { color: medalColor ? '#1B1205' : theme.textFaint }]}
           >
-            {c.complete ? '✓' : `${c.earned}`}
+            {c.complete ? '\u2605' : c.tier ? c.tier.name.charAt(0) : String(c.earned)}
           </ThemedText>
         </View>
         <View style={styles.cardMain}>
-          <ThemedText type="smallBold">{c.title}</ThemedText>
+          <View style={styles.titleLine}>
+            <ThemedText type="smallBold" style={styles.cardTitle}>
+              {c.title}
+            </ThemedText>
+            {c.tier ? (
+              <ThemedText style={[styles.tierTag, { color: medalColor ?? theme.gold }]}>
+                {c.tier.name.toUpperCase()}
+              </ThemedText>
+            ) : null}
+          </View>
           <ThemedText type="small" themeColor="textSecondary">
             {c.blurb}
           </ThemedText>
         </View>
       </View>
 
-      <ProgressBar label="" visited={c.earned} total={c.target} tone="brandIndigo" />
+      <ProgressBar label="" visited={c.earned} total={c.target} tone={tone ?? 'brandIndigo'} />
+
+      {/* Show the next step, not the distant finish line. */}
+      {c.tiered && !c.complete && c.nextTier ? (
+        <ThemedText type="small" themeColor="textFaint">
+          {c.toNext} more for {c.nextTier.name} · {c.earned} of {c.target} so far
+        </ThemedText>
+      ) : null}
 
       {!c.complete && c.remaining?.length ? (
         <ThemedText type="small" themeColor="textFaint">
-          Still to go: {c.remaining.map((r) => r.replace(/-/g, ' ')).join(', ')}
+          Still to go: {c.remaining.map(titleCase).join(', ')}
         </ThemedText>
       ) : null}
+
       {c.complete ? (
         <ThemedText type="small" style={{ color: theme.gold }}>
-          Earned
+          {c.tiered ? 'Platinum — every one of them' : 'Earned'}
         </ThemedText>
       ) : null}
     </View>
@@ -199,4 +248,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   medalMark: { fontSize: 14, fontWeight: '700', lineHeight: 18 },
+  titleLine: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  cardTitle: { flexShrink: 1 },
+  tierTag: { fontSize: 9, fontWeight: '700', letterSpacing: 0.8 },
 });

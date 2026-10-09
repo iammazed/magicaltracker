@@ -208,6 +208,18 @@ the server, so sync is "send everything where synced_at is null" rather than a g
 per-screen hook means the log-visit modal saves, refreshes its private copy, and every screen
 behind it keeps showing stale data. One store, every screen subscribed.
 
+**Never render a stored value directly.** The catalog stores lowercase, kebab-case,
+pipe-separated values because filters and the achievement engine need them that way — `mexico`,
+`american|seafood`, `galaxys-edge`. Everything display-facing goes through `src/lib/labels.ts`
+(`titleCase`, `formatCuisine`, `formatList`, `formatSubArea`), so a fix lands once instead of in
+every screen that happens to show the field. Pipes become commas; pipes are storage, not UI.
+
+**Large challenges are tiered** — Bronze 25%, Silver 50%, Gold 75%, Platinum 100% — because "4
+of 61" reads as hopeless where "16 more for Silver" reads as a next step. Pavilion challenges
+stay all-or-nothing: eleven countries is a small complete set, and nobody claims a partial
+Drinking Around the World. Tier medal colours are literal, not theme tokens — bronze is bronze
+in both themes.
+
 **Passport denominators have two exclusions, and both exist so 100% stays reachable.** Events are
 out — a seasonal dessert party must not make a park uncompletable for someone who visits in June.
 Permanently-closed venues are out — you cannot eat somewhere that no longer exists. Resort

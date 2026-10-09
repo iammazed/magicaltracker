@@ -16,6 +16,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { menuLinks, useVenue } from '@/hooks/use-venue';
 import { useVenueVisits } from '@/hooks/use-visits';
+import { formatArray, formatCuisine, formatSubArea, titleCase } from '@/lib/labels';
 
 const SERVICE_LABEL: Record<string, string> = {
   quick: 'Quick service',
@@ -52,7 +53,7 @@ export default function VenueDetailScreen() {
 
   const menus = menuLinks(venue);
   const price = '$'.repeat(Math.max(1, Math.min(4, venue.price_tier)));
-  const service = venue.service_type.map((s) => SERVICE_LABEL[s] ?? s).join(' · ');
+  const service = venue.service_type.map((s) => SERVICE_LABEL[s] ?? s).join(', ');
   const character =
     venue.is_character_breakfast_dining || venue.is_character_dinner_dining;
 
@@ -77,7 +78,7 @@ export default function VenueDetailScreen() {
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
             {[context.resortName ?? context.areaName,
-              venue.sub_area?.replace(/-/g, ' ')]
+              venue.sub_area ? formatSubArea(venue.sub_area) : null]
               .filter(Boolean)
               .join(' · ')}
           </ThemedText>
@@ -166,14 +167,14 @@ export default function VenueDetailScreen() {
 
         {/* ── Facts ───────────────────────────────────────────────── */}
         <Section title="Details">
-          <Fact label="Cuisine" value={venue.cuisine} />
+          <Fact label="Cuisine" value={formatCuisine(venue.cuisine)} />
           <Fact label="Service" value={service} />
           <Fact
             label="Style"
-            value={venue.dining_style.map((d) => d.replace(/-/g, ' ')).join(' · ')}
+            value={formatArray(venue.dining_style)}
           />
           <Fact label="Price" value={price} />
-          <Fact label="Type" value={venue.venue_kind.replace(/-/g, ' ')} />
+          <Fact label="Type" value={titleCase(venue.venue_kind)} />
         </Section>
 
         {/* ── Menus ───────────────────────────────────────────────── */}

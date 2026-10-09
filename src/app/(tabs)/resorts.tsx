@@ -134,7 +134,7 @@ function ResortRow({
   onPress: () => void;
 }) {
   const theme = useTheme();
-  const transport = resort.transport.map((t) => TRANSPORT_LABEL[t] ?? t).join(' · ');
+  const transport = resort.transport.map((t) => TRANSPORT_LABEL[t] ?? t).join(', ');
 
   return (
     <Pressable

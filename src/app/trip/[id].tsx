@@ -11,6 +11,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { daysUntil, tripStatus, useTrips } from '@/hooks/use-trips';
 import { useVenues } from '@/hooks/use-venues';
 import { useVisits } from '@/hooks/use-visits';
+import { formatCuisine } from '@/lib/labels';
 
 export default function TripScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -143,7 +144,7 @@ export default function TripScreen() {
                       {v?.name ?? p.venue_id}
                     </ThemedText>
                     <ThemedText type="small" themeColor="textFaint" numberOfLines={1}>
-                      {visited ? 'Already visited' : v?.cuisine ?? ''}
+                      {visited ? 'Already visited' : formatCuisine(v?.cuisine)}
                     </ThemedText>
                   </View>
                   <Pressable

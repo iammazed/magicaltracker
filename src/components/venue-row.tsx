@@ -4,6 +4,7 @@ import { ThemedText } from '@/components/themed-text';
 import { AreaTone, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { VenueListItem } from '@/hooks/use-venues';
+import { formatCuisine, formatSubArea } from '@/lib/labels';
 
 /** Shorthand a Disney guest already reads fluently. */
 const SERVICE_LABEL: Record<string, string> = {
@@ -30,9 +31,7 @@ export function VenueRow({
 }) {
   const theme = useTheme();
 
-  const service = venue.service_type
-    .map((s) => SERVICE_LABEL[s] ?? s)
-    .join(' · ');
+  const service = venue.service_type.map((s) => SERVICE_LABEL[s] ?? s).join(', ');
 
   // price_tier is 1–4, shown the way Disney shows it.
   const price = '$'.repeat(Math.max(1, Math.min(4, venue.price_tier)));
@@ -77,11 +76,13 @@ export function VenueRow({
 
         <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
           {areaName}
-          {venue.sub_area ? ` · ${venue.sub_area.replace(/-/g, ' ')}` : ''}
+          {venue.sub_area ? ` · ${formatSubArea(venue.sub_area)}` : ''}
         </ThemedText>
 
         <ThemedText type="small" themeColor="textFaint" numberOfLines={1}>
-          {[venue.cuisine, service, price].filter(Boolean).join('  ·  ')}
+          {[formatCuisine(venue.cuisine), service, price]
+            .filter(Boolean)
+            .join('  ·  ')}
         </ThemedText>
       </View>
 

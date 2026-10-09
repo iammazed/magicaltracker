@@ -36,6 +36,24 @@ export type Coverage = {
   pct: number;
 };
 
+/**
+ * Large challenges are tiered so they do not read as one impossible number.
+ * "4 of 61 in Disney Springs" is discouraging; "Bronze earned, 16 more for
+ * Silver" is a next step.
+ *
+ * Pavilion challenges are deliberately NOT tiered — eleven countries is a
+ * small, complete set, and a partial Drinking Around the World is not a
+ * thing anyone would claim.
+ */
+export const TIERS = [
+  { name: 'Bronze', at: 0.25 },
+  { name: 'Silver', at: 0.5 },
+  { name: 'Gold', at: 0.75 },
+  { name: 'Platinum', at: 1 },
+] as const;
+
+export type Tier = (typeof TIERS)[number];
+
 export type Challenge = {
   id: string;
   title: string;
@@ -43,9 +61,43 @@ export type Challenge = {
   earned: number;
   target: number;
   complete: boolean;
+  /** Tiered challenges show a medal and a next step; others are all-or-nothing. */
+  tiered: boolean;
+  /** Highest tier reached, or null below 25%. */
+  tier: Tier | null;
+  /** The next tier to aim at, or null once Platinum is earned. */
+  nextTier: Tier | null;
+  /** How many more visits to reach `nextTier`. */
+  toNext: number;
   /** For pavilion challenges: which ones are still missing. */
   remaining?: string[];
 };
+
+/** The visit count a tier requires. Rounded up, so 25% of 30 is 8, not 7.5. */
+export function tierTarget(tier: Tier, total: number): number {
+  return Math.ceil(total * tier.at);
+}
+
+function tierProgress(earned: number, total: number) {
+  if (total === 0) {
+    return { tier: null, nextTier: null, toNext: 0, complete: false };
+  }
+  let tier: Tier | null = null;
+  let nextTier: Tier | null = null;
+  for (const t of TIERS) {
+    if (earned >= tierTarget(t, total)) tier = t;
+    else {
+      nextTier = t;
+      break;
+    }
+  }
+  return {
+    tier,
+    nextTier,
+    toNext: nextTier ? tierTarget(nextTier, total) - earned : 0,
+    complete: earned >= total,
+  };
+}
 
 /** venue_id -> tags / sub_area, needed for the tag-based challenges but not
  *  worth loading on the list screen. */
@@ -160,6 +212,10 @@ export function usePassport() {
         earned: WORLD_SHOWCASE.length - remaining.length,
         target: WORLD_SHOWCASE.length,
         complete: remaining.length === 0,
+        tiered: false,
+        tier: null,
+        nextTier: null,
+        toNext: 0,
         remaining,
       };
     };
@@ -178,11 +234,23 @@ export function usePassport() {
         blurb,
         earned,
         target: all.length,
-        complete: all.length > 0 && earned === all.length,
+        tiered: true,
+        ...tierProgress(earned, all.length),
       };
     };
 
+    const areaChallenges: Challenge[] = byArea.map((a) => ({
+      id: `area-${a.id}`,
+      title: a.label,
+      blurb: `Eat your way through ${a.label}.`,
+      earned: a.visited,
+      target: a.total,
+      tiered: true,
+      ...tierProgress(a.visited, a.total),
+    }));
+
     return [
+      ...areaChallenges,
       pavilionChallenge(
         'drinking-around-the-world',
         'Drinking Around the World',
@@ -208,7 +276,7 @@ export function usePassport() {
         'signature',
       ),
     ];
-  }, [tagRows, byVenue]);
+  }, [tagRows, byVenue, byArea]);
 
   return {
     loading: venuesLoading || resortsLoading,
