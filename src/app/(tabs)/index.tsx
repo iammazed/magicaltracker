@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -7,11 +7,11 @@ import { ProgressBar } from '@/components/progress-bar';
 import { SkyCard, Stars } from '@/components/sky-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { TripPlanner } from '@/components/trip-planner';
 import { Wordmark } from '@/components/wordmark';
 import { AreaTone, BottomTabInset, Radius, Spacing } from '@/constants/theme';
 import { useOnboarding } from '@/hooks/use-onboarding';
 import { usePassport } from '@/hooks/use-passport';
-import { FREE_TRIP_LIMIT, usePremium } from '@/hooks/use-premium';
 import { useResorts } from '@/hooks/use-resorts';
 import { useTheme } from '@/hooks/use-theme';
 import { daysUntil, tripStatus, useTrips } from '@/hooks/use-trips';
@@ -31,9 +31,8 @@ export default function HomeScreen() {
   const { data: venues } = useVenues();
   const { data: resorts } = useResorts();
   const { visits, stays } = useVisits();
-  const { activeTrip, trips, plansFor, loading: tripsLoading } = useTrips();
+  const { activeTrip, plansFor, loading: tripsLoading } = useTrips();
   const { loading, overall, byArea, resortCoverage, challenges } = usePassport();
-  const { isPremium } = usePremium();
   const { done: onboarded, loading: onboardingLoading } = useOnboarding();
 
   /**
@@ -53,11 +52,15 @@ export default function HomeScreen() {
    * used — an existing trip stays fully editable — just a limit on starting
    * another, which is the moment the upgrade is actually worth something.
    */
-  const atTripLimit = !isPremium && trips.length >= FREE_TRIP_LIMIT;
-  const planTrip = () =>
-    atTripLimit
-      ? router.push({ pathname: '/paywall', params: { feature: 'trips' } })
-      : router.push('/new-trip');
+  /**
+   * Open when there is nothing to count down to, collapsed when there is.
+   *
+   * `useState` with an initialiser rather than an effect: this is the initial
+   * value, not a reaction to one, and an effect would flash the wrong state
+   * for a frame on every mount. The trip-limit case is handled inside
+   * `TripPlanner`, which shows the upgrade instead of the form.
+   */
+  const [plannerOpen, setPlannerOpen] = useState(!activeTrip);
 
   const resortName = useMemo(
     () => Object.fromEntries(resorts.map((r) => [r.id, r.name])),
@@ -182,24 +185,46 @@ export default function HomeScreen() {
             </SkyCard>
           )}
 
-          {/* ── Plan a trip. Always here, always in the same place. ─ */}
-          <Pressable
-            onPress={planTrip}
-            accessibilityRole="button"
-            style={({ pressed }) => [
-              styles.planCta,
-              { backgroundColor: theme.gold, opacity: pressed ? 0.85 : 1 },
-            ]}
-          >
-            <ThemedText style={[styles.planCtaText, { color: theme.onGold }]}>
-              {trips.length ? 'Plan another trip' : 'Plan a trip'}
-            </ThemedText>
-          </Pressable>
-          {atTripLimit ? (
-            <ThemedText type="small" themeColor="textFaint" style={styles.limitNote}>
-              Free covers one trip at a time. Premium plans as many as you like.
-            </ThemedText>
-          ) : null}
+          {/* ── The planner itself, not a button to it ──────────────
+              Planning is the app's main job, so it belongs on the first
+              screen — the same reason Expedia and Trivago put the search box
+              on theirs rather than behind a tap. Collapsed to a header once a
+              trip exists, because by then the countdown above is what someone
+              opened the app to see. */}
+          <View style={styles.planner}>
+            <Pressable
+              onPress={() => setPlannerOpen((o) => !o)}
+              disabled={!activeTrip}
+              accessibilityRole={activeTrip ? 'button' : 'header'}
+              accessibilityState={{ expanded: plannerOpen }}
+              style={styles.plannerHead}
+            >
+              <ThemedText type="small" themeColor="textFaint" style={styles.plannerTitle}>
+                {activeTrip ? 'PLAN ANOTHER TRIP' : 'PLAN YOUR TRIP'}
+              </ThemedText>
+              {activeTrip ? (
+                <ThemedText type="small" style={{ color: theme.accent }}>
+                  {plannerOpen ? 'Hide' : 'Open'}
+                </ThemedText>
+              ) : null}
+            </Pressable>
+
+            {plannerOpen ? (
+              <View
+                style={[
+                  styles.plannerBody,
+                  { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+                ]}
+              >
+                <TripPlanner
+                  onCreated={(id) => {
+                    setPlannerOpen(false);
+                    router.push({ pathname: '/trip/[id]', params: { id } });
+                  }}
+                />
+              </View>
+            ) : null}
+          </View>
 
           {/* ── Quick actions ────────────────────────────────────── */}
           <View style={styles.actions}>
@@ -340,7 +365,6 @@ function Section({
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safe: { flex: 1 },
-  limitNote: { textAlign: 'center', marginTop: -Spacing.two },
   masthead: {
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between', marginBottom: -Spacing.two,
@@ -361,11 +385,18 @@ const styles = StyleSheet.create({
   heroCountUnit: { color: 'rgba(255,255,255,0.75)', fontSize: 15 },
   heroMeta: { color: 'rgba(255,255,255,0.72)', fontSize: 13, lineHeight: 19 },
   heroBody: { color: 'rgba(255,255,255,0.78)', fontSize: 14, lineHeight: 20, marginTop: Spacing.one },
-  planCta: {
-    alignItems: 'center', paddingVertical: Spacing.three,
-    borderRadius: Radius.pill,
+  planner: { gap: Spacing.two },
+  plannerHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  planCtaText: { fontWeight: '700', fontSize: 16 },
+  plannerTitle: { letterSpacing: 1, fontSize: 11, fontWeight: '700' },
+  plannerBody: {
+    padding: Spacing.three,
+    borderRadius: Radius.large,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
   actions: { flexDirection: 'row', gap: Spacing.two },
   action: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.three,

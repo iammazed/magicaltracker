@@ -315,7 +315,42 @@ no reason to ask for.
 
 ---
 
+## Dates
+
+**Never ask anyone to type a date.** `DateRangePicker` is the arrive/depart control and
+`src/lib/calendar.ts` holds the arithmetic. A typed date is the one input where a mistake is
+silent and consequential: `2027-04-31` does not exist, `2072-04-03` is a plausible slip, and a
+countdown that is wrong rather than broken is a countdown nobody questions. A grid cannot produce
+a date that does not exist.
+
+**All grid arithmetic goes through `Date.UTC`.** `new Date('2027-04-03')` parses as midnight UTC
+and renders in local time, so west of Greenwich every cell would render as the day before. Build
+with `Date.UTC`, read back with `getUTC*`, and a date stays a date rather than becoming an
+instant. The single exception is "today", which must be genuinely local — `todayISO()` in
+`local-db.ts` — because someone planning at 11pm in Florida means today.
+
+The month grid is **always six rows**, never five. A grid that changes height as you page makes
+everything below it jump, and in the inline planner that moves the Create button under your thumb.
+
+`src/lib/calendar.ts` is pure and has no React in it, so it is testable headlessly — leap years,
+year boundaries, the DST change, and all 132 months of a decade checked contiguous. Compile it
+with `npx tsc src/lib/calendar.ts --ignoreConfig --outDir <tmp>` and import the output rather than
+regex-stripping the types, which breaks on union return types.
+
+---
+
 ## Onboarding
+
+**The planner lives on the home screen, not behind a button.** Planning is the app's main job, so
+it belongs on the first screen for the same reason Expedia and Trivago put the search box on
+theirs. `TripPlanner` is defined once and rendered in both places it appears — inline on home and
+in the `/new-trip` modal — because two copies of a form with a date range and a resort search in
+it would drift within a week. It collapses to a header once a trip exists, since by then the
+countdown is what someone opened the app for.
+
+**The trip name is derived from the dates, not asked for.** "What do I call this trip?" is a
+question nobody wants between choosing dates and seeing a countdown, and `April 2027` is what they
+would have typed. It stays editable.
 
 **The first-run pass is the retention play, not a nicety.** A new install gets "which of these
 have you eaten at?" over two dozen well-known places, and thirty seconds later has a populated
