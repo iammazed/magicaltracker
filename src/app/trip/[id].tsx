@@ -161,7 +161,7 @@ export default function TripScreen() {
                   >
                     <ThemedText
                       type="small"
-                      style={{ color: p.booked ? '#23133A' : theme.textFaint, fontSize: 11 }}
+                      style={{ color: p.booked ? theme.onGold : theme.textFaint, fontSize: 11 }}
                     >
                       {p.booked ? 'Booked' : 'Book'}
                     </ThemedText>

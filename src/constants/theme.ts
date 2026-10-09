@@ -34,8 +34,12 @@ export const Colors = {
     onAccent: '#FFFFFF',
 
     // Reward — achievement unlocks, premium. The warm note the brand ramp lacks.
+    // `onGold` is the only safe text colour on a gold fill. Light-mode gold is
+    // DARK (#B07818), so the deep violet ink that works on dark-mode gold has
+    // to lighten here or the label goes dark-on-dark. 4.75:1 as written.
     gold: '#B07818',
     goldSurface: '#FBF3E0',
+    onGold: '#FFFFFF',
 
     // Semantic — deliberately outside the brand ramp so a destructive
     // confirm never reads as the same violet as a premium badge.
@@ -71,6 +75,9 @@ export const Colors = {
 
     gold: '#E5B45F',
     goldSurface: '#2A2313',
+    // The terminal stop of SkyGradient, so a gold button reads as cut out of
+    // the night sky behind it. 9.0:1 on #E5B45F.
+    onGold: '#23133A',
 
     success: '#55C28D',
     warning: '#E8834A',

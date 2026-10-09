@@ -7,6 +7,7 @@ import { ProgressBar } from '@/components/progress-bar';
 import { SkyCard, Stars } from '@/components/sky-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { Wordmark } from '@/components/wordmark';
 import { AreaTone, BottomTabInset, Radius, Spacing } from '@/constants/theme';
 import { usePassport } from '@/hooks/use-passport';
 import { useResorts } from '@/hooks/use-resorts';
@@ -73,7 +74,24 @@ export default function HomeScreen() {
     <ThemedView style={styles.container}>
       <SafeAreaView edges={['top']} style={styles.safe}>
         <ScrollView contentContainerStyle={styles.scroll}>
-          {/* ── Trip, or the invitation to plan one ──────────────── */}
+          {/* ── Wordmark ─────────────────────────────────────────── */}
+          <View style={styles.masthead}>
+            <Wordmark size="md" />
+            {__DEV__ ? (
+              <Pressable
+                onPress={() => router.push('/theme')}
+                accessibilityRole="button"
+                accessibilityLabel="Design tokens"
+                hitSlop={10}
+              >
+                <ThemedText type="small" themeColor="textFaint">
+                  tokens
+                </ThemedText>
+              </Pressable>
+            ) : null}
+          </View>
+
+          {/* ── The trip, or the absence of one ──────────────────── */}
           {activeTrip ? (
             <Pressable
               onPress={() =>
@@ -121,23 +139,34 @@ export default function HomeScreen() {
               </SkyCard>
             </Pressable>
           ) : (
-            <Pressable onPress={() => router.push('/new-trip')} accessibilityRole="button">
-              <SkyCard style={styles.hero}>
-                <Stars />
-                <View style={styles.heroInner}>
-                  <ThemedText style={styles.heroEyebrow}>START HERE</ThemedText>
-                  <ThemedText style={styles.heroTitle}>Plan a trip</ThemedText>
-                  <ThemedText style={styles.heroBody}>
-                    Pick your dates and resort, then build a dining list from
-                    {' '}{venues.length} places. The countdown starts immediately.
-                  </ThemedText>
-                  <View style={styles.heroCta}>
-                    <ThemedText style={styles.heroCtaText}>New trip</ThemedText>
-                  </View>
-                </View>
-              </SkyCard>
-            </Pressable>
+            /* No countdown to show. Say so plainly and point at the button
+               directly underneath, rather than leaving a blank screen. */
+            <SkyCard style={styles.hero}>
+              <Stars />
+              <View style={styles.heroInner}>
+                <ThemedText style={styles.heroEyebrow}>YOUR NEXT TRIP</ThemedText>
+                <ThemedText style={styles.heroTitle}>No upcoming trips!</ThemedText>
+                <ThemedText style={styles.heroBody}>
+                  Plan one below and the countdown starts immediately — then build
+                  a dining list from {venues.length} places.
+                </ThemedText>
+              </View>
+            </SkyCard>
           )}
+
+          {/* ── Plan a trip. Always here, always in the same place. ─ */}
+          <Pressable
+            onPress={() => router.push('/new-trip')}
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              styles.planCta,
+              { backgroundColor: theme.gold, opacity: pressed ? 0.85 : 1 },
+            ]}
+          >
+            <ThemedText style={[styles.planCtaText, { color: theme.onGold }]}>
+              {trips.length ? 'Plan another trip' : 'Plan a trip'}
+            </ThemedText>
+          </Pressable>
 
           {/* ── Quick actions ────────────────────────────────────── */}
           <View style={styles.actions}>
@@ -154,18 +183,6 @@ export default function HomeScreen() {
               onPress={() => router.push('/resorts')}
             />
           </View>
-
-          {trips.length > 0 ? (
-            <Pressable
-              onPress={() => router.push('/new-trip')}
-              accessibilityRole="button"
-              style={[styles.addTrip, { borderColor: theme.border }]}
-            >
-              <ThemedText type="small" style={{ color: theme.accent }}>
-                + Plan another trip
-              </ThemedText>
-            </Pressable>
-          ) : null}
 
           {/* ── Progress ─────────────────────────────────────────── */}
           {visits.length > 0 || stays.length > 0 ? (
@@ -290,6 +307,10 @@ function Section({
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safe: { flex: 1 },
+  masthead: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', marginBottom: -Spacing.two,
+  },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: {
     paddingHorizontal: Spacing.three,
@@ -306,12 +327,11 @@ const styles = StyleSheet.create({
   heroCountUnit: { color: 'rgba(255,255,255,0.75)', fontSize: 15 },
   heroMeta: { color: 'rgba(255,255,255,0.72)', fontSize: 13, lineHeight: 19 },
   heroBody: { color: 'rgba(255,255,255,0.78)', fontSize: 14, lineHeight: 20, marginTop: Spacing.one },
-  heroCta: {
-    marginTop: Spacing.three, alignSelf: 'flex-start',
-    backgroundColor: '#E5B45F', paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two, borderRadius: Radius.pill,
+  planCta: {
+    alignItems: 'center', paddingVertical: Spacing.three,
+    borderRadius: Radius.pill,
   },
-  heroCtaText: { color: '#23133A', fontWeight: '700', fontSize: 14 },
+  planCtaText: { fontWeight: '700', fontSize: 16 },
   actions: { flexDirection: 'row', gap: Spacing.two },
   action: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.three,
@@ -320,11 +340,6 @@ const styles = StyleSheet.create({
   },
   actionBar: { width: 5, alignSelf: 'stretch' },
   actionText: { paddingVertical: Spacing.three, gap: 1, flexShrink: 1 },
-  addTrip: {
-    alignItems: 'center', paddingVertical: Spacing.three,
-    borderRadius: Radius.medium, borderWidth: StyleSheet.hairlineWidth,
-    borderStyle: 'dashed',
-  },
   statRow: { flexDirection: 'row', gap: Spacing.two },
   stat: {
     flex: 1, alignItems: 'center', paddingVertical: Spacing.three,

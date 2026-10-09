@@ -50,7 +50,8 @@ const GROUPS: Group[] = [
   {
     title: 'Reward',
     note: 'Achievement unlocks and premium. The warm note the ramp lacks.',
-    tokens: ['gold', 'goldSurface'],
+    tokens: ['gold', 'goldSurface', 'onGold'],
+    sampleOn: 'onGold',
   },
   {
     title: 'Semantic',

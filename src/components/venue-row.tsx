@@ -95,7 +95,7 @@ export function VenueRow({
               : { borderColor: theme.border },
           ]}
         >
-          <ThemedText style={[styles.pickMark, { color: planned ? '#23133A' : theme.textFaint }]}>
+          <ThemedText style={[styles.pickMark, { color: planned ? theme.onGold : theme.textFaint }]}>
             {planned ? '✓' : '+'}
           </ThemedText>
         </View>

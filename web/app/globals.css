@@ -27,6 +27,7 @@
   /* Reward — achievements and premium only. */
   --gold: #b07818;
   --gold-surface: #fbf3e0;
+  --on-gold: #ffffff;
 
   /* Brand ramp, teal → violet. Ordered; use it for ordered things. */
   --brand-1: #00807e;
@@ -56,6 +57,7 @@
 
     --gold: #e5b45f;
     --gold-surface: #2a2313;
+    --on-gold: #23133a;
 
     /* Lightened ~18%: the source palette is dark-native and vanishes
        against a dark ground if reused directly. */
@@ -82,6 +84,7 @@
   --color-on-accent: var(--on-accent);
   --color-gold: var(--gold);
   --color-gold-surface: var(--gold-surface);
+  --color-on-gold: var(--on-gold);
   --color-brand-1: var(--brand-1);
   --color-brand-2: var(--brand-2);
   --color-brand-3: var(--brand-3);

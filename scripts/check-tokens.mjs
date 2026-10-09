@@ -34,6 +34,7 @@ const MAP = {
   'on-accent': 'onAccent',
   gold: 'gold',
   'gold-surface': 'goldSurface',
+  'on-gold': 'onGold',
   'brand-1': 'brandTeal',
   'brand-2': 'brandTealDeep',
   'brand-3': 'brandBlue',

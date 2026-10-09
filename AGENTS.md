@@ -52,9 +52,15 @@ invisible to `/theme`, so nobody catches it until a user does.
 | `background` / `backgroundElement` / `backgroundSelected` | Screen ground, cards, pressed rows | Text |
 | `border` / `borderSoft` | Container edges / internal rules | Anything filled |
 | `accent` / `accentPressed` / `onAccent` | Primary actions, links | Decoration, large fills |
-| `gold` / `goldSurface` | **Achievement unlocks, premium, and the wordmark** | General emphasis |
+| `gold` / `goldSurface` / `onGold` | **Achievement unlocks, premium, and the wordmark** | General emphasis |
 | `success` / `warning` / `danger` | State and outcomes | Branding |
 | `brandTeal` … `brandViolet` | Sequential/categorical things | Body text, semantic state |
+
+**Text on a gold fill uses `onGold`, never `onAccent` and never a literal.**
+Light-mode gold is dark (`#B07818`) and dark-mode gold is light (`#E5B45F`), so the ink has to
+invert with the scheme. Three places had `#23133A` hardcoded, which was correct on dark-mode gold
+and roughly 2.3:1 — unreadable — on light-mode gold. That is exactly the bug the no-literals rule
+exists to prevent, and it shipped anyway because nobody opened those screens in light mode.
 
 **`gold` is load-bearing.** It marks reward. If it starts appearing as a general highlight, an
 unlocked achievement stops feeling like anything. Guard it.
@@ -96,6 +102,18 @@ correct for a script.
 
 If either face is ever swapped, **re-measure** rather than reusing the number.
 Sizes are written in `em` off the wrapper so the ratios stay readable.
+
+The lockup exists twice — `web/components/wordmark.tsx` and
+`src/components/wordmark.tsx` — because React Native has no `em` unit, so the
+ratios are multiplied against a base size instead of inherited. **They are the
+same mark: change a ratio in one and you must change it in the other.**
+
+The app loads all three faces at runtime with `useFonts`, not through the
+`expo-font` config plugin. The plugin needs a prebuild, so plugin-bundled fonts
+are simply absent in Expo Go and the wordmark silently falls back to the system
+face. **Figtree is bundled into the app for `Tracker` alone** — the 1.111 is
+measured against Figtree's letterforms, so substituting SF Pro there breaks the
+alignment the number exists to fix.
 
 The **app icon, favicon and splash are the Berkshire Swash `M` alone**, in gold
 on the twilight gradient — the same initial that opens the wordmark, so the
@@ -181,6 +199,29 @@ right after a clean means nothing until the dev server has run once.
 
 Prefer the object form for anything with params — `router.push({ pathname: '/venue/[id]',
 params: { id } })` — which survives these regenerations and avoids hand-encoding query strings.
+
+### The tab bar sizes itself unless told not to
+
+`minimizeBehavior` defaults to `automatic`, which on iOS 26 shrinks the tab bar to a pill on
+scroll-down and expands it on scroll-up. **Scroll position is per-tab**, so switching from a
+scrolled list to an unscrolled screen lands you on a tab bar of a different height — which reads
+as the tabs being inconsistently sized rather than as a scroll effect. `minimizeBehavior="never"`
+pins it.
+
+Give `labelStyle` an explicit `fontSize` and `fontWeight` for **both** `default` and `selected`,
+differing only in colour. Leave them unset and the platform may pick a different face for the
+selected item, so that label — and anything drawn around it — measures differently from its
+neighbours.
+
+Several NativeTabs props are silently inert on the platform you are probably testing:
+`indicatorColor`, `rippleColor`, `disableIndicator` and `labelVisibilityMode` are **Android/web
+only**, and on iOS `backgroundColor`, `blurEffect` and `shadowColor` apply to **iOS 18 and
+earlier only** — iOS 26 draws liquid glass and ignores them. Check `@platform` in
+`node_modules/expo-router/build/native-tabs/types.d.ts` before assuming a prop does anything.
+
+Not every SF Symbol has a `.fill` twin. `fork.knife` and `rosette` do not, so a tab using one
+cannot thicken on selection while its neighbours do. Prefer a glyph that fills — `medal` /
+`medal.fill` over `rosette` — unless the non-filling one is clearly the better symbol.
 
 ---
 
