@@ -37,6 +37,7 @@ export function DateField({
   placeholder,
   minISO,
   disabled,
+  tone = 'surface',
   onChange,
 }: {
   label: string;
@@ -45,14 +46,37 @@ export function DateField({
   /** Nothing before this is selectable. */
   minISO: string;
   disabled?: boolean;
+  /** `sky` for the twilight gradient, where theme text tokens are invisible. */
+  tone?: 'surface' | 'sky';
   onChange: (iso: string) => void;
 }) {
   const theme = useTheme();
   const [open, setOpen] = useState(false);
+  const sky = tone === 'sky';
+
+  // On the gradient everything is a literal: the theme's own tokens invert
+  // with the OS and would vanish against a surface that is dark in both
+  // schemes. Gold on a filled box because gold is the brand's "this is
+  // yours now" colour and it carries on twilight better than white does.
+  const palette = sky
+    ? {
+        label: 'rgba(255,255,255,0.62)',
+        fill: value ? 'rgba(229,180,95,0.16)' : 'rgba(255,255,255,0.10)',
+        pressedFill: 'rgba(255,255,255,0.18)',
+        border: value ? '#E5B45F' : 'rgba(255,255,255,0.26)',
+        text: value ? '#F6E3BE' : 'rgba(255,255,255,0.58)',
+      }
+    : {
+        label: theme.textFaint,
+        fill: theme.backgroundElement,
+        pressedFill: theme.backgroundSelected,
+        border: value ? theme.accent : theme.border,
+        text: value ? theme.text : theme.textFaint,
+      };
 
   return (
     <View style={styles.field}>
-      <ThemedText type="small" themeColor="textFaint" style={styles.label}>
+      <ThemedText style={[styles.label, { color: palette.label }]}>
         {label.toUpperCase()}
       </ThemedText>
       <Pressable
@@ -65,16 +89,15 @@ export function DateField({
         style={({ pressed }) => [
           styles.box,
           {
-            backgroundColor: pressed ? theme.backgroundSelected : theme.backgroundElement,
-            borderColor: value ? theme.accent : theme.border,
-            opacity: disabled ? 0.5 : 1,
+            backgroundColor: pressed ? palette.pressedFill : palette.fill,
+            borderColor: palette.border,
+            opacity: disabled ? 0.45 : 1,
           },
         ]}
       >
         <ThemedText
-          type={value ? 'smallBold' : 'small'}
           numberOfLines={1}
-          style={{ color: value ? theme.text : theme.textFaint }}
+          style={[value ? styles.valueText : styles.placeholderText, { color: palette.text }]}
         >
           {value ? formatShort(value) : placeholder}
         </ThemedText>
@@ -243,18 +266,20 @@ function CalendarSheet({
   );
 }
 
-const CELL = 36;
+const CELL = 40;
 
 const styles = StyleSheet.create({
-  field: { flex: 1, gap: Spacing.one },
-  label: { fontSize: 9, fontWeight: '700', letterSpacing: 1 },
+  field: { flex: 1, gap: Spacing.one + 2 },
+  label: { fontSize: 11, fontWeight: '700', letterSpacing: 1.2 },
   box: {
-    height: 44,
+    height: 54,
     paddingHorizontal: Spacing.three,
     justifyContent: 'center',
     borderRadius: Radius.medium,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
   },
+  valueText: { fontSize: 17, fontWeight: '700' },
+  placeholderText: { fontSize: 15 },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',
@@ -283,7 +308,7 @@ const styles = StyleSheet.create({
   nav: { width: 32, height: 28, alignItems: 'center', justifyContent: 'center' },
   navMark: { fontSize: 24, lineHeight: 28, fontWeight: '700' },
   weekdays: { flexDirection: 'row' },
-  weekday: { flex: 1, textAlign: 'center', fontSize: 10 },
+  weekday: { flex: 1, textAlign: 'center', fontSize: 11 },
   week: { flexDirection: 'row' },
   cell: { flex: 1, height: CELL, alignItems: 'center', justifyContent: 'center' },
   day: {
@@ -293,5 +318,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dayText: { fontSize: 14 },
+  dayText: { fontSize: 15 },
 });

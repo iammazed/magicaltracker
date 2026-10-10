@@ -169,74 +169,60 @@ export default function HomeScreen() {
                 </View>
               </SkyCard>
             </Pressable>
+          ) : null}
+
+          {/* ── The planner ─────────────────────────────────────────
+              Planning is the app's main job, so it is on the first screen —
+              the same reason Expedia and Trivago put the search box on theirs
+              rather than behind a tap. With no trip it IS the hero and
+              carries its own heading; with a trip the countdown above is what
+              someone opened the app for, so this collapses to one row. */}
+          {plannerOpen ? (
+            <TripPlanner
+              title={activeTrip ? 'Plan another trip' : 'Plan your trip'}
+              subtitle={
+                activeTrip
+                  ? undefined
+                  : `Pick your dates, then build a dining list from ${venues.length} places.`
+              }
+              onCreated={(id) => {
+                if (activeTrip) setPlannerOpen(false);
+                router.push({ pathname: '/trip/[id]', params: { id } });
+              }}
+            />
           ) : (
-            /* No countdown to show. Say so plainly and point at the button
-               directly underneath, rather than leaving a blank screen. */
-            <SkyCard style={styles.hero}>
-              <Stars />
-              <View style={styles.heroInner}>
-                <ThemedText style={styles.heroEyebrow}>YOUR NEXT TRIP</ThemedText>
-                <ThemedText style={styles.heroTitle}>No upcoming trips!</ThemedText>
-                <ThemedText style={styles.heroBody}>
-                  Plan one below and the countdown starts immediately — then build
-                  a dining list from {venues.length} places.
-                </ThemedText>
-              </View>
-            </SkyCard>
-          )}
-
-          {/* ── The planner itself, not a button to it ──────────────
-              Planning is the app's main job, so it belongs on the first
-              screen — the same reason Expedia and Trivago put the search box
-              on theirs rather than behind a tap. Collapsed to a header once a
-              trip exists, because by then the countdown above is what someone
-              opened the app to see. */}
-          <View style={styles.planner}>
             <Pressable
-              onPress={() => setPlannerOpen((o) => !o)}
-              disabled={!activeTrip}
-              accessibilityRole={activeTrip ? 'button' : 'header'}
-              accessibilityState={{ expanded: plannerOpen }}
-              style={styles.plannerHead}
+              onPress={() => setPlannerOpen(true)}
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                styles.plannerCollapsed,
+                {
+                  backgroundColor: pressed ? theme.backgroundSelected : theme.backgroundElement,
+                  borderColor: theme.gold,
+                },
+              ]}
             >
-              <ThemedText type="small" themeColor="textFaint" style={styles.plannerTitle}>
-                {activeTrip ? 'PLAN ANOTHER TRIP' : 'PLAN YOUR TRIP'}
+              <View style={[styles.plannerDot, { backgroundColor: theme.gold }]} />
+              <ThemedText type="smallBold" style={styles.plannerCollapsedText}>
+                Plan another trip
               </ThemedText>
-              {activeTrip ? (
-                <ThemedText type="small" style={{ color: theme.accent }}>
-                  {plannerOpen ? 'Hide' : 'Open'}
-                </ThemedText>
-              ) : null}
+              <ThemedText type="small" style={{ color: theme.gold }}>
+                Open
+              </ThemedText>
             </Pressable>
-
-            {plannerOpen ? (
-              <View
-                style={[
-                  styles.plannerBody,
-                  { backgroundColor: theme.backgroundElement, borderColor: theme.border },
-                ]}
-              >
-                <TripPlanner
-                  onCreated={(id) => {
-                    setPlannerOpen(false);
-                    router.push({ pathname: '/trip/[id]', params: { id } });
-                  }}
-                />
-              </View>
-            ) : null}
-          </View>
+          )}
 
           {/* ── Quick actions ────────────────────────────────────── */}
           <View style={styles.actions}>
             <Action
-              label="Browse dining"
-              sub={`${venues.length} places`}
+              label="Places to eat"
+              sub={String(venues.length)}
               tone={theme.brandTeal}
               onPress={() => router.push('/dining')}
             />
             <Action
-              label="Browse resorts"
-              sub={`${resorts.length} resorts`}
+              label="Resorts to stay"
+              sub={String(resorts.length)}
               tone={theme.brandViolet}
               onPress={() => router.push('/resorts')}
             />
@@ -319,10 +305,15 @@ function Action({
         { backgroundColor: theme.backgroundElement, borderColor: theme.border, opacity: pressed ? 0.7 : 1 },
       ]}
     >
+      {/* A wash of the tone behind the text rather than a computed rgba:
+          `tone` is a theme hex, and an absolutely-positioned fill at low
+          opacity gets the tint without any colour maths. Same trick as the
+          passport's area tiles. */}
+      <View style={[styles.actionWash, { backgroundColor: tone, opacity: 0.14 }]} />
       <View style={[styles.actionBar, { backgroundColor: tone }]} />
       <View style={styles.actionText}>
+        <ThemedText style={[styles.actionCount, { color: tone }]}>{sub}</ThemedText>
         <ThemedText type="smallBold">{label}</ThemedText>
-        <ThemedText type="small" themeColor="textFaint">{sub}</ThemedText>
       </View>
     </Pressable>
   );
@@ -334,6 +325,7 @@ function Stat({
   const theme = useTheme();
   return (
     <View style={[styles.stat, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+      <View style={[styles.actionWash, { backgroundColor: tone, opacity: 0.14 }]} />
       <ThemedText style={[styles.statValue, { color: tone }]}>{value}</ThemedText>
       <ThemedText type="small" themeColor="textFaint">of {total}</ThemedText>
       <ThemedText type="small" themeColor="textSecondary">{label}</ThemedText>
@@ -384,19 +376,17 @@ const styles = StyleSheet.create({
   heroCount: { color: '#E5B45F', fontSize: 52, lineHeight: 56, fontWeight: '700' },
   heroCountUnit: { color: 'rgba(255,255,255,0.75)', fontSize: 15 },
   heroMeta: { color: 'rgba(255,255,255,0.72)', fontSize: 13, lineHeight: 19 },
-  heroBody: { color: 'rgba(255,255,255,0.78)', fontSize: 14, lineHeight: 20, marginTop: Spacing.one },
-  planner: { gap: Spacing.two },
-  plannerHead: {
+  plannerCollapsed: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  plannerTitle: { letterSpacing: 1, fontSize: 11, fontWeight: '700' },
-  plannerBody: {
-    padding: Spacing.three,
+    gap: Spacing.three,
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.three,
     borderRadius: Radius.large,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
   },
+  plannerDot: { width: 8, height: 8, borderRadius: 4 },
+  plannerCollapsedText: { flex: 1 },
   actions: { flexDirection: 'row', gap: Spacing.two },
   action: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.three,
@@ -404,13 +394,16 @@ const styles = StyleSheet.create({
     paddingRight: Spacing.three, overflow: 'hidden',
   },
   actionBar: { width: 5, alignSelf: 'stretch' },
+  actionWash: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
   actionText: { paddingVertical: Spacing.three, gap: 1, flexShrink: 1 },
+  actionCount: { fontSize: 26, lineHeight: 30, fontWeight: '700' },
   statRow: { flexDirection: 'row', gap: Spacing.two },
   stat: {
     flex: 1, alignItems: 'center', paddingVertical: Spacing.three,
     borderRadius: Radius.large, borderWidth: StyleSheet.hairlineWidth, gap: 1,
+    overflow: 'hidden',
   },
-  statValue: { fontSize: 26, lineHeight: 30, fontWeight: '700' },
+  statValue: { fontSize: 30, lineHeight: 34, fontWeight: '700' },
   section: { gap: Spacing.two },
   sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   sectionTitle: { letterSpacing: 1, fontSize: 11, fontWeight: '700' },

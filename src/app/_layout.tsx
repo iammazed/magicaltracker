@@ -80,7 +80,10 @@ export default function RootLayout() {
               <Stack.Screen name="trip/[id]" options={{ title: '' }} />
               <Stack.Screen
                 name="new-trip"
-                options={{ title: 'New trip', presentation: 'modal' }}
+                // No title: TripPlanner carries its own heading inside the
+                // card, and a header saying the same thing above it was the
+                // duplication that made the heading look bolted on.
+                options={{ title: '', presentation: 'modal' }}
               />
               <Stack.Screen
                 name="log-visit"

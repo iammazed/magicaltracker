@@ -348,6 +348,22 @@ regex-stripping the types, which breaks on union return types.
 
 ## Onboarding
 
+**A card's heading goes inside the card.** A section label floating above a surface makes the
+surface look like a form bolted on under someone else's heading, and it cost a whole gradient
+card to the empty state repeating what the card beneath it already said. If a screen and a card
+would both carry the same title, the card wins and the screen's goes.
+
+**The planner renders on the twilight gradient, and that is structural rather than decorative.**
+It is the one surface the brand owns, shared with the countdown and the website hero, and a
+planner that looks like a settings form is one nobody is excited to fill in. Everything on a
+SkyCard is a colour literal — white, `#E5B45F` gold, or white at an explicit opacity — because
+the gradient is dark in both schemes and theme tokens invert underneath it.
+
+**To tint a surface in a theme colour, lay an absolutely-positioned fill at low opacity behind
+the content** rather than computing an rgba. `AreaTone`/`TierTone` resolve to theme hexes, and a
+wash View needs no colour maths and no new tokens. Used by the passport's area tiles and the
+home screen's action and stat cards.
+
 **The planner lives on the home screen, not behind a button.** Planning is the app's main job, so
 it belongs on the first screen for the same reason Expedia and Trivago put the search box on
 theirs. `TripPlanner` is defined once and rendered in both places it appears — inline on home and
