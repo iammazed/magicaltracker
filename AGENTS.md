@@ -76,8 +76,21 @@ the order carries meaning.
 **Semantic colors are deliberately outside the ramp.** A destructive confirm must never read as
 the same violet as a premium badge.
 
-**White text only on the ramp.** Black fails WCAG AA contrast on all six. `#00807E` is the
-lightest at ~4.8:1 — passes, but with no margin, so darken for hover/pressed states, never lighten.
+**Text on a ramp fill uses `onAccent`, and the reason is measured.** The rule here used to say
+"white only on the ramp", which is true of the LIGHT ramp and backwards for the dark one — the
+dark values are lightened ~18%, so white on them lands at 2.5–3.9:1 and fails everywhere:
+
+| | on white | on `#052322` |
+|---|---|---|
+| Light ramp | **4.8 – 13.3** | 1.2 – 3.5 |
+| Dark ramp | 2.5 – 3.9 | **4.2 – 6.6** |
+
+`onAccent` is white in light mode and `#052322` in dark, which is exactly the column that passes
+in each — so use it for any text sitting on a ramp colour, never a white literal. `brandIndigo`
+in dark mode is the thinnest at 4.21:1, so avoid long body copy on a ramp fill in either scheme.
+
+On the SkyCard gradient the opposite holds: it is dark in *both* schemes, so white and gold
+literals are correct there and `onAccent` would invert and vanish.
 
 ---
 
@@ -199,6 +212,15 @@ right after a clean means nothing until the dev server has run once.
 
 Prefer the object form for anything with params — `router.push({ pathname: '/venue/[id]',
 params: { id } })` — which survives these regenerations and avoids hand-encoding query strings.
+
+### The back button needs `headerBackButtonDisplayMode: 'minimal'`
+
+iOS labels the back button with the PREVIOUS screen's title. The previous screen is always the
+tab group, which has no title, so navigation fell back to the route name and every detail screen
+showed **"‹ (tabs)"**. Giving `(tabs)` a title does not fix it either: one title has to serve
+four tabs, so opening a restaurant from Dining would read "‹ Home". A bare chevron is correct and
+is what Apple itself falls back to when a label will not fit. It is set once in the root Stack's
+`screenOptions`.
 
 ### The tab bar sizes itself unless told not to
 
@@ -358,6 +380,17 @@ It is the one surface the brand owns, shared with the countdown and the website 
 planner that looks like a settings form is one nobody is excited to fill in. Everything on a
 SkyCard is a colour literal — white, `#E5B45F` gold, or white at an explicit opacity — because
 the gradient is dark in both schemes and theme tokens invert underneath it.
+
+**Progress is shown by tinting, not only by a badge.** A visited venue row and a stayed resort row
+carry a wash of their own area/tier colour at 0.10, so coverage is legible while scrolling rather
+than only visible in the tick. Only the done rows get it — 366 tinted rows would be a wall, and
+the done ones are the minority for a long time.
+
+**List screens open with a `SkyHeader`.** Dining and Resorts were a black-on-grey title over a
+grey search field, which is a settings screen. The twilight band gives them the surface the
+planner and the countdown use, with the search field and the coverage bar inside it. The safe-area
+inset goes INSIDE the gradient so the colour runs under the status bar instead of stopping in a
+line beneath it, and only the bottom corners are rounded.
 
 **To tint a surface in a theme colour, lay an absolutely-positioned fill at low opacity behind
 the content** rather than computing an rgba. `AreaTone`/`TierTone` resolve to theme hexes, and a

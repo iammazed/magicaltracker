@@ -10,9 +10,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { SKY_PLACEHOLDER, SkyHeader, skyInput } from '@/components/sky-header';
 import { ThemedView } from '@/components/themed-view';
 import { VenueMap } from '@/components/venue-map';
 import { VenueRow } from '@/components/venue-row';
@@ -117,89 +117,59 @@ export default function CatalogScreen() {
       .map((a) => ({ ...a, count: counts.get(a.id) ?? 0 }));
   }, [withoutArea, areas]);
 
-  const subtitle = planning
-    ? `${plannedIds.size} on ${planning.name} · tap to add or remove`
-    : loading && venues.length === 0
-      ? 'Loading…'
-      : visitedCount > 0
-        ? `${visitedCount} of ${venues.length} visited` +
-          (filtered.length !== venues.length ? `  ·  ${filtered.length} shown` : '')
-        : `${venues.length} places`;
-
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView edges={['top']} style={styles.safe}>
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <ThemedText type="title" style={styles.heading} numberOfLines={1}>
-              {planning ? 'Add to trip' : 'Dining'}
-            </ThemedText>
-            {!planning ? (
-              <View
-                style={[
-                  styles.segment,
-                  {
-                    backgroundColor: theme.backgroundElement,
-                    borderColor: theme.border,
-                  },
-                ]}
-              >
-                <Segment
-                  label="List"
-                  active={view === 'list'}
-                  onPress={() => setView('list')}
-                />
-                <Segment
-                  label="Map"
-                  active={view === 'map'}
-                  onPress={() => setView('map')}
-                />
-              </View>
-            ) : null}
-          </View>
-          <ThemedText type="small" themeColor="textSecondary">
-            {subtitle}
-          </ThemedText>
-        </View>
-
-        <View style={styles.searchRow}>
-          <TextInput
-            value={filters.search}
-            onChangeText={(t) => set('search', t)}
-            placeholder="Search restaurants and lounges"
-            placeholderTextColor={theme.textFaint}
-            autoCorrect={false}
-            clearButtonMode="while-editing"
-            style={[
-              styles.search,
-              {
-                backgroundColor: theme.backgroundElement,
-                borderColor: theme.border,
-                color: theme.text,
-              },
-            ]}
-          />
-          <Pressable
-            onPress={() => router.push('/filters')}
-            accessibilityRole="button"
-            accessibilityLabel={
-              refinements ? `Filters, ${refinements} active` : 'Filters'
-            }
-            style={[
-              styles.filterButton,
-              refinements
-                ? { backgroundColor: theme.accent, borderColor: theme.accent }
-                : { backgroundColor: theme.backgroundElement, borderColor: theme.border },
-            ]}
-          >
-            <ThemedText
-              type="small"
-              style={{ color: refinements ? theme.onAccent : theme.textSecondary }}
+      <View style={styles.safe}>
+        <SkyHeader
+          eyebrow={planning ? 'ADDING TO A TRIP' : 'WALT DISNEY WORLD'}
+          title={planning ? planning.name : 'Dining'}
+          progress={
+            planning
+              ? { done: plannedIds.size, total: venues.length, label: 'on this trip' }
+              : { done: visitedCount, total: venues.length, label: 'eaten at' }
+          }
+        >
+          <View style={styles.searchRow}>
+            <TextInput
+              value={filters.search}
+              onChangeText={(t) => set('search', t)}
+              placeholder="Search restaurants and lounges"
+              placeholderTextColor={SKY_PLACEHOLDER}
+              autoCorrect={false}
+              clearButtonMode="while-editing"
+              style={skyInput}
+            />
+            <Pressable
+              onPress={() => router.push('/filters')}
+              accessibilityRole="button"
+              accessibilityLabel={
+                refinements ? `Filters, ${refinements} active` : 'Filters'
+              }
+              style={[styles.filterButton, refinements ? styles.filterOn : styles.filterOff]}
             >
-              {refinements ? `Filters ${refinements}` : 'Filters'}
-            </ThemedText>
-          </Pressable>
-        </View>
+              <ThemedText
+                style={[styles.filterText, { color: refinements ? '#23133A' : '#ffffff' }]}
+              >
+                {refinements ? `Filters ${refinements}` : 'Filters'}
+              </ThemedText>
+            </Pressable>
+          </View>
+
+          {!planning ? (
+            <View style={styles.segment}>
+              <Segment
+                label="List"
+                active={view === 'list'}
+                onPress={() => setView('list')}
+              />
+              <Segment
+                label="Map"
+                active={view === 'map'}
+                onPress={() => setView('map')}
+              />
+            </View>
+          ) : null}
+        </SkyHeader>
 
         <ScrollView
           horizontal
@@ -224,6 +194,17 @@ export default function CatalogScreen() {
             />
           ))}
         </ScrollView>
+
+        {/* The header's bar answers "how much have I done"; this answers
+            "what am I looking at right now", which the filters change. */}
+        {!loading && venues.length > 0 ? (
+          <ThemedText type="small" themeColor="textFaint" style={styles.resultCount}>
+            {filtered.length === venues.length
+              ? `${venues.length} places`
+              : `${filtered.length} of ${venues.length} shown`}
+            {planning ? ' · tap to add or remove' : ''}
+          </ThemedText>
+        ) : null}
 
         {error && venues.length === 0 ? (
           <Empty
@@ -306,7 +287,7 @@ export default function CatalogScreen() {
             </ThemedText>
           </Pressable>
         ) : null}
-      </SafeAreaView>
+      </View>
     </ThemedView>
   );
 }
@@ -329,24 +310,22 @@ function Segment({
   active: boolean;
   onPress: () => void;
 }) {
-  const theme = useTheme();
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="tab"
       accessibilityState={{ selected: active }}
       accessibilityLabel={`${label} view`}
-      style={[
-        styles.segmentItem,
-        active ? { backgroundColor: theme.accent } : null,
-      ]}
+      style={[styles.segmentItem, active ? styles.segmentItemOn : null]}
     >
       <ThemedText
-        type="small"
-        style={{
-          color: active ? theme.onAccent : theme.textSecondary,
-          fontWeight: active ? '700' : '500',
-        }}
+        style={[
+          styles.segmentText,
+          {
+            color: active ? '#23133A' : 'rgba(255,255,255,0.75)',
+            fontWeight: active ? '700' : '600',
+          },
+        ]}
       >
         {label}
       </ThemedText>
@@ -428,51 +407,38 @@ function Empty({
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safe: { flex: 1 },
-  header: {
-    paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.two,
-    paddingBottom: Spacing.two,
-    gap: 2,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.two,
-  },
-  heading: { fontSize: 34, lineHeight: 40, flexShrink: 1 },
   segment: {
     flexDirection: 'row',
+    alignSelf: 'flex-start',
     borderRadius: Radius.pill,
     padding: 3,
     gap: 2,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: 'rgba(255,255,255,0.10)',
   },
   segmentItem: {
-    paddingHorizontal: Spacing.three,
+    paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.one + 3,
     borderRadius: Radius.pill,
   },
-  searchRow: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.three,
-  },
-  search: {
-    flex: 1,
-    paddingHorizontal: Spacing.three,
-    height: 42,
-    borderRadius: Radius.medium,
-    borderWidth: StyleSheet.hairlineWidth,
-    fontSize: 16,
-  },
+  segmentItemOn: { backgroundColor: '#E5B45F' },
+  segmentText: { fontSize: 14 },
+  searchRow: { flexDirection: 'row', gap: Spacing.two },
   filterButton: {
     paddingHorizontal: Spacing.three,
-    height: 42,
+    height: 48,
     justifyContent: 'center',
     borderRadius: Radius.medium,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
   },
+  filterOn: { backgroundColor: '#E5B45F', borderColor: '#E5B45F' },
+  filterOff: {
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderColor: 'rgba(255,255,255,0.26)',
+  },
+  filterText: { fontSize: 14, fontWeight: '600' },
+  resultCount: { paddingHorizontal: Spacing.three, paddingTop: Spacing.two },
   chipScroll: { flexGrow: 0, flexShrink: 0 },
   chips: {
     gap: Spacing.two,

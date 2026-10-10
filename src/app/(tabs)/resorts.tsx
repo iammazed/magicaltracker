@@ -9,9 +9,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { SKY_PLACEHOLDER, SkyHeader, skyInput } from '@/components/sky-header';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, Radius, Spacing, TierTone } from '@/constants/theme';
 import {
@@ -38,36 +38,22 @@ export default function ResortsScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView edges={['top']} style={styles.safe}>
-        <View style={styles.header}>
-          <ThemedText type="title" style={styles.heading}>
-            Resorts
-          </ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {loading
-              ? 'Loading…'
-              : stayedCount > 0
-                ? `${stayedCount} of ${resorts.length} stayed at`
-                : `${resorts.length} resorts`}
-          </ThemedText>
-        </View>
-
-        <TextInput
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Search resorts"
-          placeholderTextColor={theme.textFaint}
-          autoCorrect={false}
-          clearButtonMode="while-editing"
-          style={[
-            styles.search,
-            {
-              backgroundColor: theme.backgroundElement,
-              borderColor: theme.border,
-              color: theme.text,
-            },
-          ]}
-        />
+      <View style={styles.safe}>
+        <SkyHeader
+          eyebrow="WALT DISNEY WORLD"
+          title="Resorts"
+          progress={{ done: stayedCount, total: resorts.length, label: 'stayed at' }}
+        >
+          <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search resorts"
+            placeholderTextColor={SKY_PLACEHOLDER}
+            autoCorrect={false}
+            clearButtonMode="while-editing"
+            style={skyInput}
+          />
+        </SkyHeader>
 
         <ScrollView
           horizontal
@@ -89,6 +75,14 @@ export default function ResortsScreen() {
             );
           })}
         </ScrollView>
+
+        {!loading && resorts.length > 0 ? (
+          <ThemedText type="small" themeColor="textFaint" style={styles.resultCount}>
+            {filtered.length === resorts.length
+              ? `${resorts.length} resorts`
+              : `${filtered.length} of ${resorts.length} shown`}
+          </ThemedText>
+        ) : null}
 
         {error ? (
           <View style={styles.center}>
@@ -119,7 +113,7 @@ export default function ResortsScreen() {
             )}
           />
         )}
-      </SafeAreaView>
+      </View>
     </ThemedView>
   );
 }
@@ -134,6 +128,8 @@ function ResortRow({
   onPress: () => void;
 }) {
   const theme = useTheme();
+  const tone = theme[TierTone[resort.tier] ?? 'brandTeal'];
+  const stayed = stayCount > 0;
   const transport = resort.transport.map((t) => TRANSPORT_LABEL[t] ?? t).join(', ');
 
   return (
@@ -148,15 +144,20 @@ function ResortRow({
         styles.row,
         {
           backgroundColor: pressed ? theme.backgroundSelected : theme.backgroundElement,
-          borderColor: theme.border,
+          borderColor: stayed ? tone : theme.border,
         },
       ]}
     >
-      <View style={[styles.stripe, { backgroundColor: theme[TierTone[resort.tier] ?? 'brandTeal'] }]} />
+      {/* Same wash as the dining rows: a resort you have stayed at carries its
+          tier colour, so progress is visible scrolling 35 rows. */}
+      {stayed ? (
+        <View style={[styles.wash, { backgroundColor: tone, opacity: 0.1 }]} />
+      ) : null}
+      <View style={[styles.stripe, { backgroundColor: tone }]} />
       <View style={styles.rowMain}>
         <View style={styles.titleLine}>
-          {stayCount > 0 ? (
-            <View style={[styles.tick, { backgroundColor: theme.accent }]}>
+          {stayed ? (
+            <View style={[styles.tick, { backgroundColor: tone }]}>
               <ThemedText style={[styles.tickMark, { color: theme.onAccent }]}>
                 {stayCount > 1 ? stayCount : '✓'}
               </ThemedText>
@@ -215,17 +216,7 @@ function Chip({
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safe: { flex: 1 },
-  header: { paddingHorizontal: Spacing.three, paddingTop: Spacing.two, gap: 2 },
-  heading: { fontSize: 34, lineHeight: 40 },
-  search: {
-    marginHorizontal: Spacing.three,
-    marginTop: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    height: 42,
-    borderRadius: Radius.medium,
-    borderWidth: StyleSheet.hairlineWidth,
-    fontSize: 16,
-  },
+  resultCount: { paddingHorizontal: Spacing.three, paddingTop: Spacing.two },
   chipScroll: { flexGrow: 0, flexShrink: 0 },
   chips: {
     gap: Spacing.two,
@@ -256,6 +247,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
   },
+  wash: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
   stripe: { width: 5, alignSelf: 'stretch', marginVertical: -Spacing.three },
   rowMain: { flex: 1, gap: 3 },
   titleLine: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },

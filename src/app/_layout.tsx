@@ -73,7 +73,24 @@ export default function RootLayout() {
           <TripsProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <AnimatedSplashOverlay />
-            <Stack>
+            <Stack
+              screenOptions={{
+                /**
+                 * Chevron only, no back label.
+                 *
+                 * iOS defaults to labelling the back button with the PREVIOUS
+                 * screen's title, and the previous screen here is the tab
+                 * group — which has no title, so navigation fell back to the
+                 * route name and the button read "< (tabs)".
+                 *
+                 * Giving `(tabs)` a title would not fix it either: one title
+                 * has to serve four tabs, so opening a restaurant from Dining
+                 * would show "< Home". A bare chevron is both correct and
+                 * what Apple falls back to when a label will not fit.
+                 */
+                headerBackButtonDisplayMode: 'minimal',
+              }}
+            >
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="venue/[id]" options={{ title: '' }} />
               <Stack.Screen name="resort/[id]" options={{ title: '' }} />

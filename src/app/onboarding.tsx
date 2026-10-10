@@ -112,7 +112,7 @@ export default function OnboardingScreen() {
                   <ThemedText
                     type="smallBold"
                     numberOfLines={2}
-                    style={{ color: on ? '#FFFFFF' : theme.text }}
+                    style={{ color: on ? theme.onAccent : theme.text }}
                   >
                     {v.name}
                   </ThemedText>
@@ -120,7 +120,8 @@ export default function OnboardingScreen() {
                     type="small"
                     numberOfLines={1}
                     style={{
-                      color: on ? 'rgba(255,255,255,0.8)' : theme.textFaint,
+                      color: on ? theme.onAccent : theme.textFaint,
+                      opacity: on ? 0.75 : 1,
                       fontSize: 11,
                     }}
                   >

@@ -33,6 +33,8 @@ export function VenueRow({
   onPress?: () => void;
 }) {
   const theme = useTheme();
+  const tone = theme[AreaTone[venue.area_id] ?? 'brandTeal'];
+  const visited = visitCount > 0;
 
   const service = venue.service_type.map((s) => SERVICE_LABEL[s] ?? s).join(', ');
 
@@ -51,15 +53,22 @@ export function VenueRow({
         styles.row,
         {
           backgroundColor: pressed ? theme.backgroundSelected : theme.backgroundElement,
-          borderColor: theme.border,
+          borderColor: visited ? tone : theme.border,
         },
       ]}
     >
-      <View style={[styles.stripe, { backgroundColor: theme[AreaTone[venue.area_id] ?? 'brandTeal'] }]} />
+      {/* A wash of the area's colour on rows you have eaten at, so progress
+          is legible while scrolling rather than only in the tick. Kept to
+          0.10 because 366 tinted rows would be a wall — only the visited ones
+          get it, which is the minority for a long time. */}
+      {visited ? (
+        <View style={[styles.wash, { backgroundColor: tone, opacity: 0.1 }]} />
+      ) : null}
+      <View style={[styles.stripe, { backgroundColor: tone }]} />
       <View style={styles.main}>
         <View style={styles.titleLine}>
-          {visitCount > 0 ? (
-            <View style={[styles.tick, { backgroundColor: theme.accent }]}>
+          {visited ? (
+            <View style={[styles.tick, { backgroundColor: tone }]}>
               <ThemedText style={[styles.tickMark, { color: theme.onAccent }]}>
                 {visitCount > 1 ? visitCount : '✓'}
               </ThemedText>
@@ -131,6 +140,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
   },
+  wash: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
   // A colour per area, so a park reads the same here as on the passport.
   stripe: { width: 5, alignSelf: 'stretch', marginVertical: -Spacing.three },
   main: { flex: 1, gap: 3 },

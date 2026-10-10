@@ -95,7 +95,9 @@ export function VenueMap({
                   { backgroundColor: theme.brandBlue, borderColor: theme.background },
                 ]}
               >
-                <ThemedText style={styles.clusterCount}>{pin.count}</ThemedText>
+                <ThemedText style={[styles.clusterCount, { color: theme.onAccent }]}>
+                  {pin.count}
+                </ThemedText>
               </View>
             </Marker>
           ) : (
@@ -198,7 +200,7 @@ function VenuePin({
       ]}
     >
       {visited ? (
-        <ThemedText style={[styles.pinMark, { color: '#FFFFFF' }]}>✓</ThemedText>
+        <ThemedText style={[styles.pinMark, { color: theme.onAccent }]}>✓</ThemedText>
       ) : null}
     </View>
   );
@@ -216,8 +218,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pinSelected: { width: 26, height: 26, borderRadius: 13 },
-  // White on every ramp colour, which is the one combination that passes
-  // contrast on all six.
   pinMark: { fontSize: 10, fontWeight: '700', lineHeight: 13 },
   cluster: {
     minWidth: 30,
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  clusterCount: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', lineHeight: 16 },
+  clusterCount: { fontSize: 12, fontWeight: '700', lineHeight: 16 },
   badge: {
     position: 'absolute',
     top: Spacing.two,
