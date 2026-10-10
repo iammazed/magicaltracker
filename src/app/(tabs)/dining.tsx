@@ -12,11 +12,11 @@ import {
 } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { SKY_PLACEHOLDER, SkyHeader, skyInput } from '@/components/sky-header';
+import { SKY_PLACEHOLDER, SkyHeader, SkySegment, skyInput } from '@/components/sky-header';
 import { ThemedView } from '@/components/themed-view';
-import { VenueMap } from '@/components/venue-map';
+import { CatalogMap, type MapPlace } from '@/components/catalog-map';
 import { VenueRow } from '@/components/venue-row';
-import { BottomTabInset, Radius, Spacing } from '@/constants/theme';
+import { AreaTone, BottomTabInset, Radius, Spacing } from '@/constants/theme';
 import { useCatalogFilters } from '@/hooks/use-catalog-filters';
 import { useNearby } from '@/hooks/use-nearby';
 import { useTheme } from '@/hooks/use-theme';
@@ -29,11 +29,17 @@ import {
 } from '@/hooks/use-venues';
 import { useVisits } from '@/hooks/use-visits';
 import { formatDistance, metresBetween, sortByDistance } from '@/lib/cluster';
+import { formatCuisine, formatSubArea } from '@/lib/labels';
 
 /**
  * Chip labels. The full area names ("ESPN Wide World of Sports Resort Area")
  * are right for a detail screen and far too long for a filter chip.
  */
+const VIEW_OPTIONS = [
+  { value: 'list' as const, label: 'List' },
+  { value: 'map' as const, label: 'Map' },
+];
+
 const SHORT_AREA: Record<string, string> = {
   'magic-kingdom': 'Magic Kingdom',
   epcot: 'EPCOT',
@@ -102,6 +108,28 @@ export default function CatalogScreen() {
 
   const visitedIds = useMemo(() => new Set(byVenue.keys()), [byVenue]);
 
+  /** The map knows nothing about venues, so the mapping happens here. */
+  const mapPlaces = useMemo<MapPlace[]>(
+    () =>
+      filtered.map((v) => ({
+        id: v.id,
+        name: v.name,
+        lat: v.lat,
+        lng: v.lng,
+        tone: AreaTone[v.area_id] ?? 'brandTeal',
+        line1:
+          (areaName[v.area_id] ?? v.area_id) +
+          (v.sub_area ? ` · ${formatSubArea(v.sub_area)}` : ''),
+        line2: [
+          formatCuisine(v.cuisine),
+          '$'.repeat(Math.max(1, Math.min(4, v.price_tier))),
+        ]
+          .filter(Boolean)
+          .join('  ·  '),
+      })),
+    [filtered, areaName],
+  );
+
   /**
    * Area chips, counted against every filter EXCEPT the area itself — so the
    * number on a chip is what you would actually see after tapping it. Counting
@@ -137,7 +165,7 @@ export default function CatalogScreen() {
               placeholderTextColor={SKY_PLACEHOLDER}
               autoCorrect={false}
               clearButtonMode="while-editing"
-              style={skyInput}
+              style={[skyInput, styles.searchInput]}
             />
             <Pressable
               onPress={() => router.push('/filters')}
@@ -156,18 +184,7 @@ export default function CatalogScreen() {
           </View>
 
           {!planning ? (
-            <View style={styles.segment}>
-              <Segment
-                label="List"
-                active={view === 'list'}
-                onPress={() => setView('list')}
-              />
-              <Segment
-                label="Map"
-                active={view === 'map'}
-                onPress={() => setView('map')}
-              />
-            </View>
+            <SkySegment options={VIEW_OPTIONS} value={view} onChange={setView} />
           ) : null}
         </SkyHeader>
 
@@ -196,8 +213,9 @@ export default function CatalogScreen() {
         </ScrollView>
 
         {/* The header's bar answers "how much have I done"; this answers
-            "what am I looking at right now", which the filters change. */}
-        {!loading && venues.length > 0 ? (
+            "what am I looking at right now", which the filters change. The
+            map carries its own count badge, so it is list-only. */}
+        {view === 'list' && !loading && venues.length > 0 ? (
           <ThemedText type="small" themeColor="textFaint" style={styles.resultCount}>
             {filtered.length === venues.length
               ? `${venues.length} places`
@@ -218,11 +236,11 @@ export default function CatalogScreen() {
             <ActivityIndicator color={theme.accent} />
           </View>
         ) : view === 'map' && !planning ? (
-          <VenueMap
-            venues={filtered}
-            visitedIds={visitedIds}
-            areaName={(id) => areaName[id] ?? id}
-            onOpen={(v) => router.push({ pathname: '/venue/[id]', params: { id: v.id } })}
+          <CatalogMap
+            places={mapPlaces}
+            doneIds={visitedIds}
+            doneLabel="visited"
+            onOpen={(p) => router.push({ pathname: '/venue/[id]', params: { id: p.id } })}
           />
         ) : filtered.length === 0 ? (
           <Empty
@@ -289,47 +307,6 @@ export default function CatalogScreen() {
         ) : null}
       </View>
     </ThemedView>
-  );
-}
-
-/**
- * One side of the List/Map toggle.
- *
- * The first version drew the track transparent and filled the selected side
- * with `backgroundElement`, which against the screen background is a few
- * percent of lightness apart — so it did not read as a two-option control at
- * all, and the unselected side looked like disabled placeholder text. The
- * selected side is now `accent`, which nothing else in the header uses.
- */
-function Segment({
-  label,
-  active,
-  onPress,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="tab"
-      accessibilityState={{ selected: active }}
-      accessibilityLabel={`${label} view`}
-      style={[styles.segmentItem, active ? styles.segmentItemOn : null]}
-    >
-      <ThemedText
-        style={[
-          styles.segmentText,
-          {
-            color: active ? '#23133A' : 'rgba(255,255,255,0.75)',
-            fontWeight: active ? '700' : '600',
-          },
-        ]}
-      >
-        {label}
-      </ThemedText>
-    </Pressable>
   );
 }
 
@@ -407,24 +384,8 @@ function Empty({
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safe: { flex: 1 },
-  segment: {
-    flexDirection: 'row',
-    alignSelf: 'flex-start',
-    borderRadius: Radius.pill,
-    padding: 3,
-    gap: 2,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
-    backgroundColor: 'rgba(255,255,255,0.10)',
-  },
-  segmentItem: {
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.one + 3,
-    borderRadius: Radius.pill,
-  },
-  segmentItemOn: { backgroundColor: '#E5B45F' },
-  segmentText: { fontSize: 14 },
   searchRow: { flexDirection: 'row', gap: Spacing.two },
+  searchInput: { flex: 1 },
   filterButton: {
     paddingHorizontal: Spacing.three,
     height: 48,

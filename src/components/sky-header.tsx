@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SkyCard, Stars } from '@/components/sky-card';
@@ -76,9 +76,65 @@ export function SkyHeader({
   );
 }
 
-/** The translucent field style, so the search input matches on both screens. */
+/**
+ * The List/Map toggle, for use inside a SkyHeader.
+ *
+ * Shared because Dining and Resorts need the identical control, and the first
+ * version of this on Dining was styled so faintly — a transparent track and a
+ * selected fill a few percent of lightness from the background — that it did
+ * not read as a toggle at all. Gold on translucent white is unmistakable, and
+ * having one copy means that mistake cannot come back on only one screen.
+ */
+export function SkySegment<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: readonly { value: T; label: string }[];
+  value: T;
+  onChange: (next: T) => void;
+}) {
+  return (
+    <View style={styles.segment}>
+      {options.map((o) => {
+        const active = o.value === value;
+        return (
+          <Pressable
+            key={o.value}
+            onPress={() => onChange(o.value)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            accessibilityLabel={`${o.label} view`}
+            style={[styles.segmentItem, active ? styles.segmentItemOn : null]}
+          >
+            <ThemedText
+              style={[
+                styles.segmentText,
+                {
+                  color: active ? '#23133A' : 'rgba(255,255,255,0.75)',
+                  fontWeight: active ? '700' : '600',
+                },
+              ]}
+            >
+              {o.label}
+            </ThemedText>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/**
+ * The translucent field style, so the search input matches on both screens.
+ *
+ * Carries no `flex`. It had `flex: 1`, which is right inside a row — Dining
+ * pairs the field with a Filters button — and wrong as a direct child of the
+ * header's column, where it stretches to fill the height instead of staying
+ * 48pt. Sizing is the layout's business; add `flex: 1` at the call site that
+ * needs it.
+ */
 export const skyInput = {
-  flex: 1,
   paddingHorizontal: Spacing.three,
   height: 48,
   borderRadius: Radius.medium,
@@ -119,4 +175,21 @@ const styles = StyleSheet.create({
   },
   fill: { height: 6, borderRadius: 3, backgroundColor: '#E5B45F' },
   progressLabel: { color: 'rgba(255,255,255,0.78)', fontSize: 14 },
+  segment: {
+    flexDirection: 'row',
+    alignSelf: 'flex-start',
+    borderRadius: Radius.pill,
+    padding: 3,
+    gap: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: 'rgba(255,255,255,0.10)',
+  },
+  segmentItem: {
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.one + 3,
+    borderRadius: Radius.pill,
+  },
+  segmentItemOn: { backgroundColor: '#E5B45F' },
+  segmentText: { fontSize: 14 },
 });

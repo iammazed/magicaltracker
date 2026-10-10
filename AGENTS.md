@@ -386,6 +386,18 @@ carry a wash of their own area/tier colour at 0.10, so coverage is legible while
 than only visible in the tick. Only the done rows get it — 366 tinted rows would be a wall, and
 the done ones are the minority for a long time.
 
+**`CatalogMap` knows nothing about venues or resorts.** Callers map their own rows to `MapPlace`
+— id, name, coordinates, a `RampToken` tone, and two display lines — which is why Resorts got a
+map for about thirty lines instead of a second copy of the file. The only real differences were
+which colour map to index (`AreaTone` vs `TierTone`) and which strings go on the card, and both
+are the caller's business. `SkySegment` is shared for the same reason: one copy means the
+too-faint-to-read version of that control cannot come back on only one screen.
+
+**Shared styles carry no `flex`.** `skyInput` had `flex: 1`, which is correct inside Dining's row
+next to the Filters button and wrong as a direct child of the header's column, where it stretches
+to fill the height instead of staying 48pt. Sizing is the layout's business; add `flex` at the
+call site.
+
 **List screens open with a `SkyHeader`.** Dining and Resorts were a black-on-grey title over a
 grey search field, which is a settings screen. The twilight band gives them the surface the
 planner and the countdown use, with the search field and the coverage bar inside it. The safe-area

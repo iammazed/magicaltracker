@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { SKY_PLACEHOLDER, SkyHeader, skyInput } from '@/components/sky-header';
+import { CatalogMap, type MapPlace } from '@/components/catalog-map';
+import { SKY_PLACEHOLDER, SkyHeader, SkySegment, skyInput } from '@/components/sky-header';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, Radius, Spacing, TierTone } from '@/constants/theme';
 import {
@@ -24,6 +25,11 @@ import {
 import { useTheme } from '@/hooks/use-theme';
 import { useVisits } from '@/hooks/use-visits';
 
+const VIEW_OPTIONS = [
+  { value: 'list' as const, label: 'List' },
+  { value: 'map' as const, label: 'Map' },
+];
+
 const TIERS = ['value', 'moderate', 'deluxe', 'villa', 'campground'];
 
 export default function ResortsScreen() {
@@ -34,7 +40,32 @@ export default function ResortsScreen() {
 
   const [search, setSearch] = useState('');
   const [tier, setTier] = useState<string | null>(null);
+  // Local, not a route, for the same reason as Dining: a tab that remembers
+  // it was showing a map is surprising when you come back to look something
+  // up by name.
+  const [view, setView] = useState<'list' | 'map'>('list');
   const filtered = useFilteredResorts(resorts, { search, tier });
+
+  const stayedIds = useMemo(() => new Set(byResort.keys()), [byResort]);
+
+  /** The map knows nothing about resorts, so the mapping happens here. */
+  const mapPlaces = useMemo<MapPlace[]>(
+    () =>
+      filtered.map((r) => ({
+        id: r.id,
+        name: r.name,
+        lat: r.lat,
+        lng: r.lng,
+        // TierTone, not AreaTone — a resort's colour is its tier, which is
+        // how it is coloured on the list and on the trip screen too.
+        tone: TierTone[r.tier] ?? 'brandTeal',
+        line1:
+          (TIER_LABEL[r.tier] ?? r.tier) +
+          (r.ownership === 'partner' ? '  ·  Partner hotel' : ''),
+        line2: r.transport.map((t) => TRANSPORT_LABEL[t] ?? t).join(', '),
+      })),
+    [filtered],
+  );
 
   return (
     <ThemedView style={styles.container}>
@@ -53,6 +84,8 @@ export default function ResortsScreen() {
             clearButtonMode="while-editing"
             style={skyInput}
           />
+
+          <SkySegment options={VIEW_OPTIONS} value={view} onChange={setView} />
         </SkyHeader>
 
         <ScrollView
@@ -76,7 +109,8 @@ export default function ResortsScreen() {
           })}
         </ScrollView>
 
-        {!loading && resorts.length > 0 ? (
+        {/* List-only: the map has its own count badge. */}
+        {view === 'list' && !loading && resorts.length > 0 ? (
           <ThemedText type="small" themeColor="textFaint" style={styles.resultCount}>
             {filtered.length === resorts.length
               ? `${resorts.length} resorts`
@@ -95,6 +129,13 @@ export default function ResortsScreen() {
           <View style={styles.center}>
             <ActivityIndicator color={theme.accent} />
           </View>
+        ) : view === 'map' ? (
+          <CatalogMap
+            places={mapPlaces}
+            doneIds={stayedIds}
+            doneLabel="stayed at"
+            onOpen={(p) => router.push({ pathname: '/resort/[id]', params: { id: p.id } })}
+          />
         ) : (
           <FlatList
             style={styles.listFill}

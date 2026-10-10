@@ -3,25 +3,44 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 
 import { ThemedText } from '@/components/themed-text';
-import { AreaTone, BottomTabInset, Radius, Spacing } from '@/constants/theme';
+import { BottomTabInset, Radius, Spacing, type RampToken } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import type { VenueListItem } from '@/hooks/use-venues';
 import { clusterPins, WDW_REGION, zoomInto, type Viewport } from '@/lib/cluster';
-import { formatCuisine, formatSubArea } from '@/lib/labels';
 
 /**
- * The map view of the catalog.
+ * The map view of the catalog — venues or resorts.
+ *
+ * Deliberately knows nothing about either. Callers map their own rows to
+ * `MapPlace`, which is why Resorts got a map for about thirty lines rather
+ * than a second copy of this file: the only real differences were which
+ * colour map to index and which two strings go on the card, and both are the
+ * caller's business.
  *
  * Apple Maps, via `PROVIDER_DEFAULT`. That is not a placeholder for Google
- * Maps: Apple Maps needs no API key and runs inside Expo Go, so the map can
- * be built and tested before the Apple Developer Program enrollment clears.
- * Styled Google Maps needs a key wired through a config plugin, which needs a
- * development build, which needs the paid account.
+ * Maps: Apple Maps needs no API key and runs inside Expo Go, so the map works
+ * before the Apple Developer Program enrollment clears. Styled Google Maps
+ * needs a key wired through a config plugin, which needs a development build,
+ * which needs the paid account.
  *
  * Tapping a pin selects it and raises a card rather than pushing straight to
  * the detail screen. Pins are small and fingers are not, so a mis-tap that
  * navigates is a mis-tap you have to undo.
  */
+
+export type MapPlace = {
+  id: string;
+  name: string;
+  lat: number | null;
+  lng: number | null;
+  /** Which ramp colour this place belongs to — `AreaTone` for a venue,
+   *  `TierTone` for a resort. Resolved by the caller so this file does not
+   *  need to know which taxonomy applies. */
+  tone: RampToken;
+  /** Area, or tier. */
+  line1?: string;
+  /** Cuisine and price, or transport. */
+  line2?: string;
+};
 
 /** Markers with custom children re-render continuously unless this is off,
  *  which is the difference between a smooth map and a visibly stuttering one.
@@ -29,38 +48,39 @@ import { formatCuisine, formatSubArea } from '@/lib/labels';
  *  marker does need one more frame to redraw. */
 const STATIC_MARKERS = false;
 
-export function VenueMap({
-  venues,
-  visitedIds,
-  areaName,
+export function CatalogMap({
+  places,
+  doneIds,
+  doneLabel,
   onOpen,
 }: {
-  venues: VenueListItem[];
-  visitedIds: Set<string>;
-  areaName: (id: string) => string;
-  onOpen: (venue: VenueListItem) => void;
+  places: MapPlace[];
+  /** Ids the user has logged — visited venues, or resorts stayed at. */
+  doneIds: Set<string>;
+  /** "visited" / "stayed at", for the count badge and the card. */
+  doneLabel: string;
+  onOpen: (place: MapPlace) => void;
 }) {
   const theme = useTheme();
   const mapRef = useRef<MapView | null>(null);
   const [viewport, setViewport] = useState<Viewport>(WDW_REGION);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const pins = useMemo(() => clusterPins(venues, viewport), [venues, viewport]);
+  const pins = useMemo(() => clusterPins(places, viewport), [places, viewport]);
 
   const selected = useMemo(
-    () => venues.find((v) => v.id === selectedId) ?? null,
-    [venues, selectedId],
+    () => places.find((p) => p.id === selectedId) ?? null,
+    [places, selectedId],
   );
 
-  const visitedShown = useMemo(
-    () => venues.filter((v) => visitedIds.has(v.id)).length,
-    [venues, visitedIds],
+  const doneShown = useMemo(
+    () => places.filter((p) => doneIds.has(p.id)).length,
+    [places, doneIds],
   );
 
   const zoom = useCallback(
     (lat: number, lng: number) => {
-      const next = zoomInto(viewport, lat, lng);
-      mapRef.current?.animateToRegion(next, 280);
+      mapRef.current?.animateToRegion(zoomInto(viewport, lat, lng), 280);
     },
     [viewport],
   );
@@ -109,9 +129,9 @@ export function VenueMap({
               tracksViewChanges={pin.item.id === selectedId}
               anchor={{ x: 0.5, y: 0.5 }}
             >
-              <VenuePin
-                venue={pin.item}
-                visited={visitedIds.has(pin.item.id)}
+              <PlacePin
+                place={pin.item}
+                done={doneIds.has(pin.item.id)}
                 selected={pin.item.id === selectedId}
               />
             </Marker>
@@ -119,8 +139,8 @@ export function VenueMap({
         )}
       </MapView>
 
-      {/* Counts, because "how much of this park have I done?" is the question
-          the map exists to answer at a glance. */}
+      {/* Counts, because "how much of this have I done?" is the question the
+          map exists to answer at a glance. */}
       <View
         style={[
           styles.badge,
@@ -128,7 +148,7 @@ export function VenueMap({
         ]}
       >
         <ThemedText type="small" themeColor="textSecondary">
-          {visitedShown} of {venues.length} visited
+          {doneShown} of {places.length} {doneLabel}
         </ThemedText>
       </View>
 
@@ -141,26 +161,18 @@ export function VenueMap({
             { backgroundColor: theme.backgroundElement, borderColor: theme.border },
           ]}
         >
-          <View
-            style={[
-              styles.cardBar,
-              { backgroundColor: theme[AreaTone[selected.area_id] ?? 'brandTeal'] },
-            ]}
-          />
+          <View style={[styles.cardBar, { backgroundColor: theme[selected.tone] }]} />
           <View style={styles.cardMain}>
             <ThemedText type="smallBold" numberOfLines={1}>
               {selected.name}
             </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-              {areaName(selected.area_id)}
-              {selected.sub_area ? ` · ${formatSubArea(selected.sub_area)}` : ''}
-            </ThemedText>
+            {selected.line1 ? (
+              <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                {selected.line1}
+              </ThemedText>
+            ) : null}
             <ThemedText type="small" themeColor="textFaint" numberOfLines={1}>
-              {[
-                formatCuisine(selected.cuisine),
-                '$'.repeat(Math.max(1, Math.min(4, selected.price_tier))),
-                visitedIds.has(selected.id) ? 'Visited' : null,
-              ]
+              {[selected.line2, doneIds.has(selected.id) ? `Already ${doneLabel}` : null]
                 .filter(Boolean)
                 .join('  ·  ')}
             </ThemedText>
@@ -174,32 +186,32 @@ export function VenueMap({
   );
 }
 
-function VenuePin({
-  venue,
-  visited,
+function PlacePin({
+  place,
+  done,
   selected,
 }: {
-  venue: VenueListItem;
-  visited: boolean;
+  place: MapPlace;
+  done: boolean;
   selected: boolean;
 }) {
   const theme = useTheme();
-  const tone = theme[AreaTone[venue.area_id] ?? 'brandTeal'];
+  const tone = theme[place.tone];
 
-  // Visited is a filled pin with a tick; unvisited is a hollow ring in the
-  // same area colour. Shape carries the state as well as colour does, so it
-  // still reads for anyone who cannot tell the two hues apart.
+  // Done is a filled pin with a tick; not-yet is a hollow ring in the same
+  // colour. Shape carries the state as well as colour does, so it still reads
+  // for anyone who cannot tell the two hues apart.
   return (
     <View
       style={[
         styles.pin,
         selected && styles.pinSelected,
-        visited
+        done
           ? { backgroundColor: tone, borderColor: theme.background }
           : { backgroundColor: theme.background, borderColor: tone },
       ]}
     >
-      {visited ? (
+      {done ? (
         <ThemedText style={[styles.pinMark, { color: theme.onAccent }]}>✓</ThemedText>
       ) : null}
     </View>
