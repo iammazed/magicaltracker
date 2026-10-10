@@ -25,6 +25,7 @@ export function SkyHeader({
   eyebrow,
   title,
   progress,
+  action,
   children,
 }: {
   eyebrow?: string;
@@ -32,6 +33,11 @@ export function SkyHeader({
   /** A slim coverage bar. The question "how much of this have I done?" is the
    *  one both these screens exist to answer. */
   progress?: { done: number; total: number; label: string };
+  /** A top-right escape. The tab screens are under `headerShown: false`, so a
+   *  screen in a temporary mode — adding dining to a trip — has no navigation
+   *  bar and no back button, and its only way out was a footer that turned
+   *  out to be behind the tab bar. Two exits, not one. */
+  action?: { label: string; onPress: () => void };
   children?: React.ReactNode;
 }) {
   const pct =
@@ -44,9 +50,23 @@ export function SkyHeader({
       <Stars />
       <SafeAreaView edges={['top']}>
         <View style={styles.inner}>
-          <View style={styles.heading}>
-            {eyebrow ? <ThemedText style={styles.eyebrow}>{eyebrow}</ThemedText> : null}
-            <ThemedText style={styles.title}>{title}</ThemedText>
+          <View style={styles.headingRow}>
+            <View style={styles.heading}>
+              {eyebrow ? <ThemedText style={styles.eyebrow}>{eyebrow}</ThemedText> : null}
+              <ThemedText style={styles.title} numberOfLines={1}>
+                {title}
+              </ThemedText>
+            </View>
+            {action ? (
+              <Pressable
+                onPress={action.onPress}
+                accessibilityRole="button"
+                hitSlop={10}
+                style={styles.action}
+              >
+                <ThemedText style={styles.actionText}>{action.label}</ThemedText>
+              </Pressable>
+            ) : null}
           </View>
 
           {progress ? (
@@ -158,7 +178,22 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.three,
     gap: Spacing.three,
   },
-  heading: { gap: 2 },
+  headingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.three,
+  },
+  heading: { gap: 2, flexShrink: 1 },
+  action: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  actionText: { color: '#ffffff', fontSize: 14, fontWeight: '600' },
   eyebrow: {
     color: 'rgba(255,255,255,0.55)',
     fontSize: 11,

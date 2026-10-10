@@ -30,7 +30,7 @@ import { Colors } from '@/constants/theme';
  *    it. So on two of the four tabs the bar was reacting to a strip that never
  *    scrolls vertically, and on the other two to the real content, which is
  *    why it behaved differently depending on which tab you landed on. Every
- *    screen already pads its own bottom by `BottomTabInset`, so taking the
+ *    screen already pads its own bottom via `useBottomInset()`, so taking the
  *    automatic behaviour away costs nothing and makes all four identical.
  *    It is a per-Trigger prop, not a navigator one, so it goes on all four.
  *

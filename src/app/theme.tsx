@@ -13,7 +13,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { BottomTabInset, Colors, Radius, Spacing, type ThemeColor } from '@/constants/theme';
+import { Colors, Radius, Spacing, type ThemeColor } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -160,7 +160,8 @@ const styles = StyleSheet.create({
   },
   scroll: {
     paddingHorizontal: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.five,
+    // A modal, so there is no tab bar to clear — only generous end padding.
+    paddingBottom: Spacing.six,
     gap: Spacing.two,
   },
   group: {

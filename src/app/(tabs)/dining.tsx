@@ -16,7 +16,8 @@ import { SKY_PLACEHOLDER, SkyHeader, SkySegment, skyInput } from '@/components/s
 import { ThemedView } from '@/components/themed-view';
 import { CatalogMap, type MapPlace } from '@/components/catalog-map';
 import { VenueRow } from '@/components/venue-row';
-import { AreaTone, BottomTabInset, Radius, Spacing } from '@/constants/theme';
+import { AreaTone, Radius, Spacing } from '@/constants/theme';
+import { useBottomInset } from '@/hooks/use-bottom-inset';
 import { useCatalogFilters } from '@/hooks/use-catalog-filters';
 import { useNearby } from '@/hooks/use-nearby';
 import { useTheme } from '@/hooks/use-theme';
@@ -73,6 +74,7 @@ export default function CatalogScreen() {
   );
   const { data: areas } = useAreas();
   const { filters, set, clear } = useCatalogFilters();
+  const bottomInset = useBottomInset();
 
   // The map is a view of the same filtered set, not a separate screen, so
   // switching to it never loses the filters you just chose. It is also local
@@ -156,6 +158,7 @@ export default function CatalogScreen() {
               ? { done: plannedIds.size, total: venues.length, label: 'on this trip' }
               : { done: visitedCount, total: venues.length, label: 'eaten at' }
           }
+          action={planning ? { label: 'Done', onPress: () => router.back() } : undefined}
         >
           <View style={styles.searchRow}>
             <TextInput
@@ -283,7 +286,10 @@ export default function CatalogScreen() {
                 }}
               />
             )}
-            contentContainerStyle={styles.list}
+            contentContainerStyle={[
+              styles.list,
+              { paddingBottom: bottomInset + Spacing.five },
+            ]}
             keyboardDismissMode="on-drag"
             refreshControl={
               <RefreshControl
@@ -298,10 +304,21 @@ export default function CatalogScreen() {
           <Pressable
             onPress={() => router.back()}
             accessibilityRole="button"
-            style={[styles.doneBar, { backgroundColor: theme.accent }]}
+            style={[
+              styles.doneBar,
+              { backgroundColor: theme.accent, marginBottom: bottomInset + Spacing.two },
+            ]}
           >
             <ThemedText type="smallBold" style={{ color: theme.onAccent }}>
-              Done · {plannedIds.size} on {planning.name}
+              Done
+            </ThemedText>
+            {/* Spelled out because the button looked like a Save it would be
+                dangerous to miss. Each tap already wrote to the database, so
+                this only closes the screen. */}
+            <ThemedText type="small" style={[styles.doneSub, { color: theme.onAccent }]}>
+              {plannedIds.size === 0
+                ? `Nothing added to ${planning.name} yet`
+                : `${plannedIds.size} ${plannedIds.size === 1 ? 'place' : 'places'} on ${planning.name} · saved as you go`}
             </ThemedText>
           </Pressable>
         ) : null}
@@ -417,15 +434,15 @@ const styles = StyleSheet.create({
   listFill: { flex: 1 },
   doneBar: {
     marginHorizontal: Spacing.three,
-    marginBottom: BottomTabInset,
     paddingVertical: Spacing.three,
     borderRadius: Radius.medium,
     alignItems: 'center',
+    gap: 1,
   },
+  doneSub: { opacity: 0.85, fontSize: 12 },
   list: {
     gap: Spacing.two,
     paddingHorizontal: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.five,
   },
   center: {
     flex: 1,

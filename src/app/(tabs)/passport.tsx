@@ -5,13 +5,8 @@ import { ProgressBar } from '@/components/progress-bar';
 import { SkyCard, Stars } from '@/components/sky-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import {
-  AreaTone,
-  BottomTabInset,
-  Radius,
-  Spacing,
-  type RampToken,
-} from '@/constants/theme';
+import { AreaTone, Radius, Spacing, type RampToken } from '@/constants/theme';
+import { useBottomInset } from '@/hooks/use-bottom-inset';
 import { type Challenge, type Coverage, usePassport } from '@/hooks/use-passport';
 import { titleCase } from '@/lib/labels';
 import { useTheme } from '@/hooks/use-theme';
@@ -29,6 +24,7 @@ const TIER_COLOR: Record<string, string> = {
 export default function PassportScreen() {
   const theme = useTheme();
   const { loading, overall, byArea, resortCoverage, challenges } = usePassport();
+  const bottomInset = useBottomInset();
 
   if (loading) {
     return (
@@ -43,7 +39,12 @@ export default function PassportScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView edges={['top']} style={styles.safe}>
-        <ScrollView contentContainerStyle={styles.scroll}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.scroll,
+            { paddingBottom: bottomInset + Spacing.five },
+          ]}
+        >
           <View style={styles.header}>
             <ThemedText type="title" style={styles.heading}>
               Passport
@@ -288,7 +289,6 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: {
     paddingHorizontal: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.five,
     gap: Spacing.four,
   },
   header: { paddingTop: Spacing.two, gap: 2 },

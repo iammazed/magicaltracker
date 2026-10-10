@@ -14,7 +14,7 @@ import { ThemedText } from '@/components/themed-text';
 import { CatalogMap, type MapPlace } from '@/components/catalog-map';
 import { SKY_PLACEHOLDER, SkyHeader, SkySegment, skyInput } from '@/components/sky-header';
 import { ThemedView } from '@/components/themed-view';
-import { BottomTabInset, Radius, Spacing, TierTone } from '@/constants/theme';
+import { Radius, Spacing, TierTone } from '@/constants/theme';
 import {
   TIER_LABEL,
   TRANSPORT_LABEL,
@@ -22,6 +22,7 @@ import {
   useResorts,
   type Resort,
 } from '@/hooks/use-resorts';
+import { useBottomInset } from '@/hooks/use-bottom-inset';
 import { useTheme } from '@/hooks/use-theme';
 import { useVisits } from '@/hooks/use-visits';
 
@@ -37,6 +38,7 @@ export default function ResortsScreen() {
   const router = useRouter();
   const { data: resorts, loading, error } = useResorts();
   const { byResort, stayedCount } = useVisits();
+  const bottomInset = useBottomInset();
 
   const [search, setSearch] = useState('');
   const [tier, setTier] = useState<string | null>(null);
@@ -141,7 +143,10 @@ export default function ResortsScreen() {
             style={styles.listFill}
             data={filtered}
             keyExtractor={(r) => r.id}
-            contentContainerStyle={styles.list}
+            contentContainerStyle={[
+              styles.list,
+              { paddingBottom: bottomInset + Spacing.five },
+            ]}
             keyboardDismissMode="on-drag"
             renderItem={({ item }) => (
               <ResortRow
@@ -276,7 +281,6 @@ const styles = StyleSheet.create({
   list: {
     gap: Spacing.two,
     paddingHorizontal: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.five,
   },
   row: {
     flexDirection: 'row',

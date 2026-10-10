@@ -3,7 +3,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 
 import { ThemedText } from '@/components/themed-text';
-import { BottomTabInset, Radius, Spacing, type RampToken } from '@/constants/theme';
+import { Radius, Spacing, type RampToken } from '@/constants/theme';
+import { useBottomInset } from '@/hooks/use-bottom-inset';
 import { useTheme } from '@/hooks/use-theme';
 import { clusterPins, WDW_REGION, zoomInto, type Viewport } from '@/lib/cluster';
 
@@ -62,6 +63,7 @@ export function CatalogMap({
   onOpen: (place: MapPlace) => void;
 }) {
   const theme = useTheme();
+  const bottomInset = useBottomInset();
   const mapRef = useRef<MapView | null>(null);
   const [viewport, setViewport] = useState<Viewport>(WDW_REGION);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -158,7 +160,11 @@ export function CatalogMap({
           accessibilityRole="button"
           style={[
             styles.card,
-            { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+            {
+              backgroundColor: theme.backgroundElement,
+              borderColor: theme.border,
+              bottom: bottomInset + Spacing.two,
+            },
           ]}
         >
           <View style={[styles.cardBar, { backgroundColor: theme[selected.tone] }]} />
@@ -254,10 +260,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: Spacing.three,
     right: Spacing.three,
-    // The map is not a scroll view, so it gets none of the automatic content
-    // inset the tab bar applies to the list. Without this the card sits behind
-    // the tab bar.
-    bottom: BottomTabInset + Spacing.two,
+    // `bottom` is set inline from `useBottomInset()`: the map is not a scroll
+    // view, so it gets no automatic inset, and the tab bar's real height
+    // depends on the device's safe area.
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,

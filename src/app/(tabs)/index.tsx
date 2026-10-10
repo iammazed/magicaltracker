@@ -9,7 +9,8 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { TripPlanner } from '@/components/trip-planner';
 import { Wordmark } from '@/components/wordmark';
-import { AreaTone, BottomTabInset, Radius, Spacing } from '@/constants/theme';
+import { AreaTone, Radius, Spacing } from '@/constants/theme';
+import { useBottomInset } from '@/hooks/use-bottom-inset';
 import { useOnboarding } from '@/hooks/use-onboarding';
 import { usePassport } from '@/hooks/use-passport';
 import { useResorts } from '@/hooks/use-resorts';
@@ -34,6 +35,7 @@ export default function HomeScreen() {
   const { activeTrip, plansFor, loading: tripsLoading } = useTrips();
   const { loading, overall, byArea, resortCoverage, challenges } = usePassport();
   const { done: onboarded, loading: onboardingLoading } = useOnboarding();
+  const bottomInset = useBottomInset();
 
   /**
    * First run goes to the quick-start pass.
@@ -106,7 +108,12 @@ export default function HomeScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView edges={['top']} style={styles.safe}>
-        <ScrollView contentContainerStyle={styles.scroll}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.scroll,
+            { paddingBottom: bottomInset + Spacing.five },
+          ]}
+        >
           {/* ── Wordmark ─────────────────────────────────────────── */}
           <View style={styles.masthead}>
             <Wordmark size="md" />
@@ -365,7 +372,6 @@ const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: Spacing.three,
     paddingTop: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.five,
     gap: Spacing.four,
   },
   hero: { minHeight: 168 },

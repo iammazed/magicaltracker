@@ -195,5 +195,7 @@ export const Radius = {
   pill: 999,
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
+// `BottomTabInset` lived here as a hardcoded 50 and was wrong: on iOS the
+// tab bar occupies its own height PLUS the bottom safe area, which varies by
+// device. Use `useBottomInset()` from `@/hooks/use-bottom-inset` instead.
 export const MaxContentWidth = 800;

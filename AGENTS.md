@@ -235,12 +235,26 @@ differing only in colour. Leave them unset and the platform may pick a different
 selected item, so that label — and anything drawn around it — measures differently from its
 neighbours.
 
+**Bottom spacing comes from `useBottomInset()`, never a constant.** A hardcoded
+`BottomTabInset = 50` lived in `theme.ts` and was wrong: on iOS the tab bar occupies its own
+~49pt PLUS the bottom safe area, which is 34pt on a notched iPhone, 0 on an SE, and different
+again on Android. Scroll padding survived the error by accident because it added `Spacing.five`
+on top and landed near the right number; the fixed "Done" footer on the add-to-trip screen had no
+such slack and sat **two thirds behind the tab bar**, where it could not be scrolled into view
+because a fixed footer does not scroll. Anything positioned against the bottom of a tab screen —
+a footer, an absolutely-positioned card, scroll padding — reads the hook.
+
+**A screen in a temporary mode needs two ways out.** The tab screens run under
+`headerShown: false`, so there is no navigation bar and no back button; when the add-to-trip
+footer was unreachable, there was no other exit at all. `SkyHeader` takes an optional top-right
+`action` for exactly this.
+
 **`disableAutomaticContentInsets` belongs on every Trigger.** iOS applies its automatic inset and
 its scroll-edge appearance to the FIRST scroll view in each screen — and on Dining and Resorts
 that is the horizontal filter-chip strip, not the list under it. So the bar tracked a strip that
 never scrolls vertically on two tabs and the real content on the other two, which is why it moved
 differently depending on which tab you landed on. Every screen pads its own bottom by
-`BottomTabInset` already, so taking the automatic behaviour away costs nothing. It is a
+`useBottomInset()` already, so taking the automatic behaviour away costs nothing. It is a
 per-Trigger prop; setting it on `NativeTabs` does not typecheck.
 
 Several NativeTabs props are silently inert on the platform you are probably testing:
