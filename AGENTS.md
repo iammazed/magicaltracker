@@ -213,6 +213,30 @@ right after a clean means nothing until the dev server has run once.
 Prefer the object form for anything with params — `router.push({ pathname: '/venue/[id]',
 params: { id } })` — which survives these regenerations and avoids hand-encoding query strings.
 
+### Pushing to a tab route mounts a SECOND copy of the tab navigator
+
+`router.push({ pathname: '/dining', params: { addToTrip } })` from a screen stacked over the
+tabs does not switch the existing tab. Traced through `getNavigationAction.js`:
+`findDivergentState` compares the target against the root stack's *focused* route, which is the
+pushed screen, so divergence is detected at the root; `navigationState.type === 'stack'` leaves
+the action as `PUSH`; and `singular` comes from `options.dangerouslySingular`, which `push` never
+sets. So the root stack becomes `[(tabs), trip/[id], (tabs)]` — a whole second tab navigator,
+with all four screens remounted.
+
+It is contained rather than harmful: the original tab keeps its own params and `back()` destroys
+the copy. But a route param outlives a tab change, so inside that copy you can leave Dining, come
+back, and still be in add-to-trip mode with no explanation and no back button — tab screens run
+under `headerShown: false`.
+
+**A mode held in a route param must be cleared when the user leaves the tab**, and the listener
+has to watch the TAB NAVIGATOR's focused route, not the screen's own focus. Pushing the filter
+sheet blurs the screen without changing which tab is selected, so a focus-based check would drop
+you out of the task every time you opened filters. Compare against `useRoute().name` rather than a
+hardcoded route name, and do not capture it at mount — a tab navigator can mount a screen while a
+different tab is focused.
+
+The real fix is for a task not to live in a tab at all. See the note in the add-to-trip flow.
+
 ### The back button needs `headerBackButtonDisplayMode: 'minimal'`
 
 iOS labels the back button with the PREVIOUS screen's title. The previous screen is always the

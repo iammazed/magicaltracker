@@ -1,5 +1,5 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useLocalSearchParams, useNavigation, useRoute, useRouter } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -75,6 +75,36 @@ export default function CatalogScreen() {
   const { data: areas } = useAreas();
   const { filters, set, clear } = useCatalogFilters();
   const bottomInset = useBottomInset();
+
+  /**
+   * Switching tabs abandons the add-to-trip task.
+   *
+   * `addToTrip` is a route param, and params outlive a tab change — so after
+   * entering this mode, tapping Home and coming back to Dining left the screen
+   * still titled with the trip, still showing checkboxes, still showing a Done
+   * footer, with nothing on screen to explain why and no back button anywhere.
+   *
+   * This watches the TAB NAVIGATOR's focused route rather than this screen's
+   * own focus, and the distinction is the whole point: opening the filter sheet
+   * pushes a modal that blurs this screen without changing which tab is
+   * selected. Keyed on focus, the filter round-trip would silently drop you out
+   * of the task you were in the middle of.
+   */
+  const navigation = useNavigation();
+  // This screen's own route name, compared against whichever tab is focused.
+  // Read rather than hardcoded as 'dining' so renaming the file cannot quietly
+  // make the comparison always true, and NOT captured at mount, because a tab
+  // navigator may mount a screen while a different tab is focused.
+  const routeName = useRoute().name;
+  useEffect(() => {
+    if (!planning) return;
+    const unsubscribe = navigation.addListener('state', () => {
+      const state = navigation.getState();
+      const focused = state?.routes[state.index]?.name;
+      if (focused && focused !== routeName) router.setParams({ addToTrip: undefined });
+    });
+    return unsubscribe;
+  }, [planning, navigation, router, routeName]);
 
   // The map is a view of the same filtered set, not a separate screen, so
   // switching to it never loses the filters you just chose. It is also local
