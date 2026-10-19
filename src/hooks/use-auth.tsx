@@ -32,6 +32,10 @@ type AuthValue = {
   user: User | null;
   /** True while a sign-in attempt is in flight. */
   busy: boolean;
+  /** Set when a magic link came back carrying a failure — expired, already
+   *  used, or sent to a mismatched address. Null otherwise. */
+  linkError: string | null;
+  clearLinkError: () => void;
   /** Apple only exists on iOS, and only on a build carrying the entitlement. */
   appleAvailable: boolean;
   signInWithApple: () => Promise<{ ok: boolean; error?: string }>;
@@ -50,6 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [busy, setBusy] = useState(false);
   const [appleAvailable, setAppleAvailable] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
 
   /* ── Restore, then follow ───────────────────────────────────────────── */
   useEffect(() => {
@@ -102,10 +107,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const fragment = url.split('#')[1];
       if (!fragment) return;
       const params = new URLSearchParams(fragment);
+
+      /**
+       * A failed link comes back as a fragment too, carrying `error` rather
+       * than tokens — expired, already used, or opened on a different device.
+       * Without this branch the app simply does nothing, which from the
+       * user's side is indistinguishable from the link not working at all.
+       */
+      const failure = params.get('error_description') ?? params.get('error');
+      if (failure) {
+        setLinkError(failure.replace(/\+/g, ' '));
+        return;
+      }
+
       const access_token = params.get('access_token');
       const refresh_token = params.get('refresh_token');
       if (!access_token || !refresh_token) return;
-      await supabase.auth.setSession({ access_token, refresh_token });
+
+      const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+      if (error) setLinkError(error.message);
+      else setLinkError(null);
     };
 
     // A link that launched the app from cold, and one that arrived while it
@@ -202,12 +223,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       session,
       user: session?.user ?? null,
       busy,
+      linkError,
+      clearLinkError: () => setLinkError(null),
       appleAvailable,
       signInWithApple,
       sendMagicLink,
       signOut,
     }),
-    [status, session, busy, appleAvailable, signInWithApple, sendMagicLink, signOut],
+    [status, session, busy, linkError, appleAvailable, signInWithApple, sendMagicLink, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

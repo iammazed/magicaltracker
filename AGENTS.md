@@ -357,11 +357,27 @@ device exactly as a guest's would, and sync picks them up on the next sign-in.
 null for it, and there is no way to ask again short of the user revoking the app in their Apple
 ID settings. It is persisted to user metadata inside `signInWithApple` or it is gone forever.
 
+**The redirect allow list is glob-matched, and a bare scheme does not match a path.**
+`magicaltracker://` does NOT match `magicaltracker://auth`, which is what the app actually sends
+— separators are `.` and `/`, so the entry needs a wildcard: **`magicaltracker://**`**. An
+unlisted `redirectTo` silently falls back to the Site URL, so the symptom is a magic link that
+opens the website instead of the app and hands the session tokens to a page that cannot use
+them. It looks like a deep-link bug and is a dashboard typo.
+
+**"Confirm email" must be off on the Email provider.** With it on, a new address gets the
+*Confirm signup* template rather than *Magic Link* — the giveaway is an email headed "Confirm
+email address". A magic link is inherently confirming; requiring both means two round trips to
+sign in once.
+
 **The magic link's tokens arrive in the URL fragment, after `#`.** `Linking.parse` only reads the
 query string, so the fragment is split by hand — reading `queryParams` returns nothing and looks
 exactly like a broken link. Both entry points matter: `getInitialURL` for a link that launched
 the app cold, and the `url` listener for one that arrived while it was open. Handling only the
 second is the bug where tapping the email from a closed app does nothing.
+
+A *failed* link comes back as a fragment too, carrying `error_description` instead of tokens.
+Without a branch for it the app does nothing at all, which from the user's side is
+indistinguishable from the link being broken — so expired and already-used links are surfaced.
 
 **Sessions persist through AsyncStorage, not `expo-secure-store`.** SecureStore caps a value at
 2048 bytes and a Supabase session routinely exceeds that, so using it means a chunking adapter

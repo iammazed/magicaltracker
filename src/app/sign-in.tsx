@@ -32,8 +32,10 @@ export default function SignInScreen() {
   const theme = useTheme();
   const router = useRouter();
   const scheme = useColorScheme();
-  const { status, user, busy, appleAvailable, signInWithApple, sendMagicLink, signOut } =
-    useAuth();
+  const {
+    status, user, busy, linkError, clearLinkError,
+    appleAvailable, signInWithApple, sendMagicLink, signOut,
+  } = useAuth();
   const { visits, stays } = useVisits();
 
   const [email, setEmail] = useState('');
@@ -105,7 +107,7 @@ export default function SignInScreen() {
   }
 
   /* ── Link sent ───────────────────────────────────────────────────────── */
-  if (sentTo) {
+  if (sentTo && !linkError) {
     return (
       <ThemedView style={styles.container}>
         <Stack.Screen options={{ title: '' }} />
@@ -227,6 +229,24 @@ export default function SignInScreen() {
             </ThemedText>
           </Pressable>
         </View>
+
+        {linkError ? (
+          <Pressable
+            onPress={clearLinkError}
+            accessibilityRole="button"
+            style={[styles.card, { backgroundColor: theme.backgroundElement, borderColor: theme.danger }]}
+          >
+            <ThemedText type="smallBold" style={{ color: theme.danger }}>
+              That link did not work
+            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              {linkError}
+            </ThemedText>
+            <ThemedText type="small" themeColor="textFaint">
+              Links expire and can only be used once. Send a fresh one.
+            </ThemedText>
+          </Pressable>
+        ) : null}
 
         {error ? (
           <ThemedText type="small" style={{ color: theme.danger }}>
