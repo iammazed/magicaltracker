@@ -545,6 +545,25 @@ numbers live on EAS servers and the values in `app.json` are ignored, so nothing
 per build. `autoIncrement` is on for `production` only; it bumps `ios.buildNumber` and does not
 touch the user-facing `version`, which you bump yourself for a release.
 
+**Check what `eas init` writes into `app.json`.** It does not only add the project id — evaluating
+the config also materialises whatever the installed config plugins ask for. It added
+`android.permissions: [RECORD_AUDIO, ACCESS_COARSE_LOCATION, ACCESS_FINE_LOCATION]`, and
+RECORD_AUDIO is wrong: `expo-image-picker`'s Android plugin requests it because the picker *can*
+capture video with sound, which this app never does — `log-visit.tsx` passes
+`mediaTypes: ['images']` and the plugin is configured with `cameraPermission: false`. A Play
+Store listing claiming the app can record audio asks users to trust it for nothing. It is in
+`android.blockedPermissions` now, which strips it from the merged manifest; the plugin re-adds it
+on every prebuild, so the block has to stay even though the request is gone.
+
+**Both location permissions are deliberate.** `ACCESS_COARSE_LOCATION` alone is 1–3 km on
+Android, and Walt Disney World is about four miles across — EPCOT to Magic Kingdom is three — so
+a coarse fix cannot order a restaurant list at all. `Accuracy.Balanced` needs FINE to be useful
+here.
+
+`ITSAppUsesNonExemptEncryption: false` is correct and worth keeping: the app uses only standard
+HTTPS, which is exempt, and the key stops App Store Connect asking the export-compliance question
+on every single upload.
+
 **Expo Go and a development build are both usable.** Expo Go still runs everything built so far.
 A development build is needed for anything native that Expo Go does not bundle: WidgetKit, Sign
 in with Apple, push, RevenueCat, Sentry, styled Google Maps.
