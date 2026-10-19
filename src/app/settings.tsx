@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Wordmark } from '@/components/wordmark';
 import { Radius, Spacing } from '@/constants/theme';
+import { useAuth } from '@/hooks/use-auth';
 import { useCatalog } from '@/hooks/use-catalog';
 import { useOnboarding } from '@/hooks/use-onboarding';
 import { usePremium } from '@/hooks/use-premium';
@@ -26,6 +27,7 @@ export default function SettingsScreen() {
   const { visits, stays } = useVisits();
   const { venues, resorts, areas, version, source, refresh, refreshing } = useCatalog();
   const { isPremium, simulated } = usePremium();
+  const { status, user } = useAuth();
   const { reset } = useOnboarding();
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -91,6 +93,32 @@ export default function SettingsScreen() {
   return (
     <ThemedView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
+        {/* ── Account ──────────────────────────────────────────────── */}
+        <Section title="Account">
+          <Pressable
+            onPress={() => router.push('/sign-in')}
+            accessibilityRole="button"
+            style={[
+              styles.row,
+              { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+            ]}
+          >
+            <View style={styles.rowMain}>
+              <ThemedText type="smallBold">
+                {status === 'signed-in' ? (user?.email ?? 'Signed in') : 'Sign in'}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {status === 'signed-in'
+                  ? 'Your log is backed up and follows you to a new phone.'
+                  : 'Optional. Everything works without one — signing in is what makes it survive a reinstall.'}
+              </ThemedText>
+            </View>
+            <ThemedText type="small" style={{ color: theme.accent }}>
+              {status === 'signed-in' ? 'Manage' : 'Sign in'}
+            </ThemedText>
+          </Pressable>
+        </Section>
+
         {/* ── Premium ──────────────────────────────────────────────── */}
         <Section title="Premium">
           <Pressable
@@ -150,9 +178,9 @@ export default function SettingsScreen() {
             }
           />
           <ThemedText type="small" themeColor="textFaint">
-            Everything you log is stored on this device. There are no accounts
-            yet, so a reinstall loses it — exporting is how you keep a copy
-            until syncing arrives.
+            {status === 'signed-in'
+              ? 'Your log is backed up to your account. Exporting is for taking a copy somewhere else.'
+              : 'Everything you log is stored on this device only, so a reinstall loses it. Sign in to back it up, or export to keep a copy.'}
           </ThemedText>
         </Section>
 

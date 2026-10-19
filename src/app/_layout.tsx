@@ -10,6 +10,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { Pressable, ScrollView, StyleSheet, Text, View, useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { AuthProvider } from '@/hooks/use-auth';
 import { BrandFontsProvider } from '@/hooks/use-brand-fonts';
 import { CatalogProvider } from '@/hooks/use-catalog';
 import { CatalogFiltersProvider } from '@/hooks/use-catalog-filters';
@@ -65,6 +66,7 @@ export default function RootLayout() {
       onError={(e) => console.error('[local-db] init failed:', e)}
     >
       <BrandFontsProvider>
+      <AuthProvider>
       <PremiumProvider>
       <NearbyProvider>
       <CatalogProvider>
@@ -119,6 +121,10 @@ export default function RootLayout() {
                 options={{ title: '', presentation: 'modal' }}
               />
               <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+              <Stack.Screen
+                name="sign-in"
+                options={{ title: '', presentation: 'modal' }}
+              />
               {/* Full screen, no header, not dismissable by a swipe: it is the
                   first thing a new install shows and backing out of it halfway
                   would leave the passport half-seeded with no way back in. */}
@@ -142,6 +148,7 @@ export default function RootLayout() {
       </CatalogProvider>
       </NearbyProvider>
       </PremiumProvider>
+      </AuthProvider>
       </BrandFontsProvider>
     </SQLiteProvider>
   );

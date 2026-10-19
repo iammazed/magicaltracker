@@ -344,6 +344,40 @@ pipe-separated values because filters and the achievement engine need them that 
 (`titleCase`, `formatCuisine`, `formatList`, `formatSubArea`), so a fix lands once instead of in
 every screen that happens to show the field. Pipes become commas; pipes are storage, not UI.
 
+## Auth
+
+**Guest mode is the default and stays first-class.** Everything works with no account. Signing in
+buys exactly one thing — the record surviving a reinstall or reaching a second device — and the
+screen says so rather than overselling it. `session === null` is a normal state, never a gate.
+
+**Signing out does not touch local SQLite.** It is not "delete my trips": the rows stay on the
+device exactly as a guest's would, and sync picks them up on the next sign-in.
+
+**Apple hands over the user's name on the FIRST authorization only.** Every later sign-in returns
+null for it, and there is no way to ask again short of the user revoking the app in their Apple
+ID settings. It is persisted to user metadata inside `signInWithApple` or it is gone forever.
+
+**The magic link's tokens arrive in the URL fragment, after `#`.** `Linking.parse` only reads the
+query string, so the fragment is split by hand — reading `queryParams` returns nothing and looks
+exactly like a broken link. Both entry points matter: `getInitialURL` for a link that launched
+the app cold, and the `url` listener for one that arrived while it was open. Handling only the
+second is the bug where tapping the email from a closed app does nothing.
+
+**Sessions persist through AsyncStorage, not `expo-secure-store`.** SecureStore caps a value at
+2048 bytes and a Supabase session routinely exceeds that, so using it means a chunking adapter
+whose failure mode is a silent logout. The cost is the refresh token living in the app sandbox
+rather than the Keychain — acceptable for a trip log, worth revisiting if this ever holds
+anything more sensitive.
+
+**Auto-refresh is tied to `AppState`.** Supabase's timer otherwise keeps running while
+backgrounded, firing refreshes against a dead network as iOS suspends the process.
+
+**Native Sign in with Apple needs no Services ID or secret key** — only the bundle ID in
+Supabase's Apple provider Client IDs, plus `ios.usesAppleSignIn`. The OAuth settings are for web
+flows this app does not use.
+
+---
+
 ## Premium
 
 **Everything gated reads `isPremium` from `src/hooks/use-premium.tsx`, and nothing reads a store
