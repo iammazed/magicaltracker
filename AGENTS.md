@@ -369,6 +369,13 @@ them. It looks like a deep-link bug and is a dashboard typo.
 email address". A magic link is inherently confirming; requiring both means two round trips to
 sign in once.
 
+**A deep link's path is a ROUTE, so one has to exist for it.** `magicaltracker://auth` was
+matched against the route tree, found nothing, and rendered "Unmatched Route" — on top of a
+session that `use-auth` had already set successfully. The session worked; the user was stranded.
+`src/app/auth.tsx` is that route: it handles no tokens itself, it waits for the provider's result
+and redirects. It also needs its `<Stack.Screen>` in the root layout like any other non-tab
+screen.
+
 **The magic link's tokens arrive in the URL fragment, after `#`.** `Linking.parse` only reads the
 query string, so the fragment is split by hand — reading `queryParams` returns nothing and looks
 exactly like a broken link. Both entry points matter: `getInitialURL` for a link that launched

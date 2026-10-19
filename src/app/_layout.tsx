@@ -125,6 +125,14 @@ export default function RootLayout() {
                 name="sign-in"
                 options={{ title: '', presentation: 'modal' }}
               />
+              {/* Where the magic link lands. A route has to exist for the
+                  deep link's path or expo-router renders Unmatched Route over
+                  a session that actually succeeded. No header and no back
+                  gesture: it is an interstitial that redirects itself. */}
+              <Stack.Screen
+                name="auth"
+                options={{ headerShown: false, gestureEnabled: false }}
+              />
               {/* Full screen, no header, not dismissable by a swipe: it is the
                   first thing a new install shows and backing out of it halfway
                   would leave the passport half-seeded with no way back in. */}
