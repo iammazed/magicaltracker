@@ -401,6 +401,40 @@ flows this app does not use.
 
 ---
 
+## Sync
+
+**Off by default.** `SYNC_ENABLED` in `use-sync.tsx` is `false`. This is the one feature whose
+bug destroys data rather than displaying something wrong, so it does not run until the
+guest-to-account path has been exercised on a throwaway account — including running a claim
+twice. Settings has a `__DEV__`-only override for testing without flipping the master switch.
+
+**Device-generated ids are what make it safe.** Both sides key on the same UUID, so every write
+is an upsert and the whole cycle is idempotent. There is no id mapping to get wrong and no "did
+my last request land?" to answer — a lost response just means the next push re-sends the same
+rows to the same keys.
+
+**Push order is a foreign key constraint in disguise.** `trip_plans` references `trips`, each
+table is its own request, and nothing but the order of calls in `push()` enforces that.
+
+**`synced_at` is marked only after the server confirms.** A crash between the upsert and the
+UPDATE re-sends those rows next time, which is a no-op. The reverse order would lose them
+silently.
+
+**Pull is insert-only and never overwrites.** The device is currently the only writer, so taking
+the server's copy of a row that already exists locally would discard an edit made offline —
+exactly the failure this feature exists to prevent. Real two-way reconciliation needs per-field
+timestamps and a conflict rule, and only earns that complexity once a second device can write.
+
+**Push before pull.** On a fresh sign-in everything predates the account, so pulling first is a
+round trip that returns nothing — and if the push then failed, the user would be looking at an
+account that claims to be backed up and holds nothing.
+
+**Photos do not sync, and the UI says so.** They are `file:///var/mobile/...` URIs that mean
+nothing on another device. Pushing the paths would give a second device broken images while
+claiming they were backed up, which is worse than openly not having them.
+
+---
+
 ## Premium
 
 **Everything gated reads `isPremium` from `src/hooks/use-premium.tsx`, and nothing reads a store

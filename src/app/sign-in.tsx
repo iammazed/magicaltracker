@@ -16,6 +16,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Wordmark } from '@/components/wordmark';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
+import { useSync } from '@/hooks/use-sync';
 import { useTheme } from '@/hooks/use-theme';
 import { useVisits } from '@/hooks/use-visits';
 
@@ -37,6 +38,8 @@ export default function SignInScreen() {
     appleAvailable, signInWithApple, sendMagicLink, signOut,
   } = useAuth();
   const { visits, stays } = useVisits();
+  const { active: syncActive, status: syncStatus, pending, lastResult, lastSyncedAt, sync } =
+    useSync();
 
   const [email, setEmail] = useState('');
   const [sentTo, setSentTo] = useState<string | null>(null);
@@ -58,6 +61,12 @@ export default function SignInScreen() {
 
   /* ── Already signed in ───────────────────────────────────────────────── */
   if (status === 'signed-in') {
+    const identity = user?.email ?? 'Your account';
+    /** Apple's private relay hands over an address nobody recognises as their
+     *  own, so it is worth naming HOW they signed in, not only as what. */
+    const viaApple = user?.app_metadata?.provider === 'apple';
+    const logged = visits.length + stays.length;
+
     return (
       <ThemedView style={styles.container}>
         <Stack.Screen options={{ title: 'Account' }} />
@@ -65,29 +74,110 @@ export default function SignInScreen() {
           <SkyCard style={styles.hero}>
             <Stars />
             <View style={styles.heroInner}>
-              <ThemedText style={styles.heroEyebrow}>SIGNED IN</ThemedText>
+              <ThemedText style={styles.heroEyebrow}>
+                {viaApple ? 'SIGNED IN WITH APPLE' : 'SIGNED IN'}
+              </ThemedText>
               <ThemedText style={styles.heroTitle} numberOfLines={1}>
-                {user?.email ?? 'Your account'}
+                {identity}
               </ThemedText>
-              <ThemedText style={styles.heroBody}>
-                Everything you log is backed up and will come back if you
-                reinstall or switch phones.
-              </ThemedText>
+              {identity.includes('privaterelay') ? (
+                <ThemedText style={styles.heroBody}>
+                  That is Apple&apos;s private relay address. Mail sent to it
+                  reaches you without us ever seeing your real one.
+                </ThemedText>
+              ) : null}
+
+              <View style={styles.heroStats}>
+                <HeroStat value={visits.length} label="VISITS" />
+                <HeroStat value={stays.length} label="STAYS" />
+                <HeroStat
+                  value={syncActive ? Math.max(logged - pending, 0) : 0}
+                  label="BACKED UP"
+                />
+              </View>
             </View>
           </SkyCard>
 
+          {/* Backup state, said plainly rather than implied. */}
           <View
             style={[
               styles.card,
+              {
+                backgroundColor: theme.backgroundElement,
+                borderColor: syncActive ? theme.border : theme.warning,
+              },
+            ]}
+          >
+            <View style={styles.cardHead}>
+              <ThemedText type="smallBold">Backup</ThemedText>
+              {syncActive ? (
+                <Pressable
+                  onPress={() => void sync()}
+                  disabled={syncStatus === 'syncing'}
+                  accessibilityRole="button"
+                  hitSlop={8}
+                >
+                  <ThemedText type="small" style={{ color: theme.accent }}>
+                    {syncStatus === 'syncing' ? 'Syncing…' : 'Sync now'}
+                  </ThemedText>
+                </Pressable>
+              ) : null}
+            </View>
+
+            {!syncActive ? (
+              <ThemedText type="small" themeColor="textSecondary">
+                Not switched on yet. Your account exists, but the {logged}{' '}
+                {logged === 1 ? 'entry' : 'entries'} on this phone are still
+                only here. Export from Settings if you want a copy meanwhile.
+              </ThemedText>
+            ) : pending > 0 ? (
+              <ThemedText type="small" themeColor="textSecondary">
+                {pending} {pending === 1 ? 'change is' : 'changes are'} waiting
+                to upload. They go up on their own next time you have signal.
+              </ThemedText>
+            ) : (
+              <ThemedText type="small" themeColor="textSecondary">
+                Everything on this phone is backed up.
+              </ThemedText>
+            )}
+
+            {lastSyncedAt ? (
+              <ThemedText type="small" themeColor="textFaint">
+                Last synced {relativeTime(lastSyncedAt)}
+              </ThemedText>
+            ) : null}
+
+            {lastResult?.error ? (
+              <ThemedText type="small" style={{ color: theme.danger }}>
+                {lastResult.error}
+              </ThemedText>
+            ) : null}
+
+            {/* Photos are local file paths. Saying so beats a second device
+                showing broken images and claiming they were backed up. */}
+            <ThemedText type="small" themeColor="textFaint">
+              Photos stay on this device — they are not uploaded.
+            </ThemedText>
+          </View>
+
+          <Pressable
+            onPress={() => router.push('/settings')}
+            accessibilityRole="button"
+            style={[
+              styles.row,
               { backgroundColor: theme.backgroundElement, borderColor: theme.border },
             ]}
           >
-            <ThemedText type="smallBold">On this device</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              {visits.length} {visits.length === 1 ? 'visit' : 'visits'} ·{' '}
-              {stays.length} {stays.length === 1 ? 'stay' : 'stays'}
+            <View style={styles.rowMain}>
+              <ThemedText type="smallBold">Export your data</ThemedText>
+              <ThemedText type="small" themeColor="textFaint">
+                Visits and stays as a spreadsheet
+              </ThemedText>
+            </View>
+            <ThemedText type="small" style={{ color: theme.accent }}>
+              Settings
             </ThemedText>
-          </View>
+          </Pressable>
 
           <Pressable
             onPress={() => void signOut()}
@@ -143,7 +233,12 @@ export default function SignInScreen() {
   return (
     <ThemedView style={styles.container}>
       <Stack.Screen options={{ title: '' }} />
-      <ScrollView contentContainerStyle={styles.scroll} keyboardDismissMode="on-drag">
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
+      >
         <View style={styles.masthead}>
           <Wordmark size="lg" />
         </View>
@@ -273,6 +368,29 @@ export default function SignInScreen() {
   );
 }
 
+function HeroStat({ value, label }: { value: number; label: string }) {
+  return (
+    <View style={styles.heroStat}>
+      <ThemedText style={styles.heroStatValue}>{value}</ThemedText>
+      <ThemedText style={styles.heroStatLabel}>{label}</ThemedText>
+    </View>
+  );
+}
+
+/** "3 minutes ago". Deliberately vague past a day — the exact minute a
+ *  background sync ran is not information anyone acts on. */
+function relativeTime(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  if (!Number.isFinite(ms) || ms < 0) return 'just now';
+  const mins = Math.floor(ms / 60_000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} minute${mins === 1 ? '' : 's'} ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { padding: Spacing.three, gap: Spacing.three, paddingBottom: Spacing.six },
@@ -313,11 +431,41 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     borderRadius: Radius.medium,
   },
+  heroStats: {
+    flexDirection: 'row',
+    gap: Spacing.four,
+    marginTop: Spacing.three,
+    paddingTop: Spacing.three,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255,255,255,0.18)',
+  },
+  heroStat: { gap: 1 },
+  heroStatValue: { color: '#ffffff', fontSize: 20, fontWeight: '700' },
+  heroStatLabel: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  cardHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    padding: Spacing.three,
+    borderRadius: Radius.medium,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  rowMain: { flex: 1, gap: 2 },
   card: {
     padding: Spacing.three,
     borderRadius: Radius.large,
     borderWidth: StyleSheet.hairlineWidth,
-    gap: 2,
+    gap: Spacing.two,
   },
   center: { flex: 1, justifyContent: 'center', padding: Spacing.four, gap: Spacing.three },
   centerTitle: { fontSize: 28, lineHeight: 34 },

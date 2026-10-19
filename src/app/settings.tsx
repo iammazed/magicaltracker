@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useCatalog } from '@/hooks/use-catalog';
 import { useOnboarding } from '@/hooks/use-onboarding';
 import { usePremium } from '@/hooks/use-premium';
+import { useSync } from '@/hooks/use-sync';
 import { useTheme } from '@/hooks/use-theme';
 import { useVisits } from '@/hooks/use-visits';
 import { exportFilename, shareCsv, staysCsv, visitsCsv } from '@/lib/export-csv';
@@ -28,6 +29,7 @@ export default function SettingsScreen() {
   const { venues, resorts, areas, version, source, refresh, refreshing } = useCatalog();
   const { isPremium, simulated } = usePremium();
   const { status, user } = useAuth();
+  const { active: syncActive, devEnabled, setDevEnabled, pending } = useSync();
   const { reset } = useOnboarding();
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -236,6 +238,16 @@ export default function SettingsScreen() {
         {__DEV__ ? (
           <Section title="Developer">
             <Row label="Design tokens" action="Open" onPress={() => router.push('/theme')} />
+            <Row
+              label={devEnabled ? 'Sync: ON (dev override)' : 'Sync: off'}
+              sub={
+                syncActive
+                  ? `${pending} row${pending === 1 ? '' : 's'} pending`
+                  : 'Turn on to exercise push/pull before the master switch'
+              }
+              action={devEnabled ? 'Turn off' : 'Turn on'}
+              onPress={() => void setDevEnabled(!devEnabled)}
+            />
           </Section>
         ) : null}
       </ScrollView>

@@ -96,7 +96,12 @@ export default function LogVisitScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardDismissMode="on-drag">
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
+      >
         {name ? (
           <ThemedText type="subtitle" style={styles.venue}>
             {name}

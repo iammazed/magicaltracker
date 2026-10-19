@@ -44,7 +44,12 @@ export default function LogStayScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardDismissMode="on-drag">
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
+      >
         {name ? (
           <ThemedText type="subtitle" style={styles.venue}>
             {name}

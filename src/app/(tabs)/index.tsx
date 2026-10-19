@@ -109,6 +109,8 @@ export default function HomeScreen() {
     <ThemedView style={styles.container}>
       <SafeAreaView edges={['top']} style={styles.safe}>
         <ScrollView
+          automaticallyAdjustKeyboardInsets
+          keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.scroll,
             { paddingBottom: bottomInset + Spacing.five },

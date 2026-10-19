@@ -16,6 +16,7 @@ import { CatalogProvider } from '@/hooks/use-catalog';
 import { CatalogFiltersProvider } from '@/hooks/use-catalog-filters';
 import { NearbyProvider } from '@/hooks/use-nearby';
 import { PremiumProvider } from '@/hooks/use-premium';
+import { SyncProvider } from '@/hooks/use-sync';
 import { TripsProvider } from '@/hooks/use-trips';
 import { VisitsProvider } from '@/hooks/use-visits';
 import { DATABASE_NAME, migrate } from '@/lib/local-db';
@@ -72,7 +73,8 @@ export default function RootLayout() {
       <CatalogProvider>
         <CatalogFiltersProvider>
         <VisitsProvider>
-          <TripsProvider>
+          <SyncProvider>
+            <TripsProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <AnimatedSplashOverlay />
             <Stack
@@ -150,7 +152,8 @@ export default function RootLayout() {
               />
             </Stack>
         </ThemeProvider>
-          </TripsProvider>
+            </TripsProvider>
+          </SyncProvider>
         </VisitsProvider>
         </CatalogFiltersProvider>
       </CatalogProvider>

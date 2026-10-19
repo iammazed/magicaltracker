@@ -17,7 +17,12 @@ export default function NewTripScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardDismissMode="on-drag">
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
+      >
         <TripPlanner
           onCreated={(id) => router.replace({ pathname: '/trip/[id]', params: { id } })}
         />
