@@ -585,6 +585,25 @@ Schema lives in `src/db/schema.ts`. Migrations are generated, never hand-written
 edit schema.ts → npm run db:generate → READ the generated SQL → npm run db:migrate
 ```
 
+**The Free Plan pauses a project after ~7 days of inactivity, and restoring is manual.**
+`.github/workflows/keep-supabase-awake.yml` pings daily to prevent it. Two things about it are
+the point rather than the detail:
+
+It **fails** when `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` are missing. It used to `exit 0`
+with a friendly "not configured yet — skipping", so an unconfigured repo showed a column of
+green ticks while pinging nothing. The project paused anyway, and the only symptom was a
+screen that said "Could not load resorts". **A guard that turns "misconfigured" into "passing"
+is worse than no guard** — it costs attention and returns nothing.
+
+The secrets are **per Supabase project**. Recreate the project and the URL and key change, so the
+workflow silently starts pinging a host that no longer exists. Re-add them, and use
+"Run workflow" to prove it before trusting it.
+
+`public.heartbeat` is the one table deliberately NOT in `src/db/schema.ts` — it is created by
+`docs/supabase-heartbeat.sql` in the dashboard. It is pure ops, nothing reads it, and adding it
+to the schema now would make `db:generate` emit a `CREATE TABLE` for a table that already
+exists. Recorded here so the omission is a decision rather than a gap.
+
 **Never change tables in the Supabase dashboard.** The dashboard has no migration history, so a
 dashboard change makes the repo lie about the database and the next `db:generate` will try to
 undo it.

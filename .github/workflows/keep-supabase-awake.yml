@@ -1,23 +1,34 @@
 name: Keep Supabase awake
 
-# Supabase pauses Free Plan projects after ~7 days without database activity,
-# and restoring is manual. This queries a trivial table every 3 days so the
-# inactivity window never closes.
+# Supabase pauses Free Plan projects after ~7 days without activity, and
+# restoring is manual. This queries a trivial table daily so the inactivity
+# window never closes.
 #
-# Setup (once, after creating the Supabase project):
+# Setup (once per Supabase project — and AGAIN if the project is ever
+# recreated, because the URL and key change):
 #   1. Run the SQL in docs/supabase-heartbeat.sql
 #   2. Repo → Settings → Secrets and variables → Actions → New repository secret:
-#        SUPABASE_URL       https://xxxxx.supabase.co
-#        SUPABASE_PUBLISHABLE_KEY  eyJ...
+#        SUPABASE_URL              https://xxxxx.supabase.co
+#        SUPABASE_PUBLISHABLE_KEY  sb_publishable_...
+#   3. Actions tab → this workflow → "Run workflow" to prove it works.
+#
+# This workflow FAILS when the secrets are missing. It used to `exit 0` with a
+# friendly "not configured yet — skipping", which meant an unconfigured repo
+# showed a column of green ticks while pinging nothing, and the project paused
+# anyway with no signal that anything was wrong. A guard that turns
+# "misconfigured" into "passing" is worse than no guard: it spends your
+# attention and gives nothing back.
 #
 # Note: GitHub disables scheduled workflows on repos with no commits for 60
 # days. Regular commits keep it alive; otherwise re-enable it in the Actions tab.
 
 on:
   schedule:
-    # 09:00 UTC every 3rd day — comfortably inside the 7-day window even if a
-    # run is skipped during GitHub's scheduling backlog.
-    - cron: '0 9 */3 * *'
+    # 09:00 UTC daily. The window is 7 days, so daily leaves room for six
+    # consecutive skips — and GitHub does skip scheduled runs under load.
+    # Every 3 days left only two, which is not enough margin for something
+    # whose failure mode is silent and manual to undo.
+    - cron: '0 9 * * *'
   workflow_dispatch: # lets you trigger a run by hand to test it
 
 jobs:
@@ -30,13 +41,14 @@ jobs:
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
         run: |
           if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_PUBLISHABLE_KEY" ]; then
-            echo "Secrets not configured yet — skipping."
-            echo "Add SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY in repo settings."
-            exit 0
+            echo "::error::SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY are not set."
+            echo "Repo → Settings → Secrets and variables → Actions."
+            echo "Without them this workflow pings nothing and the project will pause."
+            exit 1
           fi
 
           echo "Querying heartbeat table..."
-          code=$(curl -sS -o /tmp/out.txt -w '%{http_code}' \
+          code=$(curl -sS -o /tmp/out.txt -w '%{http_code}' --max-time 30 \
             "${SUPABASE_URL}/rest/v1/heartbeat?select=id&limit=1" \
             -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}" \
             -H "Authorization: Bearer ${SUPABASE_PUBLISHABLE_KEY}")
@@ -45,7 +57,16 @@ jobs:
           cat /tmp/out.txt
 
           if [ "$code" != "200" ]; then
-            echo "::error::Heartbeat failed — the project may already be paused. Restore it in the Supabase dashboard."
+            echo "::error::Heartbeat failed with HTTP ${code} — the project may already be paused, or the secrets may be stale. Check the Supabase dashboard."
             exit 1
           fi
+
+          # A 200 proves the project answered. An empty array would mean the
+          # heartbeat row is gone, which still counts as activity but means
+          # docs/supabase-heartbeat.sql was never run against this project.
+          if ! grep -q '"id"' /tmp/out.txt; then
+            echo "::error::Reached the project but the heartbeat table is empty. Run docs/supabase-heartbeat.sql."
+            exit 1
+          fi
+
           echo "Database is awake."
