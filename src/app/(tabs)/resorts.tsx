@@ -120,7 +120,7 @@ export default function ResortsScreen() {
           </ThemedText>
         ) : null}
 
-        {error ? (
+        {error && resorts.length === 0 ? (
           <View style={styles.center}>
             <ThemedText type="smallBold">Could not load resorts</ThemedText>
             <ThemedText type="small" themeColor="textSecondary" style={styles.centerText}>

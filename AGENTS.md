@@ -313,6 +313,13 @@ because the bundle is generated from the same CSVs the database is imported from
 with `npm run data:bundle`; `prestart` and `eas-build-post-install` both run it, so a CSV edit
 cannot reach a build unseen.
 
+**A failed background refresh is not a load error.** In a local-first app those are different
+conditions, and conflating them is what put a full-page "Could not load resorts" over 35 resorts
+the app was already holding — and, through `useResort`, over every resort detail screen too. The
+hooks now surface `refreshError` only when `data.length === 0`, so a screen that forgets the
+check cannot reintroduce it: there is no error to hand it. Screens report "nothing to show";
+`useCatalog()` reports staleness, and Settings is where that belongs.
+
 **A successful refresh that returns zero rows is treated as an error, not as an instruction.**
 An empty result means something broke upstream — an RLS policy, a bad filter — and wiping every
 restaurant off someone's device in response to it would turn a server mistake into a dead app.

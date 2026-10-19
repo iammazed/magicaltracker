@@ -29,7 +29,15 @@ export function useVenues() {
     [venues],
   );
 
-  return { data, loading, refreshing, error: refreshError, reload: refresh };
+  // Same rule as `useResorts`: a refresh failure is only an error when there
+  // is nothing to show. See the note there.
+  return {
+    data,
+    loading,
+    refreshing,
+    error: data.length === 0 ? refreshError : null,
+    reload: refresh,
+  };
 }
 
 export function useAreas() {

@@ -28,9 +28,29 @@ export const TRANSPORT_LABEL: Record<string, string> = {
   shuttle: 'Shuttle',
 };
 
+/**
+ * A failed background refresh is NOT a load error, and the difference matters
+ * in a local-first app.
+ *
+ * `refreshError` is only ever surfaced when there is nothing to show. With the
+ * catalog already in SQLite, a server that cannot be reached is a non-event —
+ * the screens have every row they need. Handing the refresh error straight to
+ * screens meant Resorts rendered a full-page "Could not load resorts" over 35
+ * resorts it was holding, and `useResort` inherited it so every resort detail
+ * screen did the same.
+ *
+ * Gating it here rather than in each screen is deliberate: a screen that
+ * forgets the `length === 0` check cannot reintroduce the bug, because the hook
+ * no longer has an error to give it. Settings reads `useCatalog()` directly
+ * when it wants to report staleness.
+ */
 export function useResorts() {
   const { resorts, loading, refreshError } = useCatalog();
-  return { data: resorts, loading, error: refreshError };
+  return {
+    data: resorts,
+    loading,
+    error: resorts.length === 0 ? refreshError : null,
+  };
 }
 
 export function useResort(id: string | undefined) {
