@@ -6,7 +6,10 @@ if (!process.env.DATABASE_URL) {
 }
 
 export default defineConfig({
-  schema: './src/db/schema.ts',
+  // Both halves. `schema.ts` is the read-mostly catalog, `user-schema.ts` is
+  // the per-user data scoped to auth.uid(). Listing only the first silently
+  // omits the second from every generated migration.
+  schema: ['./src/db/schema.ts', './src/db/user-schema.ts'],
   out: './drizzle',
   dialect: 'postgresql',
   dbCredentials: { url: process.env.DATABASE_URL },

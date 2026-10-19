@@ -579,7 +579,26 @@ in with Apple, push, RevenueCat, Sentry, styled Google Maps.
 
 ## Database
 
-Schema lives in `src/db/schema.ts`. Migrations are generated, never hand-written.
+Schema lives in **two** files, and `drizzle.config.ts` must list both or the missing one is
+silently absent from every generated migration:
+
+| File | Holds |
+|---|---|
+| `src/db/schema.ts` | The read-mostly catalog. World-readable, written only by the import script |
+| `src/db/user-schema.ts` | Per-user data, every row scoped to `auth.uid()` |
+
+**User-data primary keys are generated on the device.** `local-db` already mints a UUID per row,
+and reusing it server-side is what makes the push idempotent — an upsert on `id` that runs twice
+is a no-op the second time. A server-generated key would force the client to keep a mapping, and
+a retry after a dropped response would duplicate the row.
+
+**The two foreign-key directions are deliberate.** `user_id` cascades from `auth.users`, so
+in-app account deletion is one delete rather than a transaction that has to remember every
+table. References into the catalog are `restrict`, so a catalog cleanup cannot silently erase
+someone's history — "you may not delete a restaurant someone has eaten at" is the right thing to
+tell whoever is tidying up.
+
+Migrations are generated, never hand-written.
 
 ```
 edit schema.ts → npm run db:generate → READ the generated SQL → npm run db:migrate

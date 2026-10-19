@@ -29,6 +29,13 @@
       "when": 1791486842938,
       "tag": "0003_add_new_venue_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792438058936,
+      "tag": "0004_flashy_cannonball",
+      "breakpoints": true
     }
   ]
 }
