@@ -8,9 +8,11 @@
     "scheme": "magicaltracker",
     "userInterfaceStyle": "automatic",
     "ios": {
+      "bundleIdentifier": "com.greyfoxcreations.magicaltracker",
       "supportsTablet": false
     },
     "android": {
+      "package": "com.greyfoxcreations.magicaltracker",
       "adaptiveIcon": {
         "backgroundColor": "#1A596E",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

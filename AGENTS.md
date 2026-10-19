@@ -532,6 +532,25 @@ exists to be handed to another app, and iOS reclaims it on its own.
 
 ---
 
+## Builds
+
+The bundle identifier is **`com.greyfoxcreations.magicaltracker`** on both platforms, and it is
+permanent — changing it after the first App Store submission means a new listing with no reviews
+or ranking. Company prefix rather than product prefix because the LLC may own more than one app;
+Disneyland and the other destinations are NOT one of them, they land inside this app via
+`destination_id`.
+
+`eas.json` uses `appVersionSource: "remote"`, which EAS has recommended since CLI 12. The build
+numbers live on EAS servers and the values in `app.json` are ignored, so nothing needs committing
+per build. `autoIncrement` is on for `production` only; it bumps `ios.buildNumber` and does not
+touch the user-facing `version`, which you bump yourself for a release.
+
+**Expo Go and a development build are both usable.** Expo Go still runs everything built so far.
+A development build is needed for anything native that Expo Go does not bundle: WidgetKit, Sign
+in with Apple, push, RevenueCat, Sentry, styled Google Maps.
+
+---
+
 ## Database
 
 Schema lives in `src/db/schema.ts`. Migrations are generated, never hand-written.
