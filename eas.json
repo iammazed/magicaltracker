@@ -7,28 +7,22 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "environment": "development",
       "ios": {
         "simulator": false
-      },
-      "env": {
-        "APP_VARIANT": "development"
       }
     },
     "preview": {
       "distribution": "internal",
+      "environment": "preview",
       "ios": {
         "simulator": false
-      },
-      "env": {
-        "APP_VARIANT": "preview"
       }
     },
     "production": {
       "distribution": "store",
-      "autoIncrement": true,
-      "env": {
-        "APP_VARIANT": "production"
-      }
+      "environment": "production",
+      "autoIncrement": true
     }
   },
   "submit": {
