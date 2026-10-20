@@ -455,6 +455,19 @@ the server's copy of a row that already exists locally would discard an edit mad
 exactly the failure this feature exists to prevent. Real two-way reconciliation needs per-field
 timestamps and a conflict rule, and only earns that complexity once a second device can write.
 
+**`activeTrip` is ONE trip, so something else has to list the rest.** It returns the current
+trip, else the earliest upcoming — and for a while nothing in the app listed trips at all, so
+planning a second one that started later than the first appeared to do nothing. The home screen's
+"Your trips" section is the only place they exist; upcoming in date order, then past
+most-recent-first, because a finished trip is a record and an upcoming one is a plan.
+
+**Sync runs on sign-in and on returning to the foreground.** Not on a timer — a trip log changes
+a few times a day and a background poll spends battery in a park where signal is already bad.
+Foreground is the honest trigger: log a meal, pocket the phone, and it uploads when you next pick
+it up. This block's comment claimed foreground syncing for a while before it did it, which meant
+"Everything on this phone is backed up" became false the moment anything was logged and stayed
+false until the next launch.
+
 **Push before pull.** On a fresh sign-in everything predates the account, so pulling first is a
 round trip that returns nothing — and if the push then failed, the user would be looking at an
 account that claims to be backed up and holds nothing.

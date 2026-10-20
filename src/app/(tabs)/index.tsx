@@ -16,6 +16,8 @@ import { usePassport } from '@/hooks/use-passport';
 import { useResorts } from '@/hooks/use-resorts';
 import { useTheme } from '@/hooks/use-theme';
 import { daysUntil, tripStatus, useTrips } from '@/hooks/use-trips';
+import type { Trip } from '@/lib/local-db';
+import { formatShort } from '@/lib/calendar';
 import { useVenues } from '@/hooks/use-venues';
 import { useVisits } from '@/hooks/use-visits';
 
@@ -32,7 +34,7 @@ export default function HomeScreen() {
   const { data: venues } = useVenues();
   const { data: resorts } = useResorts();
   const { visits, stays } = useVisits();
-  const { activeTrip, plansFor, loading: tripsLoading } = useTrips();
+  const { activeTrip, trips, plansFor, loading: tripsLoading } = useTrips();
   const { loading, overall, byArea, resortCoverage, challenges } = usePassport();
   const { done: onboarded, loading: onboardingLoading } = useOnboarding();
   const bottomInset = useBottomInset();
@@ -101,6 +103,29 @@ export default function HomeScreen() {
       </ThemedView>
     );
   }
+
+  /**
+   * Every trip except the one already filling the hero.
+   *
+   * Without this there was no way to see a second trip at all: `activeTrip`
+   * returns exactly one — current, else the earliest upcoming — and nothing
+   * else in the app listed trips. Planning a second one appeared to do
+   * nothing, because the new trip started later than the first and so never
+   * became the active one.
+   *
+   * Upcoming first in date order, then past ones most-recent first, because
+   * a finished trip is a record and an upcoming one is a plan.
+   */
+  const otherTrips = useMemo(() => {
+    const rest = trips.filter((t) => t.id !== activeTrip?.id);
+    const upcoming = rest
+      .filter((t) => tripStatus(t) !== 'past')
+      .sort((a, b) => a.start_date.localeCompare(b.start_date));
+    const past = rest
+      .filter((t) => tripStatus(t) === 'past')
+      .sort((a, b) => b.start_date.localeCompare(a.start_date));
+    return { upcoming, past };
+  }, [trips, activeTrip]);
 
   const planned = activeTrip ? plansFor(activeTrip.id) : [];
   const booked = planned.filter((p) => p.booked).length;
@@ -221,6 +246,33 @@ export default function HomeScreen() {
             </Pressable>
           )}
 
+          {/* ── Every other trip ───────────────────────────────────
+              The hero shows one. This is the only place the rest exist. */}
+          {otherTrips.upcoming.length > 0 || otherTrips.past.length > 0 ? (
+            <Section title="Your trips">
+              {otherTrips.upcoming.map((t) => (
+                <TripRow
+                  key={t.id}
+                  trip={t}
+                  plannedCount={plansFor(t.id).length}
+                  onPress={() =>
+                    router.push({ pathname: '/trip/[id]', params: { id: t.id } })
+                  }
+                />
+              ))}
+              {otherTrips.past.map((t) => (
+                <TripRow
+                  key={t.id}
+                  trip={t}
+                  plannedCount={plansFor(t.id).length}
+                  onPress={() =>
+                    router.push({ pathname: '/trip/[id]', params: { id: t.id } })
+                  }
+                />
+              ))}
+            </Section>
+          ) : null}
+
           {/* ── Quick actions ────────────────────────────────────── */}
           <View style={styles.actions}>
             <Action
@@ -298,6 +350,56 @@ export default function HomeScreen() {
         </ScrollView>
       </SafeAreaView>
     </ThemedView>
+  );
+}
+
+function TripRow({
+  trip,
+  plannedCount,
+  onPress,
+}: {
+  trip: Trip;
+  plannedCount: number;
+  onPress: () => void;
+}) {
+  const theme = useTheme();
+  const status = tripStatus(trip);
+  const days = daysUntil(trip.start_date);
+
+  // Past trips are deliberately quieter: tier colour on the spine, faded
+  // text. They are a record to look back at, not something to act on.
+  const tone =
+    status === 'current' ? theme.gold : status === 'past' ? theme.textFaint : theme.accent;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${trip.name}, ${trip.start_date} to ${trip.end_date}`}
+      style={({ pressed }) => [
+        styles.tripRow,
+        {
+          backgroundColor: pressed ? theme.backgroundSelected : theme.backgroundElement,
+          borderColor: theme.border,
+        },
+      ]}
+    >
+      <View style={[styles.tripBar, { backgroundColor: tone }]} />
+      <View style={styles.tripMain}>
+        <ThemedText type="smallBold" numberOfLines={1}>
+          {trip.name}
+        </ThemedText>
+        <ThemedText type="small" themeColor="textFaint" numberOfLines={1}>
+          {formatShort(trip.start_date)} – {formatShort(trip.end_date)}
+          {plannedCount > 0
+            ? `  ·  ${plannedCount} ${plannedCount === 1 ? 'place' : 'places'}`
+            : ''}
+        </ThemedText>
+      </View>
+      <ThemedText type="small" style={{ color: tone }}>
+        {status === 'current' ? 'Now' : status === 'past' ? 'Past' : `${days}d`}
+      </ThemedText>
+    </Pressable>
   );
 }
 
@@ -384,6 +486,17 @@ const styles = StyleSheet.create({
   heroCount: { color: '#E5B45F', fontSize: 52, lineHeight: 56, fontWeight: '700' },
   heroCountUnit: { color: 'rgba(255,255,255,0.75)', fontSize: 15 },
   heroMeta: { color: 'rgba(255,255,255,0.72)', fontSize: 13, lineHeight: 19 },
+  tripRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    paddingRight: Spacing.three,
+    borderRadius: Radius.large,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+  },
+  tripBar: { width: 5, alignSelf: 'stretch' },
+  tripMain: { flex: 1, paddingVertical: Spacing.three, gap: 1 },
   plannerCollapsed: {
     flexDirection: 'row',
     alignItems: 'center',

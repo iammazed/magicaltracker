@@ -1,4 +1,5 @@
 import { useSQLiteContext } from 'expo-sqlite';
+import { AppState } from 'react-native';
 import {
   createContext,
   useCallback,
@@ -61,7 +62,7 @@ const LAST_SYNC_KEY = 'sync_last_at';
 export function SyncProvider({ children }: { children: React.ReactNode }) {
   const db = useSQLiteContext();
   const { status: authStatus, user } = useAuth();
-  const { refresh: refreshVisits } = useVisits();
+  const { visits, refresh: refreshVisits } = useVisits();
 
   const [status, setStatus] = useState<SyncStatus>('idle');
   const [pending, setPending] = useState(0);
@@ -125,6 +126,40 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (active && authStatus === 'signed-in') void sync();
   }, [active, authStatus, sync]);
+
+  /**
+   * And on returning to the foreground.
+   *
+   * The comment above this block used to claim this happened and it did not —
+   * sync ran once at sign-in and never again, so "Everything on this phone is
+   * backed up" became false the moment anything was logged and stayed false
+   * until the next launch. Foreground is the right trigger for a trip log:
+   * you log a meal, put the phone away, and the upload happens when you next
+   * pick it up. A timer would spend battery in a park where signal is already
+   * poor, for data that changes a few times a day.
+   */
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next !== 'active') return;
+      // Recount first: the card should tell the truth even when the sync
+      // itself cannot run, offline or signed out.
+      void refreshPending();
+      if (active && authStatus === 'signed-in') void sync();
+    });
+    return () => sub.remove();
+  }, [active, authStatus, sync, refreshPending]);
+
+  /**
+   * Keep the pending count honest as things are logged.
+   *
+   * `visits` changes whenever the store writes, which is the cheapest signal
+   * available that something now needs uploading. Trips are not visible from
+   * here — `TripsProvider` mounts inside this one — so a trip created without
+   * a visit is only noticed on the next foreground or manual sync.
+   */
+  useEffect(() => {
+    void refreshPending();
+  }, [visits, refreshPending]);
 
   const value = useMemo<SyncValue>(
     () => ({
