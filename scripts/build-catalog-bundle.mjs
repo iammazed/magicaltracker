@@ -32,6 +32,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   AREA_ROWS,
+  DESTINATION_ROWS,
   MENU_COLUMNS,
   RESORT_COLUMNS,
   VENUE_COLUMNS,
@@ -75,6 +76,10 @@ function readVerified(file, columns, label) {
 const venues = readVerified('venues.csv', VENUE_COLUMNS, 'venue').map((r) => ({
   id: r.id,
   name: r.name,
+  // Load-bearing for a second destination. Disneyland lands INSIDE this app,
+  // so every row has to say which resort it belongs to or the lists and the
+  // passport denominators mix both coasts together.
+  destination_id: r.destination_id,
   area_id: r.area_id,
   sub_area: r.sub_area || null,
   resort_id: r.resort_id || null,
@@ -100,6 +105,7 @@ const venues = readVerified('venues.csv', VENUE_COLUMNS, 'venue').map((r) => ({
 const resorts = readVerified('resorts.csv', RESORT_COLUMNS, 'resort').map((r) => ({
   id: r.id,
   name: r.name,
+  destination_id: r.destination_id,
   area_id: r.area_id,
   tier: r.tier,
   transport: list(r.transport),
@@ -116,7 +122,11 @@ const resorts = readVerified('resorts.csv', RESORT_COLUMNS, 'resort').map((r) =>
 venues.sort((a, b) => a.id.localeCompare(b.id));
 resorts.sort((a, b) => a.id.localeCompare(b.id));
 
-const payload = { areas: AREA_ROWS, resorts, venues };
+// `AREA_ROWS` has no destination of its own — the importer stamps areas with
+// 'wdw' the same way. Done here too so the bundle and the database agree.
+const areas = AREA_ROWS.map((a) => ({ ...a, destination_id: DESTINATION_ROWS[0].id }));
+
+const payload = { destinations: DESTINATION_ROWS, areas, resorts, venues };
 const version = createHash('sha256')
   .update(JSON.stringify(payload))
   .digest('hex')
@@ -136,7 +146,10 @@ fs.writeFileSync(OUT, `${JSON.stringify(bundle, null, 2)}\n`);
 
 const kb = (fs.statSync(OUT).size / 1024).toFixed(0);
 console.log(`\n  src/data/catalog.json  ${kb} KB`);
-console.log(`  ${venues.length} venues · ${resorts.length} resorts · ${AREA_ROWS.length} areas`);
+console.log(
+  `  ${venues.length} venues · ${resorts.length} resorts · ${areas.length} areas · ` +
+    `${DESTINATION_ROWS.length} destination(s)`,
+);
 console.log(
   previous === version
     ? `  version ${version} (unchanged — installed apps will not re-seed)`

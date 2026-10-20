@@ -37,8 +37,20 @@ import { supabase } from '@/lib/supabase';
 /** Don't re-download 500 KB of restaurants on every launch. */
 const REFRESH_AFTER_HOURS = 24;
 
+/**
+ * Which resort the app is showing.
+ *
+ * Fixed for now because there is exactly one, but every read filters on it —
+ * so Disneyland is a data import plus a picker, not a change to every screen
+ * and every passport denominator. That is the whole reason `destination_id`
+ * has been on these rows since the first migration.
+ */
+export const ACTIVE_DESTINATION = 'wdw';
+
 type CatalogValue = Catalog & {
   loading: boolean;
+  /** The destination every list is scoped to. */
+  destinationId: string;
   /** Set only when a refresh fails. The catalog still works; this is for a
    *  quiet note, never an error screen. */
   refreshError: string | null;
@@ -47,6 +59,7 @@ type CatalogValue = Catalog & {
 };
 
 const EMPTY: Catalog = {
+  destinations: [],
   areas: [],
   venues: [],
   resorts: [],
@@ -57,14 +70,14 @@ const EMPTY: Catalog = {
 const CatalogContext = createContext<CatalogValue | null>(null);
 
 const REMOTE_VENUE_COLUMNS =
-  'id, name, area_id, sub_area, resort_id, venue_kind, service_type, ' +
+  'id, name, destination_id, area_id, sub_area, resort_id, venue_kind, service_type, ' +
   'dining_style, cuisine, price_tier, reservations_recommended, ' +
   'is_character_dinner_dining, is_character_breakfast_dining, is_signature, ' +
   'status, lat, lng, dinner_menu_url, lunch_menu_url, breakfast_menu_url, ' +
   'snack_menu_url, lounge_menu_url, description, tags, keywords';
 
 const REMOTE_RESORT_COLUMNS =
-  'id, name, area_id, tier, transport, transport_notes, ownership, lat, lng, ' +
+  'id, name, destination_id, area_id, tier, transport, transport_notes, ownership, lat, lng, ' +
   'official_url, description, status';
 
 export function CatalogProvider({ children }: { children: React.ReactNode }) {
@@ -90,7 +103,7 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
       const [venues, resorts, areas] = await Promise.all([
         supabase.from('venues').select(REMOTE_VENUE_COLUMNS).order('name'),
         supabase.from('resorts').select(REMOTE_RESORT_COLUMNS).order('name'),
-        supabase.from('areas').select('id, name, kind'),
+        supabase.from('areas').select('id, name, kind, destination_id'),
       ]);
 
       const failed = venues.error ?? resorts.error ?? areas.error;
@@ -151,7 +164,14 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
   }, [db, refresh]);
 
   const value = useMemo<CatalogValue>(
-    () => ({ ...catalog, loading, refreshing, refreshError, refresh }),
+    () => ({
+      ...catalog,
+      destinationId: ACTIVE_DESTINATION,
+      loading,
+      refreshing,
+      refreshError,
+      refresh,
+    }),
     [catalog, loading, refreshing, refreshError, refresh],
   );
 

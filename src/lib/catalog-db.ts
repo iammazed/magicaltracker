@@ -28,11 +28,19 @@ import bundle from '@/data/catalog.json';
 
 export const BUNDLE_VERSION: string = bundle.version;
 
-export type CatalogArea = { id: string; name: string; kind: string };
+export type CatalogDestination = { id: string; name: string };
+
+export type CatalogArea = {
+  id: string;
+  name: string;
+  kind: string;
+  destination_id: string;
+};
 
 export type CatalogVenue = {
   id: string;
   name: string;
+  destination_id: string;
   area_id: string;
   sub_area: string | null;
   resort_id: string | null;
@@ -61,6 +69,7 @@ export type CatalogVenue = {
 export type CatalogResort = {
   id: string;
   name: string;
+  destination_id: string;
   area_id: string;
   tier: string;
   transport: string[];
@@ -74,6 +83,7 @@ export type CatalogResort = {
 };
 
 export type Catalog = {
+  destinations: CatalogDestination[];
   areas: CatalogArea[];
   venues: CatalogVenue[];
   resorts: CatalogResort[];
@@ -97,16 +107,23 @@ export const CATALOG_DDL = `
     value TEXT
   );
 
-  CREATE TABLE IF NOT EXISTS catalog_areas (
+  CREATE TABLE IF NOT EXISTS catalog_destinations (
     id   TEXT PRIMARY KEY NOT NULL,
-    name TEXT NOT NULL,
-    kind TEXT NOT NULL,
-    sort INTEGER NOT NULL DEFAULT 0
+    name TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS catalog_areas (
+    id             TEXT PRIMARY KEY NOT NULL,
+    name           TEXT NOT NULL,
+    kind           TEXT NOT NULL,
+    destination_id TEXT NOT NULL DEFAULT 'wdw',
+    sort           INTEGER NOT NULL DEFAULT 0
   );
 
   CREATE TABLE IF NOT EXISTS catalog_resorts (
     id              TEXT PRIMARY KEY NOT NULL,
     name            TEXT NOT NULL,
+    destination_id  TEXT NOT NULL DEFAULT 'wdw',
     area_id         TEXT NOT NULL,
     tier            TEXT NOT NULL,
     transport       TEXT NOT NULL DEFAULT '[]',
@@ -122,6 +139,7 @@ export const CATALOG_DDL = `
   CREATE TABLE IF NOT EXISTS catalog_venues (
     id                            TEXT PRIMARY KEY NOT NULL,
     name                          TEXT NOT NULL,
+    destination_id                TEXT NOT NULL DEFAULT 'wdw',
     area_id                       TEXT NOT NULL,
     sub_area                      TEXT,
     resort_id                     TEXT,
@@ -147,6 +165,8 @@ export const CATALOG_DDL = `
     keywords                      TEXT NOT NULL DEFAULT '[]'
   );
 
+  CREATE INDEX IF NOT EXISTS catalog_venues_dest_idx   ON catalog_venues (destination_id);
+  CREATE INDEX IF NOT EXISTS catalog_resorts_dest_idx  ON catalog_resorts (destination_id);
   CREATE INDEX IF NOT EXISTS catalog_venues_area_idx   ON catalog_venues (area_id);
   CREATE INDEX IF NOT EXISTS catalog_venues_resort_idx ON catalog_venues (resort_id);
   CREATE INDEX IF NOT EXISTS catalog_venues_kind_idx   ON catalog_venues (venue_kind);
@@ -156,25 +176,25 @@ export const CATALOG_DDL = `
 
 const VENUE_INSERT = `
   INSERT INTO catalog_venues (
-    id, name, area_id, sub_area, resort_id, venue_kind, service_type,
+    id, name, destination_id, area_id, sub_area, resort_id, venue_kind, service_type,
     dining_style, cuisine, price_tier, reservations_recommended,
     is_character_dinner_dining, is_character_breakfast_dining, is_signature,
     status, lat, lng, dinner_menu_url, lunch_menu_url, breakfast_menu_url,
     snack_menu_url, lounge_menu_url, description, tags, keywords
   ) VALUES (
-    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
   )
 `;
 
 const RESORT_INSERT = `
   INSERT INTO catalog_resorts (
-    id, name, area_id, tier, transport, transport_notes, ownership,
-    lat, lng, official_url, description, status
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    id, name, destination_id, area_id, tier, transport, transport_notes,
+    ownership, lat, lng, official_url, description, status
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `;
 
 const venueParams = (v: CatalogVenue) => [
-  v.id, v.name, v.area_id, v.sub_area, v.resort_id, v.venue_kind,
+  v.id, v.name, v.destination_id, v.area_id, v.sub_area, v.resort_id, v.venue_kind,
   JSON.stringify(v.service_type), JSON.stringify(v.dining_style),
   v.cuisine, v.price_tier,
   v.reservations_recommended ? 1 : 0,
@@ -188,7 +208,7 @@ const venueParams = (v: CatalogVenue) => [
 ];
 
 const resortParams = (r: CatalogResort) => [
-  r.id, r.name, r.area_id, r.tier, JSON.stringify(r.transport),
+  r.id, r.name, r.destination_id, r.area_id, r.tier, JSON.stringify(r.transport),
   r.transport_notes, r.ownership, r.lat, r.lng, r.official_url,
   r.description, r.status,
 ];
@@ -220,25 +240,37 @@ async function setMeta(db: SQLiteDatabase, key: string, value: string) {
  */
 export async function writeCatalog(
   db: SQLiteDatabase,
-  data: { areas: CatalogArea[]; venues: CatalogVenue[]; resorts: CatalogResort[] },
+  data: {
+    destinations?: CatalogDestination[];
+    areas: CatalogArea[];
+    venues: CatalogVenue[];
+    resorts: CatalogResort[];
+  },
   { version, source }: { version: string; source: 'bundle' | 'remote' },
 ) {
   const venueStmt = await db.prepareAsync(VENUE_INSERT);
   const resortStmt = await db.prepareAsync(RESORT_INSERT);
   const areaStmt = await db.prepareAsync(
-    'INSERT INTO catalog_areas (id, name, kind, sort) VALUES (?, ?, ?, ?)',
+    'INSERT INTO catalog_areas (id, name, kind, destination_id, sort) VALUES (?, ?, ?, ?, ?)',
+  );
+  const destStmt = await db.prepareAsync(
+    'INSERT INTO catalog_destinations (id, name) VALUES (?, ?)',
   );
 
   try {
     await db.withTransactionAsync(async () => {
       await db.execAsync(
-        'DELETE FROM catalog_venues; DELETE FROM catalog_resorts; DELETE FROM catalog_areas;',
+        'DELETE FROM catalog_venues; DELETE FROM catalog_resorts; ' +
+          'DELETE FROM catalog_areas; DELETE FROM catalog_destinations;',
       );
+      for (const d of data.destinations ?? [{ id: 'wdw', name: 'Walt Disney World Resort' }]) {
+        await destStmt.executeAsync([d.id, d.name]);
+      }
       // `sort` preserves AREA_ROWS order — parks, then districts, then resort
       // areas — which is the order a filter list should offer them in and is
       // not recoverable from the names.
       for (const [i, a] of data.areas.entries()) {
-        await areaStmt.executeAsync([a.id, a.name, a.kind, i]);
+        await areaStmt.executeAsync([a.id, a.name, a.kind, a.destination_id ?? 'wdw', i]);
       }
       for (const r of data.resorts) await resortStmt.executeAsync(resortParams(r));
       for (const v of data.venues) await venueStmt.executeAsync(venueParams(v));
@@ -251,6 +283,7 @@ export async function writeCatalog(
     await venueStmt.finalizeAsync();
     await resortStmt.finalizeAsync();
     await areaStmt.finalizeAsync();
+    await destStmt.finalizeAsync();
   }
 }
 
@@ -300,9 +333,12 @@ function arr(json: string): string[] {
 }
 
 export async function readCatalog(db: SQLiteDatabase): Promise<Catalog> {
-  const [areas, resortRows, venueRows, version, source] = await Promise.all([
+  const [destinations, areas, resortRows, venueRows, version, source] = await Promise.all([
+    db.getAllAsync<CatalogDestination>(
+      'SELECT id, name FROM catalog_destinations ORDER BY id',
+    ),
     db.getAllAsync<CatalogArea>(
-      'SELECT id, name, kind FROM catalog_areas ORDER BY sort',
+      'SELECT id, name, kind, destination_id FROM catalog_areas ORDER BY sort',
     ),
     db.getAllAsync<Omit<CatalogResort, 'transport'> & { transport: string }>(
       'SELECT * FROM catalog_resorts ORDER BY name',
@@ -313,6 +349,7 @@ export async function readCatalog(db: SQLiteDatabase): Promise<Catalog> {
   ]);
 
   return {
+    destinations,
     areas,
     resorts: resortRows.map((r) => ({ ...r, transport: arr(r.transport) })),
     venues: venueRows.map((v) => ({

@@ -1,82 +1,103 @@
 {
-  "version": "df5cd15d954b",
-  "generated_at": "2026-10-09T04:00:17.678Z",
+  "version": "71cea2a4893a",
+  "generated_at": "2026-10-20T02:56:26.887Z",
+  "destinations": [
+    {
+      "id": "wdw",
+      "name": "Walt Disney World Resort"
+    }
+  ],
   "areas": [
     {
       "id": "magic-kingdom",
       "name": "Magic Kingdom",
-      "kind": "park"
+      "kind": "park",
+      "destination_id": "wdw"
     },
     {
       "id": "epcot",
       "name": "EPCOT",
-      "kind": "park"
+      "kind": "park",
+      "destination_id": "wdw"
     },
     {
       "id": "hollywood-studios",
       "name": "Disney's Hollywood Studios",
-      "kind": "park"
+      "kind": "park",
+      "destination_id": "wdw"
     },
     {
       "id": "animal-kingdom",
       "name": "Disney's Animal Kingdom",
-      "kind": "park"
+      "kind": "park",
+      "destination_id": "wdw"
     },
     {
       "id": "typhoon-lagoon",
       "name": "Typhoon Lagoon",
-      "kind": "park"
+      "kind": "park",
+      "destination_id": "wdw"
     },
     {
       "id": "blizzard-beach",
       "name": "Blizzard Beach",
-      "kind": "park"
+      "kind": "park",
+      "destination_id": "wdw"
     },
     {
       "id": "disney-springs",
       "name": "Disney Springs",
-      "kind": "district"
+      "kind": "district",
+      "destination_id": "wdw"
     },
     {
       "id": "boardwalk",
       "name": "Disney's BoardWalk",
-      "kind": "district"
+      "kind": "district",
+      "destination_id": "wdw"
     },
     {
       "id": "wide-world-of-sports",
       "name": "ESPN Wide World of Sports",
-      "kind": "district"
+      "kind": "district",
+      "destination_id": "wdw"
     },
     {
       "id": "mk-resort-area",
       "name": "Magic Kingdom Resort Area",
-      "kind": "resort_area"
+      "kind": "resort_area",
+      "destination_id": "wdw"
     },
     {
       "id": "epcot-resort-area",
       "name": "EPCOT Resort Area",
-      "kind": "resort_area"
+      "kind": "resort_area",
+      "destination_id": "wdw"
     },
     {
       "id": "ak-resort-area",
       "name": "Animal Kingdom Resort Area",
-      "kind": "resort_area"
+      "kind": "resort_area",
+      "destination_id": "wdw"
     },
     {
       "id": "springs-resort-area",
       "name": "Disney Springs Resort Area",
-      "kind": "resort_area"
+      "kind": "resort_area",
+      "destination_id": "wdw"
     },
     {
       "id": "sports-resort-area",
       "name": "ESPN Wide World of Sports Resort Area",
-      "kind": "resort_area"
+      "kind": "resort_area",
+      "destination_id": "wdw"
     }
   ],
   "resorts": [
     {
       "id": "all-star-movies-resort",
       "name": "Disney's All-Star Movies Resort",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "tier": "value",
       "transport": [
@@ -93,6 +114,7 @@
     {
       "id": "all-star-music-resort",
       "name": "Disney's All-Star Music Resort",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "tier": "value",
       "transport": [
@@ -109,6 +131,7 @@
     {
       "id": "all-star-sports-resort",
       "name": "Disney's All-Star Sports Resort",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "tier": "value",
       "transport": [
@@ -125,6 +148,7 @@
     {
       "id": "animal-kingdom-lodge",
       "name": "Disney's Animal Kingdom Lodge",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "tier": "deluxe",
       "transport": [
@@ -141,6 +165,7 @@
     {
       "id": "animal-kingdom-villas-jambo-house",
       "name": "Disney's Animal Kingdom Villas - Jambo House",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "tier": "deluxe",
       "transport": [
@@ -157,6 +182,7 @@
     {
       "id": "animal-kingdom-villas-kidani-village",
       "name": "Disney's Animal Kingdom Villas - Kidani Village",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "tier": "deluxe",
       "transport": [
@@ -173,6 +199,7 @@
     {
       "id": "art-of-animation-resort",
       "name": "Disney's Art of Animation Resort",
+      "destination_id": "wdw",
       "area_id": "sports-resort-area",
       "tier": "value",
       "transport": [
@@ -190,6 +217,7 @@
     {
       "id": "bay-lake-tower-contemporary-resort",
       "name": "Bay Lake Tower at Disney's Contemporary Resort",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "tier": "deluxe",
       "transport": [
@@ -208,6 +236,7 @@
     {
       "id": "beach-club-resort",
       "name": "Disney's Beach Club Resort",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "tier": "deluxe",
       "transport": [
@@ -226,6 +255,7 @@
     {
       "id": "beach-club-villas",
       "name": "Disney's Beach Club Villas",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "tier": "deluxe",
       "transport": [
@@ -244,6 +274,7 @@
     {
       "id": "boardwalk-inn",
       "name": "Disney's BoardWalk Inn",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "tier": "deluxe",
       "transport": [
@@ -262,6 +293,7 @@
     {
       "id": "boardwalk-villas",
       "name": "Disney's BoardWalk Villas",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "tier": "deluxe",
       "transport": [
@@ -280,6 +312,7 @@
     {
       "id": "boulder-ridge-villas-wilderness-lodge",
       "name": "Boulder Ridge Villas at Disney's Wilderness Lodge",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "tier": "deluxe",
       "transport": [
@@ -297,6 +330,7 @@
     {
       "id": "cabins-at-fort-wilderness",
       "name": "The Cabins at Disney's Fort Wilderness Resort - A Disney Vacation Club Resort",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "tier": "deluxe",
       "transport": [
@@ -314,6 +348,7 @@
     {
       "id": "campsites-at-fort-wilderness",
       "name": "The Campsites at Disney's Fort Wilderness Resort",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "tier": "campground",
       "transport": [
@@ -331,6 +366,7 @@
     {
       "id": "caribbean-beach-resort",
       "name": "Disney's Caribbean Beach Resort",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "tier": "moderate",
       "transport": [
@@ -348,6 +384,7 @@
     {
       "id": "contemporary-resort",
       "name": "Disney's Contemporary Resort",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "tier": "deluxe",
       "transport": [
@@ -366,6 +403,7 @@
     {
       "id": "copper-creek-cabins-wilderness-lodge",
       "name": "Copper Creek Villas and Cabins at Disney's Wilderness Lodge",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "tier": "deluxe",
       "transport": [
@@ -383,6 +421,7 @@
     {
       "id": "coronado-springs-resort",
       "name": "Disney's Coronado Springs Resort",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "tier": "moderate",
       "transport": [
@@ -399,6 +438,7 @@
     {
       "id": "dolphin-hotel",
       "name": "Walt Disney World Dolphin Hotel",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "tier": "deluxe",
       "transport": [
@@ -416,6 +456,7 @@
     {
       "id": "four-seasons-resort-orlando",
       "name": "Four Seasons Resort Orlando at Walt Disney World Resort",
+      "destination_id": "wdw",
       "area_id": "springs-resort-area",
       "tier": "deluxe",
       "transport": [
@@ -432,6 +473,7 @@
     {
       "id": "grand-floridian-resort-and-spa",
       "name": "Disney's Grand Floridian Resort & Spa",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "tier": "deluxe",
       "transport": [
@@ -451,6 +493,7 @@
     {
       "id": "old-key-west-resort",
       "name": "Disney's Old Key West Resort",
+      "destination_id": "wdw",
       "area_id": "springs-resort-area",
       "tier": "deluxe",
       "transport": [
@@ -468,6 +511,7 @@
     {
       "id": "polynesian-village-resort",
       "name": "Disney's Polynesian Village Resort",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "tier": "deluxe",
       "transport": [
@@ -486,6 +530,7 @@
     {
       "id": "polynesian-villas-and-bungalows",
       "name": "Disney's Polynesian Villas & Bungalows",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "tier": "deluxe",
       "transport": [
@@ -504,6 +549,7 @@
     {
       "id": "pop-century-resort",
       "name": "Disney's Pop Century Resort",
+      "destination_id": "wdw",
       "area_id": "sports-resort-area",
       "tier": "value",
       "transport": [
@@ -521,6 +567,7 @@
     {
       "id": "port-orleans-french-quarter",
       "name": "Disney's Port Orleans Resort - French Quarter",
+      "destination_id": "wdw",
       "area_id": "springs-resort-area",
       "tier": "moderate",
       "transport": [
@@ -538,6 +585,7 @@
     {
       "id": "port-orleans-riverside",
       "name": "Disney's Port Orleans Resort - Riverside",
+      "destination_id": "wdw",
       "area_id": "springs-resort-area",
       "tier": "moderate",
       "transport": [
@@ -555,6 +603,7 @@
     {
       "id": "riviera-resort",
       "name": "Disney's Riviera Resort",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "tier": "deluxe",
       "transport": [
@@ -572,6 +621,7 @@
     {
       "id": "saratoga-springs-resort-and-spa",
       "name": "Disney's Saratoga Springs Resort & Spa",
+      "destination_id": "wdw",
       "area_id": "springs-resort-area",
       "tier": "deluxe",
       "transport": [
@@ -589,6 +639,7 @@
     {
       "id": "swan-hotel",
       "name": "Walt Disney World Swan Hotel",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "tier": "deluxe",
       "transport": [
@@ -606,6 +657,7 @@
     {
       "id": "swan-reserve",
       "name": "Walt Disney World Swan Reserve",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "tier": "deluxe",
       "transport": [
@@ -623,6 +675,7 @@
     {
       "id": "villas-at-grand-floridian-resort",
       "name": "The Villas at Disney's Grand Floridian Resort & Spa",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "tier": "deluxe",
       "transport": [
@@ -642,6 +695,7 @@
     {
       "id": "wilderness-lodge",
       "name": "Disney's Wilderness Lodge",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "tier": "deluxe",
       "transport": [
@@ -659,6 +713,7 @@
     {
       "id": "yacht-club-resort",
       "name": "Disney's Yacht Club Resort",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "tier": "deluxe",
       "transport": [
@@ -679,6 +734,7 @@
     {
       "id": "1900-park-fare",
       "name": "1900 Park Fare",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "grand-floridian-resort-and-spa",
@@ -716,6 +772,7 @@
     {
       "id": "50s-prime-time-cafe",
       "name": "50s Prime Time Cafe",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "echo-lake",
       "resort_id": null,
@@ -754,6 +811,7 @@
     {
       "id": "abc-commissary",
       "name": "ABC Commissary",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "commissary-lane",
       "resort_id": null,
@@ -791,6 +849,7 @@
     {
       "id": "abracadabar",
       "name": "AbracadaBar",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "boardwalk-inn",
@@ -828,6 +887,7 @@
     {
       "id": "akershus-royal-banquet-hall",
       "name": "Akershus Royal Banquet Hall",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "norway",
       "resort_id": null,
@@ -870,6 +930,7 @@
     {
       "id": "ale-and-compass-lounge",
       "name": "Ale and Compass Lounge",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "yacht-club-resort",
@@ -907,6 +968,7 @@
     {
       "id": "ale-and-compass-lounge-restaurant",
       "name": "Ale and Compass Lounge",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "yacht-club-resort",
@@ -947,6 +1009,7 @@
     {
       "id": "aloha-isle",
       "name": "Aloha Isle",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "adventureland",
       "resort_id": null,
@@ -983,6 +1046,7 @@
     {
       "id": "amare",
       "name": "Amare",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "swan-reserve",
@@ -1025,6 +1089,7 @@
     {
       "id": "amc-disney-springs-24-dine-in-theatres",
       "name": "AMC Disney Springs 24 Dine-In Theatres",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "west-side",
       "resort_id": null,
@@ -1067,6 +1132,7 @@
     {
       "id": "amorettes-patisserie",
       "name": "Amorette's Patisserie",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "town-center",
       "resort_id": null,
@@ -1110,6 +1176,7 @@
     {
       "id": "anaheim-produce",
       "name": "Anaheim Produce",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "sunset-blvd",
       "resort_id": null,
@@ -1146,6 +1213,7 @@
     {
       "id": "anandapur-ice-cream",
       "name": "Anandapur Ice Cream Truck",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "asia",
       "resort_id": null,
@@ -1184,6 +1252,7 @@
     {
       "id": "arctic-expedition",
       "name": "Arctic Expeditions",
+      "destination_id": "wdw",
       "area_id": "blizzard-beach",
       "sub_area": null,
       "resort_id": null,
@@ -1222,6 +1291,7 @@
     {
       "id": "astrofizz",
       "name": "Astrofizz",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "fantasyland",
       "resort_id": null,
@@ -1258,6 +1328,7 @@
     {
       "id": "auntie-gravitys-galactic-goodies",
       "name": "Auntie Gravitys Galactic Goodies",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "tomorrowland",
       "resort_id": null,
@@ -1294,6 +1365,7 @@
     {
       "id": "avalunch",
       "name": "Avalunch",
+      "destination_id": "wdw",
       "area_id": "blizzard-beach",
       "sub_area": null,
       "resort_id": null,
@@ -1334,6 +1406,7 @@
     {
       "id": "backlot-express",
       "name": "Backlot Express",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "echo-lake",
       "resort_id": null,
@@ -1372,6 +1445,7 @@
     {
       "id": "backstretch-pool-bar",
       "name": "Backstretch Pool Bar",
+      "destination_id": "wdw",
       "area_id": "springs-resort-area",
       "sub_area": null,
       "resort_id": "saratoga-springs-resort-and-spa",
@@ -1414,6 +1488,7 @@
     {
       "id": "banana-cabana",
       "name": "Banana Cabana",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "caribbean-beach-resort",
@@ -1456,6 +1531,7 @@
     {
       "id": "bar-riva",
       "name": "Bar Riva",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "riviera-resort",
@@ -1498,6 +1574,7 @@
     {
       "id": "barcelona-lounge",
       "name": "Barcelona Lounge",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "sub_area": null,
       "resort_id": "coronado-springs-resort",
@@ -1542,6 +1619,7 @@
     {
       "id": "barefoot-pool-bar",
       "name": "Barefoot Pool Bar",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "polynesian-village-resort",
@@ -1577,6 +1655,7 @@
     {
       "id": "baseline-tap-house",
       "name": "Baseline Tap House",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "grand-avenue",
       "resort_id": null,
@@ -1614,6 +1693,7 @@
     {
       "id": "basket-at-wine-bar-george",
       "name": "The Basket at Wine Bar George",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "the-landing",
       "resort_id": null,
@@ -1654,6 +1734,7 @@
     {
       "id": "bb-wolf-sausage-co",
       "name": "B.B. Wolf's Sausage Co.",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "marketplace",
       "resort_id": null,
@@ -1695,6 +1776,7 @@
     {
       "id": "be-our-guest-restaurant",
       "name": "Be Our Guest Restaurant",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "fantasyland",
       "resort_id": null,
@@ -1734,6 +1816,7 @@
     {
       "id": "beach-club-marketplace",
       "name": "Beach Club Marketplace",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "beach-club-resort",
@@ -1773,6 +1856,7 @@
     {
       "id": "beaches-and-cream-soda-shop",
       "name": "Beaches and Cream Soda Shop",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "beach-club-resort",
@@ -1812,6 +1896,7 @@
     {
       "id": "beaches-pool-bar-and-grill",
       "name": "Beaches Pool Bar & Grill",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "grand-floridian-resort-and-spa",
@@ -1849,6 +1934,7 @@
     {
       "id": "beak-and-barrel",
       "name": "The Beak and Barrel",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "adventureland",
       "resort_id": null,
@@ -1887,6 +1973,7 @@
     {
       "id": "belle-vue-lounge",
       "name": "Belle Vue Lounge",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "boardwalk-inn",
@@ -1924,6 +2011,7 @@
     {
       "id": "biergarten-restaurant",
       "name": "Biergarten Restaurant",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "germany",
       "resort_id": null,
@@ -1965,6 +2053,7 @@
     {
       "id": "blaze-fast-fired-pizza",
       "name": "Blaze Fast-Fire'd Pizza",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "town-center",
       "resort_id": null,
@@ -2005,6 +2094,7 @@
     {
       "id": "block-and-hans",
       "name": "Block and Hans",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "american-adventure",
       "resort_id": null,
@@ -2045,6 +2135,7 @@
     {
       "id": "blue-ribbon-corn-dog",
       "name": "Blue Ribbon Corn Dog",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "boardwalk-inn",
@@ -2081,6 +2172,7 @@
     {
       "id": "boardwalk-deli",
       "name": "BoardWalk Deli",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "boardwalk-inn",
@@ -2120,6 +2212,7 @@
     {
       "id": "boardwalk-ice-cream",
       "name": "BoardWalk Ice Cream",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "boardwalk-inn",
@@ -2156,6 +2249,7 @@
     {
       "id": "boardwalk-joes-marvelous-margaritas",
       "name": "BoardWalk Joes Marvelous Margaritas",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "boardwalk-inn",
@@ -2193,6 +2287,7 @@
     {
       "id": "boma-flavors-of-africa",
       "name": "Boma - Flavors of Africa",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "sub_area": null,
       "resort_id": "animal-kingdom-lodge",
@@ -2236,6 +2331,7 @@
     {
       "id": "booatwrights-dining-hall",
       "name": "Boatwright's Dining Hall",
+      "destination_id": "wdw",
       "area_id": "springs-resort-area",
       "sub_area": null,
       "resort_id": "port-orleans-riverside",
@@ -2278,6 +2374,7 @@
     {
       "id": "bourbon-steak",
       "name": "Bourbon Steak - A Michael Mina Restaurant",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "dolphin-hotel",
@@ -2318,6 +2415,7 @@
     {
       "id": "bourbon-steak-lounge",
       "name": "Bourbon Steak Lounge",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "dolphin-hotel",
@@ -2359,6 +2457,7 @@
     {
       "id": "breakfast-at-wailulu-bar-and-grill",
       "name": "Breakfast at Wailulu Bar & Grill",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "polynesian-villas-and-bungalows",
@@ -2394,6 +2493,7 @@
     {
       "id": "cabana-bar-and-beach-club",
       "name": "Cabana Bar and Beach Club",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "dolphin-hotel",
@@ -2435,6 +2535,7 @@
     {
       "id": "cafe-rix",
       "name": "Cafe Rix",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "sub_area": null,
       "resort_id": "coronado-springs-resort",
@@ -2478,6 +2579,7 @@
     {
       "id": "cake-bake-shop-bakery",
       "name": "The Cake Bake Shop Bakery by Gwendolyn Rogers",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "boardwalk-inn",
@@ -2515,6 +2617,7 @@
     {
       "id": "cake-bake-shop-restaurant",
       "name": "The Cake Bake Shop Restaurant by Gwendolyn Rogers",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "boardwalk-inn",
@@ -2557,6 +2660,7 @@
     {
       "id": "california-grill",
       "name": "California Grill",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "contemporary-resort",
@@ -2593,6 +2697,7 @@
     {
       "id": "canada-popcorn-cart",
       "name": "Canada Popcorn Cart",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "canada",
       "resort_id": null,
@@ -2631,6 +2736,7 @@
     {
       "id": "capa",
       "name": "Capa",
+      "destination_id": "wdw",
       "area_id": "springs-resort-area",
       "sub_area": null,
       "resort_id": "four-seasons-resort-orlando",
@@ -2672,6 +2778,7 @@
     {
       "id": "cape-may-cafe",
       "name": "Cape May Cafe",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "beach-club-resort",
@@ -2713,6 +2820,7 @@
     {
       "id": "cape-town-lounge-and-wine-bar",
       "name": "Cape Town Lounge & Wine Bar",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "sub_area": null,
       "resort_id": "animal-kingdom-lodge",
@@ -2756,6 +2864,7 @@
     {
       "id": "capt-cooks",
       "name": "Capt. Cooks",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "polynesian-village-resort",
@@ -2796,6 +2905,7 @@
     {
       "id": "caravan-road",
       "name": "Caravan Road",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "asia",
       "resort_id": null,
@@ -2835,6 +2945,7 @@
     {
       "id": "carousel-cafe",
       "name": "Carousel Cafe",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "boardwalk-inn",
@@ -2875,6 +2986,7 @@
     {
       "id": "caseys-corner",
       "name": "Caseys Corner",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "main-street",
       "resort_id": null,
@@ -2913,6 +3025,7 @@
     {
       "id": "catalina-eddies",
       "name": "Catalina Eddies",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "sunset-blvd",
       "resort_id": null,
@@ -2952,6 +3065,7 @@
     {
       "id": "celebration-at-the-top-sip-savor-sparkle",
       "name": "Celebration at the Top -  Sip, Savor, Sparkle",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "contemporary-resort",
@@ -2988,6 +3102,7 @@
     {
       "id": "centertown-market",
       "name": "Centertown Market",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "caribbean-beach-resort",
@@ -3030,6 +3145,7 @@
     {
       "id": "centertown-market-grab-and-go",
       "name": "Centertown Market Grab and Go",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "caribbean-beach-resort",
@@ -3070,6 +3186,7 @@
     {
       "id": "chef-art-smiths-homecomin",
       "name": "Chef Art Smith's Homecomin'",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "the-landing",
       "resort_id": null,
@@ -3113,6 +3230,7 @@
     {
       "id": "chef-mickeys",
       "name": "Chef Mickeys",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "contemporary-resort",
@@ -3154,6 +3272,7 @@
     {
       "id": "chefs-de-france",
       "name": "Chefs de France",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "france",
       "resort_id": null,
@@ -3194,6 +3313,7 @@
     {
       "id": "chefs-table-at-victoria-and-alberts",
       "name": "Chef's Table at Victoria and Alberts",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "grand-floridian-resort-and-spa",
@@ -3235,6 +3355,7 @@
     {
       "id": "cheshire-cafe",
       "name": "Cheshire Cafe",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "fantasyland",
       "resort_id": null,
@@ -3270,6 +3391,7 @@
     {
       "id": "chicken-guy",
       "name": "Chicken Guy",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "town-center",
       "resort_id": null,
@@ -3314,6 +3436,7 @@
     {
       "id": "chill",
       "name": "Chill",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "swan-hotel",
@@ -3355,6 +3478,7 @@
     {
       "id": "chip-n-dale-cafe",
       "name": "Chip 'n' Dal's Cafe at Disney's Lake Buena Vista Golf Course",
+      "destination_id": "wdw",
       "area_id": "springs-resort-area",
       "sub_area": null,
       "resort_id": "saratoga-springs-resort-and-spa",
@@ -3398,6 +3522,7 @@
     {
       "id": "chip-n-dale-deli-at-disneys-palm-magnolia-oak-trail-golf-course",
       "name": "Chip 'n' Dale's Cafe at Disney's Palm, Magnolia, and Oak Trail Golf Course",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "polynesian-village-resort",
@@ -3442,6 +3567,7 @@
     {
       "id": "choza-de-margarita",
       "name": "Choza de Margarita",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "mexico",
       "resort_id": null,
@@ -3487,6 +3613,7 @@
     {
       "id": "chuck-wagon",
       "name": "The Chuck Wagon",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "campsites-at-fort-wilderness",
@@ -3523,6 +3650,7 @@
     {
       "id": "cinderellas-royal-table",
       "name": "Cinderellas Royal Table",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "fantasyland",
       "resort_id": null,
@@ -3564,6 +3692,7 @@
     {
       "id": "citricos",
       "name": "Citricos",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "grand-floridian-resort-and-spa",
@@ -3601,6 +3730,7 @@
     {
       "id": "citricos-lounge",
       "name": "Citricos Lounge",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "grand-floridian-resort-and-spa",
@@ -3636,6 +3766,7 @@
     {
       "id": "city-works-eatery-pour-house",
       "name": "City Works Eatery and Pour House",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "west-side",
       "resort_id": null,
@@ -3678,6 +3809,7 @@
     {
       "id": "coca-cola-rooftop-beverage-bar",
       "name": "Coca-Cola Rooftop Beverage Bar",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "town-center",
       "resort_id": null,
@@ -3720,6 +3852,7 @@
     {
       "id": "columbia-harbor-house",
       "name": "Columbia Harbour House",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "liberty-square",
       "resort_id": null,
@@ -3757,6 +3890,7 @@
     {
       "id": "connections-cafe",
       "name": "Connections Cafe",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "world-celebration",
       "resort_id": null,
@@ -3795,6 +3929,7 @@
     {
       "id": "connections-eatery",
       "name": "Connections Eatery",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "world-celebration",
       "resort_id": null,
@@ -3836,6 +3971,7 @@
     {
       "id": "contempo-cafe",
       "name": "Contempo Cafe",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "contemporary-resort",
@@ -3875,6 +4011,7 @@
     {
       "id": "contemporary-grounds",
       "name": "Contemporary Grounds",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "contemporary-resort",
@@ -3910,6 +4047,7 @@
     {
       "id": "cookies-of-dublin",
       "name": "Cookies of Dublin",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "the-landing",
       "resort_id": null,
@@ -3952,6 +4090,7 @@
     {
       "id": "cooling-hut",
       "name": "Cooling Hut",
+      "destination_id": "wdw",
       "area_id": "blizzard-beach",
       "sub_area": null,
       "resort_id": null,
@@ -3990,6 +4129,7 @@
     {
       "id": "coral-reef-restaurant",
       "name": "Coral Reef Restaurant",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "world-nature",
       "resort_id": null,
@@ -4031,6 +4171,7 @@
     {
       "id": "cosmic-rays-starlight-cafe",
       "name": "Cosmic Rays Starlight Cafe",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "tomorrowland",
       "resort_id": null,
@@ -4068,6 +4209,7 @@
     {
       "id": "courtyard-pool-bar",
       "name": "Courtyard Pool Bar",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "grand-floridian-resort-and-spa",
@@ -4104,6 +4246,7 @@
     {
       "id": "cove-bar",
       "name": "Cove Bar",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "bay-lake-tower-contemporary-resort",
@@ -4141,6 +4284,7 @@
     {
       "id": "creature-comforts",
       "name": "Creature Comforts",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "discovery-island",
       "resort_id": null,
@@ -4181,6 +4325,7 @@
     {
       "id": "crepes-a-emporter-by-la-creperie-paris",
       "name": "Crepes A Emporter by La Creperie Paris",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "france",
       "resort_id": null,
@@ -4222,6 +4367,7 @@
     {
       "id": "crews-cup-lounge",
       "name": "Crew's Cup Lounge",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "yacht-club-resort",
@@ -4260,6 +4406,7 @@
     {
       "id": "crocketts-tavern",
       "name": "Crocketts Tavern",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "campsites-at-fort-wilderness",
@@ -4295,6 +4442,7 @@
     {
       "id": "crystal-palace",
       "name": "The Crystal Palace",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "main-street",
       "resort_id": null,
@@ -4337,6 +4485,7 @@
     {
       "id": "d-luxe-burger",
       "name": "D-Luxe Burger",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "town-center",
       "resort_id": null,
@@ -4379,6 +4528,7 @@
     {
       "id": "dahlia-lounge",
       "name": "Dahlia Lounge",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "sub_area": null,
       "resort_id": "coronado-springs-resort",
@@ -4421,6 +4571,7 @@
     {
       "id": "daily-poutine",
       "name": "The Daily Poutine",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "town-center",
       "resort_id": null,
@@ -4462,6 +4613,7 @@
     {
       "id": "dawa-bar",
       "name": "Dawa Bar",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "africa",
       "resort_id": null,
@@ -4501,6 +4653,7 @@
     {
       "id": "diamond-horseshoe",
       "name": "The Diamond Horseshoe",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "liberty-square",
       "resort_id": null,
@@ -4542,6 +4695,7 @@
     {
       "id": "diamond-horseshoe-limited-time-offering",
       "name": "The Diamond Horseshoe - Limited Time Offering",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "liberty-square",
       "resort_id": null,
@@ -4581,6 +4735,7 @@
     {
       "id": "docking-bay-7-food-and-cargo",
       "name": "Docking Bay 7 Food and Cargo",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "galaxys-edge",
       "resort_id": null,
@@ -4621,6 +4776,7 @@
     {
       "id": "dockside-diner",
       "name": "Dockside Diner",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "echo-lake",
       "resort_id": null,
@@ -4659,6 +4815,7 @@
     {
       "id": "dockside-margaritas",
       "name": "Dockside Maargaritas",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "marketplace",
       "resort_id": null,
@@ -4699,6 +4856,7 @@
     {
       "id": "drinkwallah",
       "name": "Drinkwallah",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "asia",
       "resort_id": null,
@@ -4739,6 +4897,7 @@
     {
       "id": "drop-off-pool-bar",
       "name": "The Drop Off Pool Bar",
+      "destination_id": "wdw",
       "area_id": "wide-world-of-sports",
       "sub_area": null,
       "resort_id": "art-of-animation-resort",
@@ -4777,6 +4936,7 @@
     {
       "id": "earl-of-sandwich",
       "name": "Earl of Sandwich",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "marketplace",
       "resort_id": null,
@@ -4819,6 +4979,7 @@
     {
       "id": "eet-by-maneet-chauhan",
       "name": "eet by Maneet Chauhan",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "marketplace",
       "resort_id": null,
@@ -4860,6 +5021,7 @@
     {
       "id": "eight-spoon-cafe",
       "name": "Eight Spoon Cafe",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "discovery-island",
       "resort_id": null,
@@ -4898,6 +5060,7 @@
     {
       "id": "el-mercado-de-coronado",
       "name": "El Mercado De Coronado",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "sub_area": null,
       "resort_id": "coronado-springs-resort",
@@ -4942,6 +5105,7 @@
     {
       "id": "enchanted-rose",
       "name": "Enchanted Rose",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "grand-floridian-resort-and-spa",
@@ -4977,6 +5141,7 @@
     {
       "id": "end-zone-food-court",
       "name": "End Zone Food Court",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "sub_area": null,
       "resort_id": "all-star-sports-resort",
@@ -5016,6 +5181,7 @@
     {
       "id": "energy-bytes",
       "name": "Energy Bytes",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "tomorrowland",
       "resort_id": null,
@@ -5051,6 +5217,7 @@
     {
       "id": "enzos-hideaway",
       "name": "Enzo's Hideaway",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "the-landing",
       "resort_id": null,
@@ -5096,6 +5263,7 @@
     {
       "id": "epic-eats",
       "name": "Epic Eats",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "echo-lake",
       "resort_id": null,
@@ -5133,6 +5301,7 @@
     {
       "id": "erin-mckennas-bakery-nyc",
       "name": "Erin McKenna's Bakery NYC",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "the-landing",
       "resort_id": null,
@@ -5174,6 +5343,7 @@
     {
       "id": "espn-wide-world-of-sports-grill",
       "name": "ESPN Wide World of Sports Grill",
+      "destination_id": "wdw",
       "area_id": "wide-world-of-sports",
       "sub_area": null,
       "resort_id": null,
@@ -5220,6 +5390,7 @@
     {
       "id": "everglazed-donuts-and-cold-brew",
       "name": "Everglazed Donuts and Cold Brew",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "west-side",
       "resort_id": null,
@@ -5266,6 +5437,7 @@
     {
       "id": "everything-pop-shopping-and-dining",
       "name": "Everything POP Shopping and Dining",
+      "destination_id": "wdw",
       "area_id": "sports-resort-area",
       "sub_area": null,
       "resort_id": "pop-century-resort",
@@ -5305,6 +5477,7 @@
     {
       "id": "fairfax-fare",
       "name": "Fairfax Fare",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "sunset-blvd",
       "resort_id": null,
@@ -5344,6 +5517,7 @@
     {
       "id": "fantasmic-dining-packages",
       "name": "Fantasmic! Dining Packages",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "commissary-lane",
       "resort_id": null,
@@ -5385,6 +5559,7 @@
     {
       "id": "fife-and-drum-tavern",
       "name": "Fife and Drum Tavern",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "american-adventure",
       "resort_id": null,
@@ -5429,6 +5604,7 @@
     {
       "id": "flame-tree-barbecue",
       "name": "Flame Tree Barbecue",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "discovery-island",
       "resort_id": null,
@@ -5471,6 +5647,7 @@
     {
       "id": "flying-fish",
       "name": "Flying FIsh",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "boardwalk-inn",
@@ -5514,6 +5691,7 @@
     {
       "id": "food-by-swedish-chef",
       "name": "Food by Swedish Chef",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "sunset-blvd",
       "resort_id": null,
@@ -5551,6 +5729,7 @@
     {
       "id": "friars-nook",
       "name": "The Friars Nook",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "fantasyland",
       "resort_id": null,
@@ -5589,6 +5768,7 @@
     {
       "id": "front-porch-house-of-blues",
       "name": "The Front Porch at House of Blues",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "west-side",
       "resort_id": null,
@@ -5632,6 +5812,7 @@
     {
       "id": "frontera-cocina",
       "name": "Frontera Cocina",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "town-center",
       "resort_id": null,
@@ -5676,6 +5857,7 @@
     {
       "id": "frostbite-freddys-frozen-refreshments",
       "name": "Frostbite Freddy's Frozen Refreshments",
+      "destination_id": "wdw",
       "area_id": "blizzard-beach",
       "sub_area": null,
       "resort_id": null,
@@ -5715,6 +5897,7 @@
     {
       "id": "fuel",
       "name": "Fuel",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "dolphin-hotel",
@@ -5756,6 +5939,7 @@
     {
       "id": "funnel-cake",
       "name": "Funnel Cake",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "american-adventure",
       "resort_id": null,
@@ -5795,6 +5979,7 @@
     {
       "id": "funnel-cake-cart",
       "name": "Funnel Cake Cart",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "boardwalk-inn",
@@ -5838,6 +6023,7 @@
     {
       "id": "garden-grill-restaurant",
       "name": "The Garden Grill Restaurant",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "world-nature",
       "resort_id": null,
@@ -5885,6 +6071,7 @@
     {
       "id": "garden-grove",
       "name": "Garden Grove",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "swan-hotel",
@@ -5925,6 +6112,7 @@
     {
       "id": "gasparilla-island-grill",
       "name": "Gasparilla Island Grill",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "grand-floridian-resort-and-spa",
@@ -5963,6 +6151,7 @@
     {
       "id": "gastons-tavern",
       "name": "Gastons Tavern",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "fantasyland",
       "resort_id": null,
@@ -5998,6 +6187,7 @@
     {
       "id": "geo-82",
       "name": "Geo 82",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "world-celebration",
       "resort_id": null,
@@ -6038,6 +6228,7 @@
     {
       "id": "geo-82-fireworks-experience",
       "name": "GEO-82 Fireworks Experience",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "world-celebration",
       "resort_id": null,
@@ -6077,6 +6268,7 @@
     {
       "id": "geysey-point-bar-and-grill",
       "name": "Geyser Point Bar & Grill",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "wilderness-lodge",
@@ -6114,6 +6306,7 @@
     {
       "id": "ghiradelli-soda-fountain-and-chocolate-shop",
       "name": "Ghiradelli Soda Fountain and Chocolate Shop",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "marketplace",
       "resort_id": null,
@@ -6156,6 +6349,7 @@
     {
       "id": "gideons-bakehouse",
       "name": "Gideon's Bakehouse",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "the-landing",
       "resort_id": null,
@@ -6198,6 +6392,7 @@
     {
       "id": "golden-oak-outpost",
       "name": "Golden Oak Outpost",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "frontierland",
       "resort_id": null,
@@ -6234,6 +6429,7 @@
     {
       "id": "good-morning-breakfast-with-goofy-and-his-pals",
       "name": "Good Morning Breakfast with Goofy and His Pals",
+      "destination_id": "wdw",
       "area_id": "springs-resort-area",
       "sub_area": null,
       "resort_id": "four-seasons-resort-orlando",
@@ -6274,6 +6470,7 @@
     {
       "id": "goods-food-to-go",
       "name": "Good's Food to Go",
+      "destination_id": "wdw",
       "area_id": "springs-resort-area",
       "sub_area": null,
       "resort_id": "old-key-west-resort",
@@ -6323,6 +6520,7 @@
     {
       "id": "grand-floridian-cafe",
       "name": "Grand Floridian Cafe",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "grand-floridian-resort-and-spa",
@@ -6362,6 +6560,7 @@
     {
       "id": "grandstand-spirits",
       "name": "Grandstand Spirits",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "sub_area": null,
       "resort_id": "all-star-sports-resort",
@@ -6401,6 +6600,7 @@
     {
       "id": "grounds",
       "name": "Grounds",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "swan-reserve",
@@ -6440,6 +6640,7 @@
     {
       "id": "gurgling-suitcase",
       "name": "Gurgling Suitcase",
+      "destination_id": "wdw",
       "area_id": "springs-resort-area",
       "sub_area": null,
       "resort_id": "old-key-west-resort",
@@ -6483,6 +6684,7 @@
     {
       "id": "haagen-dazs",
       "name": "Haagen Dazs",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "west-side",
       "resort_id": null,
@@ -6522,6 +6724,7 @@
     {
       "id": "harambe-fruit-market",
       "name": "Harambe Fruit Market",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "africa",
       "resort_id": null,
@@ -6565,6 +6768,7 @@
     {
       "id": "harambe-market",
       "name": "Harambe Market",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "africa",
       "resort_id": null,
@@ -6612,6 +6816,7 @@
     {
       "id": "hollywood-and-vine",
       "name": "Hollywood and Vine",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "echo-lake",
       "resort_id": null,
@@ -6653,6 +6858,7 @@
     {
       "id": "hollywood-brown-derby",
       "name": "Hollywood Brown Derby",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "hollywood-blvd",
       "resort_id": null,
@@ -6693,6 +6899,7 @@
     {
       "id": "hollywood-brown-derby-lounge",
       "name": "Hollywood Brown Derby Lounge",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "hollywood-blvd",
       "resort_id": null,
@@ -6734,6 +6941,7 @@
     {
       "id": "hollywood-scoops",
       "name": "Hollywood Scoops",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "hollywood-blvd",
       "resort_id": null,
@@ -6770,6 +6978,7 @@
     {
       "id": "hoop-dee-doo-musical-revue",
       "name": "Hoop-Dee-Doo Musical Revue",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "campsites-at-fort-wilderness",
@@ -6809,6 +7018,7 @@
     {
       "id": "house-of-blues",
       "name": "House of Blues",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "west-side",
       "resort_id": null,
@@ -6857,6 +7067,7 @@
     {
       "id": "hurly-burly",
       "name": "Hurly Burly",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "boardwalk-inn",
@@ -6901,6 +7112,7 @@
     {
       "id": "hurricane-hannas-grill",
       "name": "Hurricane Hannas Grill",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "beach-club-resort",
@@ -6942,6 +7154,7 @@
     {
       "id": "i-c-expeditions",
       "name": "I.C. Expeditions",
+      "destination_id": "wdw",
       "area_id": "blizzard-beach",
       "sub_area": null,
       "resort_id": null,
@@ -6980,6 +7193,7 @@
     {
       "id": "ice-cold-hydraulics",
       "name": "Ice Cold Hydraulics",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "grand-avenue",
       "resort_id": null,
@@ -7018,6 +7232,7 @@
     {
       "id": "il-mulino",
       "name": "Il Mulino",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "swan-hotel",
@@ -7061,6 +7276,7 @@
     {
       "id": "il-mulino-lounge",
       "name": "Il Mulino Lounge",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "swan-hotel",
@@ -7101,6 +7317,7 @@
     {
       "id": "intermission-food-court",
       "name": "Intermission Food Court",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "sub_area": null,
       "resort_id": "all-star-music-resort",
@@ -7140,6 +7357,7 @@
     {
       "id": "internation-festival-of-the-holidays-candlelight-processional",
       "name": "EPCOT Internation Festival of the Holidays - Candlelight Processional Dining Package",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "american-adventure",
       "resort_id": null,
@@ -7180,6 +7398,7 @@
     {
       "id": "international-festival-of-the-arts-disney-on-broadway",
       "name": "EPCOT International Festival of the Arts - DISNEY ON BROADWAY  Concert Series Dining Packages",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "american-adventure",
       "resort_id": null,
@@ -7219,6 +7438,7 @@
     {
       "id": "international-food-and-wine-festival-concert-series",
       "name": "EPCOT Internation Food and Wine Festival Concert Series Dining Package",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "american-adventure",
       "resort_id": null,
@@ -7260,6 +7480,7 @@
     {
       "id": "isle-of-java",
       "name": "Isle of Java",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "discovery-island",
       "resort_id": null,
@@ -7301,6 +7522,7 @@
     {
       "id": "jaleo-by-jose-andres",
       "name": "Jaleo by Jose Andres",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": null,
       "resort_id": null,
@@ -7342,6 +7564,7 @@
     {
       "id": "java",
       "name": "Java",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "swan-hotel",
@@ -7381,6 +7604,7 @@
     {
       "id": "jiko-the-cooking-place",
       "name": "Jiko - The Cooking Place",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "sub_area": null,
       "resort_id": "animal-kingdom-lodge",
@@ -7428,6 +7652,7 @@
     {
       "id": "jock-lindsays-hangar-bar",
       "name": "Jock Lindsay's Hangar Bar",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "the-landing",
       "resort_id": null,
@@ -7468,6 +7693,7 @@
     {
       "id": "joffreys-coffee-and-tea-co-at-the-leanding",
       "name": "Joffrey's Coffee and Tea Company at The Landing at Disney Springs",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "the-landing",
       "resort_id": null,
@@ -7508,6 +7734,7 @@
     {
       "id": "joffreys-handcrafted-smoothies",
       "name": "Joffrey's Handcrafted Smoothies",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "marketplace",
       "resort_id": null,
@@ -7548,6 +7775,7 @@
     {
       "id": "joy-of-tea",
       "name": "Joy of Tea",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "china",
       "resort_id": null,
@@ -7589,6 +7817,7 @@
     {
       "id": "jungle-navigation-skipper-canteen",
       "name": "Jungle Navigation Co LTD Skipper Canteen",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "adventureland",
       "resort_id": null,
@@ -7629,6 +7858,7 @@
     {
       "id": "kabuki-cafe",
       "name": "Kabuki Cafe",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "japan",
       "resort_id": null,
@@ -7673,6 +7903,7 @@
     {
       "id": "kat-sakas-kettle",
       "name": "Kat Sakas Kettle",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "galaxys-edge",
       "resort_id": null,
@@ -7711,6 +7942,7 @@
     {
       "id": "katsura-grill",
       "name": "Katsura Grill",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "japan",
       "resort_id": null,
@@ -7756,6 +7988,7 @@
     {
       "id": "kidani-village-breakfast-at-sanaa",
       "name": "Kidani Village Breakfast at Sanaa",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "sub_area": null,
       "resort_id": "animal-kingdom-villas-kidani-village",
@@ -7797,6 +8030,7 @@
     {
       "id": "kimonos",
       "name": "Kimonos",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "swan-hotel",
@@ -7841,6 +8075,7 @@
     {
       "id": "kimonos-lounge",
       "name": "Kimonos Lounge",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "swan-hotel",
@@ -7887,6 +8122,7 @@
     {
       "id": "kona-cafe",
       "name": "Kona Cafe",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "polynesian-village-resort",
@@ -7928,6 +8164,7 @@
     {
       "id": "kona-island",
       "name": "Kona Island",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "polynesian-village-resort",
@@ -7964,6 +8201,7 @@
     {
       "id": "kringla-bakeri-og-kafe",
       "name": "Kringla Bakeri Og Kafe",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "norway",
       "resort_id": null,
@@ -8008,6 +8246,7 @@
     {
       "id": "kusafiri-coffee-shop-and-bakery",
       "name": "Kusafiri Coffee Shop and Bakery",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "africa",
       "resort_id": null,
@@ -8055,6 +8294,7 @@
     {
       "id": "la-cantina-de-san-angel",
       "name": "La Cantina De San Angel",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "mexico",
       "resort_id": null,
@@ -8098,6 +8338,7 @@
     {
       "id": "la-cava-del-tequila",
       "name": "La Cava del Tequila",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "mexico",
       "resort_id": null,
@@ -8139,6 +8380,7 @@
     {
       "id": "la-cava-experience",
       "name": "La Cava Experience",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "mexico",
       "resort_id": null,
@@ -8178,6 +8420,7 @@
     {
       "id": "la-creperie-de-paris",
       "name": "La Creperie de Paris",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "france",
       "resort_id": null,
@@ -8222,6 +8465,7 @@
     {
       "id": "la-gelateria-toscana",
       "name": "La Gelateria Toscana",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "italy",
       "resort_id": null,
@@ -8268,6 +8512,7 @@
     {
       "id": "la-hacienda-de-san-angel",
       "name": "La Hacienda de San Angel",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "mexico",
       "resort_id": null,
@@ -8308,6 +8553,7 @@
     {
       "id": "la-poutinerie",
       "name": "La Poutinerie",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "canada",
       "resort_id": null,
@@ -8347,6 +8593,7 @@
     {
       "id": "lagoon-games-lanes-and-eats",
       "name": "Lagoon: Games, Lanes, and Eats",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "dolphin-hotel",
@@ -8385,6 +8632,7 @@
     {
       "id": "laguna-bar",
       "name": "Laguna Bar",
+      "destination_id": "wdw",
       "area_id": "springs-resort-area",
       "sub_area": null,
       "resort_id": "old-key-west-resort",
@@ -8429,6 +8677,7 @@
     {
       "id": "landscape-of-flavors",
       "name": "Landscape of Flavors",
+      "destination_id": "wdw",
       "area_id": "wide-world-of-sports",
       "sub_area": null,
       "resort_id": "art-of-animation-resort",
@@ -8469,6 +8718,7 @@
     {
       "id": "lartisan-des-glaces",
       "name": "L'Artisan des Glaces",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "france",
       "resort_id": null,
@@ -8509,6 +8759,7 @@
     {
       "id": "lava-lounge-rainforest-cafe",
       "name": "Lava Lounge at Rainforest Cafe",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "marketplace",
       "resort_id": null,
@@ -8552,6 +8803,7 @@
     {
       "id": "le-cellier-steakhouse",
       "name": "Le Cellier Steakhouse",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "canada",
       "resort_id": null,
@@ -8595,6 +8847,7 @@
     {
       "id": "le-petit-cafe",
       "name": "Le Petit Cafe",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "riviera-resort",
@@ -8635,6 +8888,7 @@
     {
       "id": "leaping-horse-libations",
       "name": "Leaping Horse Libations",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "boardwalk-inn",
@@ -8673,6 +8927,7 @@
     {
       "id": "les-halles-boulangerie-patisserie",
       "name": "Les Halles Boulangerie- Patisserie",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "france",
       "resort_id": null,
@@ -8718,6 +8973,7 @@
     {
       "id": "les-vins-des-chefs-de-france",
       "name": "Les Vins des Chef de France",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "france",
       "resort_id": null,
@@ -8758,6 +9014,7 @@
     {
       "id": "liberty-square-market",
       "name": "Liberty Square Market",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "liberty-square",
       "resort_id": null,
@@ -8795,6 +9052,7 @@
     {
       "id": "liberty-tree-tavern",
       "name": "Liberty Tree Tavern",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "liberty-square",
       "resort_id": null,
@@ -8833,6 +9091,7 @@
     {
       "id": "lottawatta-lodge",
       "name": "Lottawatta Lodge",
+      "destination_id": "wdw",
       "area_id": "blizzard-beach",
       "sub_area": null,
       "resort_id": null,
@@ -8875,6 +9134,7 @@
     {
       "id": "lotus-blossom-cafe",
       "name": "Lotus Blossom Cafe",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "china",
       "resort_id": null,
@@ -8916,6 +9176,7 @@
     {
       "id": "lunching-pad",
       "name": "The Lunching Pad",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "tomorrowland",
       "resort_id": null,
@@ -8954,6 +9215,7 @@
     {
       "id": "macguffins",
       "name": "MacGuffins",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "west-side",
       "resort_id": null,
@@ -8995,6 +9257,7 @@
     {
       "id": "magic-kingdon-fireworks-dessert-parties-post-party",
       "name": "Magic Kingdom Fireworks Dessert Parties: Post-Party",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "tomorrowland",
       "resort_id": null,
@@ -9035,6 +9298,7 @@
     {
       "id": "magic-kingdon-fireworks-dessert-parties-pre-party",
       "name": "Magic Kingdom Fireworks Dessert Parties: Pre-Party",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "tomorrowland",
       "resort_id": null,
@@ -9075,6 +9339,7 @@
     {
       "id": "magic-kingdon-fireworks-dessert-parties-seats-and-sweets",
       "name": "Magic Kingdom Fireworks Dessert Parties: Seats and Sweets",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "tomorrowland",
       "resort_id": null,
@@ -9115,6 +9380,7 @@
     {
       "id": "mahindi",
       "name": "Mahindi",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "africa",
       "resort_id": null,
@@ -9158,6 +9424,7 @@
     {
       "id": "main-street-bakery",
       "name": "Main Street Bakery",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "main-street",
       "resort_id": null,
@@ -9197,6 +9464,7 @@
     {
       "id": "maji-pool-bar",
       "name": "Maji Pool Bar",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "sub_area": null,
       "resort_id": "animal-kingdom-villas-kidani-village",
@@ -9240,6 +9508,7 @@
     {
       "id": "mardi-grogs",
       "name": "Mardi Grogs",
+      "destination_id": "wdw",
       "area_id": "springs-resort-area",
       "sub_area": null,
       "resort_id": "port-orleans-french-quarter",
@@ -9283,6 +9552,7 @@
     {
       "id": "maria-enzos-ristorante",
       "name": "Maria & Enzo's Ristorante",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "the-landing",
       "resort_id": null,
@@ -9324,6 +9594,7 @@
     {
       "id": "market",
       "name": "Market",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "pixar-plaza",
       "resort_id": null,
@@ -9361,6 +9632,7 @@
     {
       "id": "marketplace-brew-wing-at-the-odyssey",
       "name": "Marketplace - Brew-Wing at the Odyssey",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "world-celebration",
       "resort_id": null,
@@ -9397,6 +9669,7 @@
     {
       "id": "marketplace-festival-favorites",
       "name": "Marketplace - Festival Favorites",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "world-celebration",
       "resort_id": null,
@@ -9433,6 +9706,7 @@
     {
       "id": "marketplace-snacks",
       "name": "Marketplace Snacks",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "marketplace",
       "resort_id": null,
@@ -9472,6 +9746,7 @@
     {
       "id": "marthas-vineyard",
       "name": "Marthas Vineyard",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "beach-club-resort",
@@ -9510,6 +9785,7 @@
     {
       "id": "maya-grill",
       "name": "Maya Grill",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "sub_area": null,
       "resort_id": "coronado-springs-resort",
@@ -9559,6 +9835,7 @@
     {
       "id": "meadow-snack-bar",
       "name": "Meadow Snack Bar",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "campsites-at-fort-wilderness",
@@ -9597,6 +9874,7 @@
     {
       "id": "milk-stand",
       "name": "Milk Stand",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "galaxys-edge",
       "resort_id": null,
@@ -9634,6 +9912,7 @@
     {
       "id": "mini-donuts-joffreys-coffee-at-blizard-beach",
       "name": "Mini Donuts by Joffrey's Coffee at Blizzard Beach",
+      "destination_id": "wdw",
       "area_id": "blizzard-beach",
       "sub_area": null,
       "resort_id": null,
@@ -9675,6 +9954,7 @@
     {
       "id": "minnies-wonderful-chrismastime-fireworks-dessert-party-plaza-garden",
       "name": "Minnie's Wonderful Chrismastime Fireworks Dessert Party with Plaza Garden Viewing",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "tomorrowland",
       "resort_id": null,
@@ -9715,6 +9995,7 @@
     {
       "id": "minnies-wonderful-chrismastime-fireworks-dessert-party-terrace",
       "name": "Minnie's Wonderful Chrismastime Fireworks Dessert Party at Tomorrowland Terrace",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "tomorrowland",
       "resort_id": null,
@@ -9755,6 +10036,7 @@
     {
       "id": "monsieur-paul",
       "name": "Monsieur Paul",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "france",
       "resort_id": null,
@@ -9797,6 +10079,7 @@
     {
       "id": "morimoto-asia",
       "name": "Morimoto Asia",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "the-landing",
       "resort_id": null,
@@ -9844,6 +10127,7 @@
     {
       "id": "morimoto-asia-street-food",
       "name": "Morimoto Asia Street Food",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "the-landing",
       "resort_id": null,
@@ -9887,6 +10171,7 @@
     {
       "id": "muddy-rivers",
       "name": "Muddy Rivers",
+      "destination_id": "wdw",
       "area_id": "springs-resort-area",
       "sub_area": null,
       "resort_id": "port-orleans-riverside",
@@ -9927,6 +10212,7 @@
     {
       "id": "narcoossees",
       "name": "Narcoossees",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "grand-floridian-resort-and-spa",
@@ -9966,6 +10252,7 @@
     {
       "id": "neighborhood-bakery",
       "name": "Neighborhood Bakery",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "pixar-plaza",
       "resort_id": null,
@@ -10003,6 +10290,7 @@
     {
       "id": "nine-dragons-restaurant",
       "name": "Nine Dragons Restaurant",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "china",
       "resort_id": null,
@@ -10043,6 +10331,7 @@
     {
       "id": "nomad-lounge",
       "name": "Nomad Lounge",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "discovery-island",
       "resort_id": null,
@@ -10086,6 +10375,7 @@
     {
       "id": "not-so-spooky-spectacular-dessert-party-plaza-garden-viewing",
       "name": "Disney's Not-So-Spooky Spectacular Dessert Party with Plaza Garden Viewing",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "tomorrowland",
       "resort_id": null,
@@ -10127,6 +10417,7 @@
     {
       "id": "not-so-spooky-spectacular-dessert-party-tomorrowland",
       "name": "Disney's Not-So-Spooky Spectacular Dessert Party - Tomorrowland",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "tomorrowland",
       "resort_id": null,
@@ -10168,6 +10459,7 @@
     {
       "id": "oasis-bar-and-grill",
       "name": "Oasis Bar and Grill",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "polynesian-village-resort",
@@ -10206,6 +10498,7 @@
     {
       "id": "oasis-sweet-and-sips",
       "name": "Oasis Sweet and Sips",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "morocco",
       "resort_id": null,
@@ -10247,6 +10540,7 @@
     {
       "id": "ogas-cantina",
       "name": "Ogas Cantina",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "galaxys-edge",
       "resort_id": null,
@@ -10285,6 +10579,7 @@
     {
       "id": "ohana",
       "name": "Ohana",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "polynesian-village-resort",
@@ -10325,6 +10620,7 @@
     {
       "id": "olivias-cafe",
       "name": "Olivia's Cafe",
+      "destination_id": "wdw",
       "area_id": "springs-resort-area",
       "sub_area": null,
       "resort_id": "old-key-west-resort",
@@ -10368,6 +10664,7 @@
     {
       "id": "on-the-rocks-pool-bar",
       "name": "On the Rocks Pool Bar",
+      "destination_id": "wdw",
       "area_id": "springs-resort-area",
       "sub_area": null,
       "resort_id": "saratoga-springs-resort-and-spa",
@@ -10411,6 +10708,7 @@
     {
       "id": "outer-rim",
       "name": "Outer Rim",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "contemporary-resort",
@@ -10447,6 +10745,7 @@
     {
       "id": "paddlefish",
       "name": "Paddlefish",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "the-landing",
       "resort_id": null,
@@ -10492,6 +10791,7 @@
     {
       "id": "paradiso-37",
       "name": "Paradiso 37 Taste ofd America",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "the-landing",
       "resort_id": null,
@@ -10538,6 +10838,7 @@
     {
       "id": "parisian-breakfast-at-chefs-de-france",
       "name": "Parisian Breakfast at Chefs de France",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "france",
       "resort_id": null,
@@ -10580,6 +10881,7 @@
     {
       "id": "pecos-bill-tall-tale-inn-and-cafe",
       "name": "Pecos Bill Tall Tale Inn and Cafe",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "frontierland",
       "resort_id": null,
@@ -10618,6 +10920,7 @@
     {
       "id": "pepe-jose-andres",
       "name": "Pepe by Jose Andres",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "west-side",
       "resort_id": null,
@@ -10662,6 +10965,7 @@
     {
       "id": "petals-pool-bar",
       "name": "Petals Pool Bar",
+      "destination_id": "wdw",
       "area_id": "sports-resort-area",
       "sub_area": null,
       "resort_id": "pop-century-resort",
@@ -10700,6 +11004,7 @@
     {
       "id": "phins",
       "name": "Phins",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "dolphin-hotel",
@@ -10737,6 +11042,7 @@
     {
       "id": "pineapple-lanai",
       "name": "Pineapple Lanai",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "polynesian-village-resort",
@@ -10773,6 +11079,7 @@
     {
       "id": "pinocchio-village-haus",
       "name": "Pinocchio Village Haus",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "fantasyland",
       "resort_id": null,
@@ -10810,6 +11117,7 @@
     {
       "id": "pizza-al-taglio",
       "name": "Pizza al Taglio",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "italy",
       "resort_id": null,
@@ -10853,6 +11161,7 @@
     {
       "id": "pizza-ponte",
       "name": "Pizza Ponte",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "the-landing",
       "resort_id": null,
@@ -10896,6 +11205,7 @@
     {
       "id": "pizza-window",
       "name": "Pizza Window",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "boardwalk-inn",
@@ -10936,6 +11246,7 @@
     {
       "id": "pizzafari",
       "name": "Pizzafari",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "discovery-island",
       "resort_id": null,
@@ -10977,6 +11288,7 @@
     {
       "id": "planet-hollywood",
       "name": "Planet Hollywood",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "town-center",
       "resort_id": null,
@@ -11022,6 +11334,7 @@
     {
       "id": "plaza-ice-cream-parlor",
       "name": "Plaza Ice Cream Parlor",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "main-street",
       "resort_id": null,
@@ -11058,6 +11371,7 @@
     {
       "id": "plaza-restaurant",
       "name": "The Plaza Restaurant",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "main-street",
       "resort_id": null,
@@ -11096,6 +11410,7 @@
     {
       "id": "polar-pub",
       "name": "Polar Pub",
+      "destination_id": "wdw",
       "area_id": "blizzard-beach",
       "sub_area": null,
       "resort_id": null,
@@ -11137,6 +11452,7 @@
     {
       "id": "pongu-pongu",
       "name": "Pongu Pongu",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "pandora",
       "resort_id": null,
@@ -11177,6 +11493,7 @@
     {
       "id": "primo-piatto",
       "name": "Primo Piatto",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "riviera-resort",
@@ -11217,6 +11534,7 @@
     {
       "id": "prince-erics-village-market",
       "name": "Prince Erics Village Market",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "fantasyland",
       "resort_id": null,
@@ -11253,6 +11571,7 @@
     {
       "id": "private-dining-at-disneys-grand-floridian-resort-and-spa",
       "name": "Private Dining at Disney's Grand Floridian Resort & Spa",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "grand-floridian-resort-and-spa",
@@ -11296,6 +11615,7 @@
     {
       "id": "queen-victorias-room-at-victoria-and-alberts",
       "name": "Queen Victoria's Room at Victoria's and Alberts",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "grand-floridian-resort-and-spa",
@@ -11336,6 +11656,7 @@
     {
       "id": "raglan-road-irish-pub",
       "name": "Raglan Road Irish Pub and Restauarant",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "the-landing",
       "resort_id": null,
@@ -11381,6 +11702,7 @@
     {
       "id": "rainforest-cafe-at-animal-kingdom",
       "name": "Rainforest Cafe at Animal Kingdom",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "main-entrance",
       "resort_id": null,
@@ -11423,6 +11745,7 @@
     {
       "id": "rainforest-cafe-at-disney-springs",
       "name": "Rainforest Cafe at Disnet Springs Marketplace",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "marketplace",
       "resort_id": null,
@@ -11470,6 +11793,7 @@
     {
       "id": "ravello",
       "name": "Ravello",
+      "destination_id": "wdw",
       "area_id": "springs-resort-area",
       "sub_area": null,
       "resort_id": "four-seasons-resort-orlando",
@@ -11510,6 +11834,7 @@
     {
       "id": "refreshment-outpost",
       "name": "Refreshment Outpost",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "outpost",
       "resort_id": null,
@@ -11547,6 +11872,7 @@
     {
       "id": "refreshment-station",
       "name": "Refreshment Station",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "world-discovery",
       "resort_id": null,
@@ -11584,6 +11910,7 @@
     {
       "id": "regal-eagle-smokehouse",
       "name": "Regal Eagle Smokehouse",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "american-adventure",
       "resort_id": null,
@@ -11625,6 +11952,7 @@
     {
       "id": "river-roost",
       "name": "River Roost",
+      "destination_id": "wdw",
       "area_id": "springs-resort-area",
       "sub_area": null,
       "resort_id": "port-orleans-riverside",
@@ -11665,6 +11993,7 @@
     {
       "id": "riverside-mill-food-court",
       "name": "Riverside Mill Food Court",
+      "destination_id": "wdw",
       "area_id": "springs-resort-area",
       "sub_area": null,
       "resort_id": "port-orleans-riverside",
@@ -11706,6 +12035,7 @@
     {
       "id": "rix-sports-bar-and-grill",
       "name": "Rix Sports Bar & Grill",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "sub_area": null,
       "resort_id": "coronado-springs-resort",
@@ -11756,6 +12086,7 @@
     {
       "id": "roaring-fork",
       "name": "Roaring Fork",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "wilderness-lodge",
@@ -11796,6 +12127,7 @@
     {
       "id": "ronto-roasters",
       "name": "Ronto Roasters",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "galaxys-edge",
       "resort_id": null,
@@ -11836,6 +12168,7 @@
     {
       "id": "rosa-mexicano",
       "name": "Rosa Mexicano",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "dolphin-hotel",
@@ -11878,6 +12211,7 @@
     {
       "id": "rosa-mexicano-lounnge",
       "name": "Rosa Mexicano Lounge",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "dolphin-hotel",
@@ -11917,6 +12251,7 @@
     {
       "id": "rose-and-crown-dining-room",
       "name": "Rose and Crown Dining Room",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "united-kingdom",
       "resort_id": null,
@@ -11956,6 +12291,7 @@
     {
       "id": "rose-and-crown-fireworks-dining-package",
       "name": "Rose & Crown Fireworks Dining Package",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "united-kingdom",
       "resort_id": null,
@@ -11995,6 +12331,7 @@
     {
       "id": "rose-and-crown-pub",
       "name": "Rose and Crown Pub",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "united-kingdom",
       "resort_id": null,
@@ -12035,6 +12372,7 @@
     {
       "id": "rose-of-gold-afternoon-tea-at-the-cake-bake-shop",
       "name": "Roses of Gold Afternoon Tea at The Cake Bake Shop by Gwendolyn Rogers",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "boardwalk-inn",
@@ -12073,6 +12411,7 @@
     {
       "id": "rosies-all-american-cafe",
       "name": "Rosies All American Cafe",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "sunset-blvd",
       "resort_id": null,
@@ -12111,6 +12450,7 @@
     {
       "id": "roundup-rodeo-bbq",
       "name": "Roundup Rodeo BBQ",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "toy-story-land",
       "resort_id": null,
@@ -12150,6 +12490,7 @@
     {
       "id": "salt-and-straw",
       "name": "Salt & Straw",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "west-side",
       "resort_id": null,
@@ -12189,6 +12530,7 @@
     {
       "id": "san-angel-inn-restaurante",
       "name": "San Angel Inn Restaurante",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "mexico",
       "resort_id": null,
@@ -12230,6 +12572,7 @@
     {
       "id": "sanaa",
       "name": "Sanaa",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "sub_area": null,
       "resort_id": "animal-kingdom-villas-kidani-village",
@@ -12276,6 +12619,7 @@
     {
       "id": "sanaa-lounge",
       "name": "Sanaa Lounge",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "sub_area": null,
       "resort_id": "animal-kingdom-villas-kidani-village",
@@ -12322,6 +12666,7 @@
     {
       "id": "sand-bar",
       "name": "The Sand Bar",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "contemporary-resort",
@@ -12360,6 +12705,7 @@
     {
       "id": "sangria-university",
       "name": "Sangria University",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "sub_area": null,
       "resort_id": "coronado-springs-resort",
@@ -12397,6 +12743,7 @@
     {
       "id": "sassagoula-floatworks-and-food-factory",
       "name": "Sassagoula Floatworks and Food Factory",
+      "destination_id": "wdw",
       "area_id": "springs-resort-area",
       "sub_area": null,
       "resort_id": "port-orleans-french-quarter",
@@ -12443,6 +12790,7 @@
     {
       "id": "satuli-canteen",
       "name": "Satu'li Canteen",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "pandora",
       "resort_id": null,
@@ -12486,6 +12834,7 @@
     {
       "id": "scat-cats-club-cafe",
       "name": "Scat Cat's Club - Cafe",
+      "destination_id": "wdw",
       "area_id": "springs-resort-area",
       "sub_area": null,
       "resort_id": "port-orleans-french-quarter",
@@ -12525,6 +12874,7 @@
     {
       "id": "scat-cats-club-lounge",
       "name": "Scat Cat's Club - Lounge",
+      "destination_id": "wdw",
       "area_id": "springs-resort-area",
       "sub_area": null,
       "resort_id": "port-orleans-french-quarter",
@@ -12566,6 +12916,7 @@
     {
       "id": "sci-fi-dine-in-theater",
       "name": "Sci-Fi Dine-In Theater",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "commissary-lane",
       "resort_id": null,
@@ -12605,6 +12956,7 @@
     {
       "id": "sebastians-bistro",
       "name": "Sebastians Bistro",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "caribbean-beach-resort",
@@ -12645,6 +12997,7 @@
     {
       "id": "shiki-sai-izakaya-and-sushi",
       "name": "Shiki-Sai: Izakaya and Sushi",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "japan",
       "resort_id": null,
@@ -12688,6 +13041,7 @@
     {
       "id": "shiki-sai-sushi-izakaya-fireworks-dining-package",
       "name": "Shiki-Sai: Sushi Izakaya Fireworks Dining Package",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "japan",
       "resort_id": null,
@@ -12727,6 +13081,7 @@
     {
       "id": "siestas-cantina",
       "name": "Siestas Cantina",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "sub_area": null,
       "resort_id": "coronado-springs-resort",
@@ -12772,6 +13127,7 @@
     {
       "id": "silver-screen-spirits-pool-bar",
       "name": "Silver Screen Spirits Pool Bar",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "sub_area": null,
       "resort_id": "all-star-sports-resort",
@@ -12816,6 +13172,7 @@
     {
       "id": "singing-spirits-pool-bar",
       "name": "Singing Spirits Pool Bar",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "sub_area": null,
       "resort_id": "all-star-music-resort",
@@ -12863,6 +13220,7 @@
     {
       "id": "six-ravens",
       "name": "Six Ravens",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "the-landing",
       "resort_id": null,
@@ -12908,6 +13266,7 @@
     {
       "id": "sleepy-hollow",
       "name": "Sleepy Hollow",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "liberty-square",
       "resort_id": null,
@@ -12945,6 +13304,7 @@
     {
       "id": "sommerfest",
       "name": "Sommerfest",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "germany",
       "resort_id": null,
@@ -12986,6 +13346,7 @@
     {
       "id": "space-220-lounge",
       "name": "Space 220 Lounge",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "world-discovery",
       "resort_id": null,
@@ -13030,6 +13391,7 @@
     {
       "id": "space-220-restaurant",
       "name": "Space 220 Restaurant",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "world-discovery",
       "resort_id": null,
@@ -13070,6 +13432,7 @@
     {
       "id": "spice-road-table",
       "name": "Spice Road Table",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "morocco",
       "resort_id": null,
@@ -13110,6 +13473,7 @@
     {
       "id": "spice-road-table-dining-package",
       "name": "Spice Road Table Dining Package",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "morocco",
       "resort_id": null,
@@ -13153,6 +13517,7 @@
     {
       "id": "splash-grill-and-terrace",
       "name": "Splash Grill and Terrace",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "swan-hotel",
@@ -13192,6 +13557,7 @@
     {
       "id": "splitsville-dining-room",
       "name": "Splitsville Dining Room",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "west-side",
       "resort_id": null,
@@ -13239,6 +13605,7 @@
     {
       "id": "spyglass-grill",
       "name": "Spyglass Grill",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "caribbean-beach-resort",
@@ -13278,6 +13645,7 @@
     {
       "id": "starbucks-at-disney-springs-marketplace",
       "name": "Starbucks at Disney Springs Marketplace",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "marketplace",
       "resort_id": null,
@@ -13322,6 +13690,7 @@
     {
       "id": "starbucks-at-disney-springs-west-side",
       "name": "Starbucks at Disney Springs West Side",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "west-side",
       "resort_id": null,
@@ -13366,6 +13735,7 @@
     {
       "id": "stargazers-bar",
       "name": "Stargazers Bar",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "town-center",
       "resort_id": null,
@@ -13405,6 +13775,7 @@
     {
       "id": "steakhouse-71",
       "name": "Steakhouse 71",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "contemporary-resort",
@@ -13443,6 +13814,7 @@
     {
       "id": "steakhouse-71-lounge",
       "name": "Steakhouse 71 Lounge",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "contemporary-resort",
@@ -13483,6 +13855,7 @@
     {
       "id": "stir",
       "name": "Stir",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "swan-reserve",
@@ -13522,6 +13895,7 @@
     {
       "id": "stk-steakhouse",
       "name": "STK Steakhouse",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "the-landing",
       "resort_id": null,
@@ -13570,6 +13944,7 @@
     {
       "id": "story-book-dining-at-artist-point-with-snow-white",
       "name": "Story Book Dining at Artist Point With Snow White",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "wilderness-lodge",
@@ -13608,6 +13983,7 @@
     {
       "id": "storybook-treats",
       "name": "Storybook Treats",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "fantasyland",
       "resort_id": null,
@@ -13644,6 +14020,7 @@
     {
       "id": "summer-house-on-the-lake",
       "name": "Summer House on the Lake",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "west-side",
       "resort_id": null,
@@ -13687,6 +14064,7 @@
     {
       "id": "sunshine-day-bar",
       "name": "Sunshine Day Bar",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "sunset-blvd",
       "resort_id": null,
@@ -13722,6 +14100,7 @@
     {
       "id": "sunshine-seasons",
       "name": "Sunshine Seasons",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "world-nature",
       "resort_id": null,
@@ -13764,6 +14143,7 @@
     {
       "id": "sunshine-tree-terrace",
       "name": "Sunshine Tree Terrace",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "adventureland",
       "resort_id": null,
@@ -13800,6 +14180,7 @@
     {
       "id": "swirls-on-the-water",
       "name": "Swirsl on the Water",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "marketplace",
       "resort_id": null,
@@ -13840,6 +14221,7 @@
     {
       "id": "t-rex-restaurant",
       "name": "T-REX Restaurant",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "marketplace",
       "resort_id": null,
@@ -13886,6 +14268,7 @@
     {
       "id": "takumi-tei-restaurant",
       "name": "Takumi-Tei Restaurant",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "japan",
       "resort_id": null,
@@ -13931,6 +14314,7 @@
     {
       "id": "tambu-lounge",
       "name": "Tambu Lounge",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "polynesian-village-resort",
@@ -13969,6 +14353,7 @@
     {
       "id": "tamu-tamu-refreshments",
       "name": "Tamu Tamu Refreshments",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "africa",
       "resort_id": null,
@@ -14013,6 +14398,7 @@
     {
       "id": "tangerine-pool-bar",
       "name": "Tangerine Pool Bar",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "swan-reserve",
@@ -14054,6 +14440,7 @@
     {
       "id": "tangierine-cafe-flavors-of-the-medina",
       "name": "Tangierine Cafe: Flavors of the Medina",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "morocco",
       "resort_id": null,
@@ -14095,6 +14482,7 @@
     {
       "id": "teppan-edo",
       "name": "Teppan Edo",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "japan",
       "resort_id": null,
@@ -14139,6 +14527,7 @@
     {
       "id": "terra-treats",
       "name": "Terra Treats",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "discovery-island",
       "resort_id": null,
@@ -14180,6 +14569,7 @@
     {
       "id": "terralina-crafted-italian",
       "name": "Terralina Crafted Italian",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "the-landing",
       "resort_id": null,
@@ -14226,6 +14616,7 @@
     {
       "id": "territory-lounge",
       "name": "Territory Lounge",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "wilderness-lodge",
@@ -14262,6 +14653,7 @@
     {
       "id": "the-artists-palette",
       "name": "The Artists Palette",
+      "destination_id": "wdw",
       "area_id": "springs-resort-area",
       "sub_area": null,
       "resort_id": "saratoga-springs-resort-and-spa",
@@ -14305,6 +14697,7 @@
     {
       "id": "the-boathouse",
       "name": "The BOATHOUSE: Great Food, Waterfront Dining, Dream Boats",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "the-landing",
       "resort_id": null,
@@ -14350,6 +14743,7 @@
     {
       "id": "the-edison",
       "name": "The Edison",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "the-landing",
       "resort_id": null,
@@ -14394,6 +14788,7 @@
     {
       "id": "the-fountain",
       "name": "The Fountain",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "dolphin-hotel",
@@ -14432,6 +14827,7 @@
     {
       "id": "the-ganachery",
       "name": "The Ganachery",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "the-landing",
       "resort_id": null,
@@ -14473,6 +14869,7 @@
     {
       "id": "the-land-cart",
       "name": "The Land Cart",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "world-nature",
       "resort_id": null,
@@ -14511,6 +14908,7 @@
     {
       "id": "the-magic-of-new-years-eve-at-california-grill",
       "name": "The Magic of New Years Eve at California Grill",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "contemporary-resort",
@@ -14552,6 +14950,7 @@
     {
       "id": "the-mara",
       "name": "The Mara",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "sub_area": null,
       "resort_id": "animal-kingdom-lodge",
@@ -14596,6 +14995,7 @@
     {
       "id": "the-market-at-ale-and-compass",
       "name": "The Market at Ale and Compass",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "yacht-club-resort",
@@ -14637,6 +15037,7 @@
     {
       "id": "the-paddock-grill",
       "name": "The Paddock Grill",
+      "destination_id": "wdw",
       "area_id": "springs-resort-area",
       "sub_area": null,
       "resort_id": "saratoga-springs-resort-and-spa",
@@ -14687,6 +15088,7 @@
     {
       "id": "the-perch",
       "name": "The Perch at Disneys Grand Floridian Resort and Spa",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "grand-floridian-resort-and-spa",
@@ -14722,6 +15124,7 @@
     {
       "id": "the-polite-pig",
       "name": "The Polite Pig",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "town-center",
       "resort_id": null,
@@ -14767,6 +15170,7 @@
     {
       "id": "the-smiling-crocodile",
       "name": "The Smiling Crocodile",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "discovery-island",
       "resort_id": null,
@@ -14808,6 +15212,7 @@
     {
       "id": "the-smokehouse-at-house-of-blues",
       "name": "The Smokehouse at House of Blues",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "west-side",
       "resort_id": null,
@@ -14853,6 +15258,7 @@
     {
       "id": "the-turf-club-bar-and-grill",
       "name": "The Turf Club Bar & Grill",
+      "destination_id": "wdw",
       "area_id": "springs-resort-area",
       "sub_area": null,
       "resort_id": "saratoga-springs-resort-and-spa",
@@ -14898,6 +15304,7 @@
     {
       "id": "thirsty-river-bar",
       "name": "Thirsty River Bar",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "asia",
       "resort_id": null,
@@ -14939,6 +15346,7 @@
     {
       "id": "three-bridges-bar-and-grill",
       "name": "Three Bridges Bar & Grill at Villa Del Lago",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "sub_area": null,
       "resort_id": "coronado-springs-resort",
@@ -14982,6 +15390,7 @@
     {
       "id": "tiffins-restaurant",
       "name": "Tiffins Restaurant",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "discovery-island",
       "resort_id": null,
@@ -15029,6 +15438,7 @@
     {
       "id": "todd-englishs-bluezoo",
       "name": "Todd Englishs bluezoo",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "dolphin-hotel",
@@ -15069,6 +15479,7 @@
     {
       "id": "todd-englishs-bluezoo-lounge",
       "name": "Todd Englishs bluezoo Lounge",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "dolphin-hotel",
@@ -15107,6 +15518,7 @@
     {
       "id": "toledo-tapas-steaks-and-seafood",
       "name": "Toledo - Tapas, Steak & Seafood",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "sub_area": null,
       "resort_id": "coronado-springs-resort",
@@ -15157,6 +15569,7 @@
     {
       "id": "tomorrowland-terrace-restaurant",
       "name": "Tomorrowland Terrace Restaurant",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "tomorrowland",
       "resort_id": null,
@@ -15196,6 +15609,7 @@
     {
       "id": "tonys-town-square",
       "name": "Tonys Town Square",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "main-street",
       "resort_id": null,
@@ -15234,6 +15648,7 @@
     {
       "id": "topolinos-terrace-flavors-of-the-riviera",
       "name": "Topolinos Terrace - Flavors of the Riviera",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "riviera-resort",
@@ -15277,6 +15692,7 @@
     {
       "id": "tortuga-tavern",
       "name": "Tortuga Tavern",
+      "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "adventureland",
       "resort_id": null,
@@ -15313,6 +15729,7 @@
     {
       "id": "trader-sams-grog-grotto",
       "name": "Trader Sams Grog Grotto",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "polynesian-village-resort",
@@ -15349,6 +15766,7 @@
     {
       "id": "trader-sams-tiki-terrace",
       "name": "Trader Sams Tiki Terrace",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "polynesian-village-resort",
@@ -15386,6 +15804,7 @@
     {
       "id": "trails-end-restaurant",
       "name": "Trails End Restaurant",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "campsites-at-fort-wilderness",
@@ -15424,6 +15843,7 @@
     {
       "id": "trattoria-al-forno",
       "name": "Trattoria al Forno",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "boardwalk-inn",
@@ -15464,6 +15884,7 @@
     {
       "id": "trek-snacks",
       "name": "Trek Snacks",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "asia",
       "resort_id": null,
@@ -15503,6 +15924,7 @@
     {
       "id": "trolley-car-cafe",
       "name": "Trolley Car Cafe",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "hollywood-blvd",
       "resort_id": null,
@@ -15540,6 +15962,7 @@
     {
       "id": "tune-in-lounge",
       "name": "Tune-In Lounge",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "echo-lake",
       "resort_id": null,
@@ -15577,6 +16000,7 @@
     {
       "id": "turtle-shack-poolside-snacks",
       "name": "Turtle Shack Poolside Snacks",
+      "destination_id": "wdw",
       "area_id": "springs-resort-area",
       "sub_area": null,
       "resort_id": "old-key-west-resort",
@@ -15624,6 +16048,7 @@
     {
       "id": "tusker-house-restaurant",
       "name": "Tusker House Restaurant",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "africa",
       "resort_id": null,
@@ -15670,6 +16095,7 @@
     {
       "id": "tutto-gusto-wine-cellar",
       "name": "Tutto Gusto Wine Cellar",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "italy",
       "resort_id": null,
@@ -15710,6 +16136,7 @@
     {
       "id": "tutto-italia-ristorante",
       "name": "Tutto Italia Ristorante",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "italy",
       "resort_id": null,
@@ -15751,6 +16178,7 @@
     {
       "id": "uk-beer-cart",
       "name": "UK Beer Cart",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "united-kingdom",
       "resort_id": null,
@@ -15792,6 +16220,7 @@
     {
       "id": "uzima-springs-pool-bar",
       "name": "Uzima Springs Pool Bar",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "sub_area": null,
       "resort_id": "animal-kingdom-lodge",
@@ -15836,6 +16265,7 @@
     {
       "id": "via-napoli-ristorante-e-pizzeria",
       "name": "Via Napoli Ristorante e Pizzeria",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "italy",
       "resort_id": null,
@@ -15878,6 +16308,7 @@
     {
       "id": "victoria-and-alberts",
       "name": "The Dining Room at Victoria & Alberts",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "grand-floridian-resort-and-spa",
@@ -15917,6 +16348,7 @@
     {
       "id": "victoria-falls-lounge",
       "name": "Victoria Falls Lounge",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "sub_area": null,
       "resort_id": "animal-kingdom-lodge",
@@ -15961,6 +16393,7 @@
     {
       "id": "vivoli-il-gelato",
       "name": "Vivoli il Gelato",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "the-landing",
       "resort_id": null,
@@ -16005,6 +16438,7 @@
     {
       "id": "wailulu-bar-and-grill",
       "name": "Wailulu Bar & Grill",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "polynesian-villas-and-bungalows",
@@ -16042,6 +16476,7 @@
     {
       "id": "warming-hut",
       "name": "Warming Hut",
+      "destination_id": "wdw",
       "area_id": "blizzard-beach",
       "sub_area": null,
       "resort_id": null,
@@ -16081,6 +16516,7 @@
     {
       "id": "warung-outpost",
       "name": "Warung Outpost",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "asia",
       "resort_id": null,
@@ -16120,6 +16556,7 @@
     {
       "id": "wetzels-pretzels-snack-stand-at-marketplace",
       "name": "Wetzel's PretzelsKiosk at Disney Springs Marketplace",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "marketplace",
       "resort_id": null,
@@ -16159,6 +16596,7 @@
     {
       "id": "wetzels-pretzels-snack-stand-at-west-side",
       "name": "Wetzel's PretzelsKiosk at Disney Springs West Side",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "west-side",
       "resort_id": null,
@@ -16198,6 +16636,7 @@
     {
       "id": "whispering-canyon-cafe",
       "name": "Whispering Canyon Cafe",
+      "destination_id": "wdw",
       "area_id": "mk-resort-area",
       "sub_area": null,
       "resort_id": "wilderness-lodge",
@@ -16235,6 +16674,7 @@
     {
       "id": "wine-bar-george",
       "name": "Wine Bar George - A Restaurant & Bar",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "the-landing",
       "resort_id": null,
@@ -16281,6 +16721,7 @@
     {
       "id": "wine-tasting-with-master-sommelier-george-miliotes",
       "name": "Learn How to Taste Wine with Master Sommelier George Miliotes",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "the-landing",
       "resort_id": null,
@@ -16318,6 +16759,7 @@
     {
       "id": "woodys-lunch-box",
       "name": "Woodys Lunch Box",
+      "destination_id": "wdw",
       "area_id": "hollywood-studios",
       "sub_area": "toy-story-land",
       "resort_id": null,
@@ -16357,6 +16799,7 @@
     {
       "id": "world-premiere-food-court",
       "name": "World Premiere Food Court",
+      "destination_id": "wdw",
       "area_id": "ak-resort-area",
       "sub_area": null,
       "resort_id": "all-star-movies-resort",
@@ -16396,6 +16839,7 @@
     {
       "id": "yachtsman-steakhouse",
       "name": "Yachtsman Steakhouse",
+      "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
       "resort_id": "yacht-club-resort",
@@ -16436,6 +16880,7 @@
     {
       "id": "yak-yeti-local-foods-cafe",
       "name": "Yak and Yeti Local Foods Cafe",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "asia",
       "resort_id": null,
@@ -16480,6 +16925,7 @@
     {
       "id": "yak-yeti-quality-beverages",
       "name": "Yak and Yeti Quality Beverages",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "asia",
       "resort_id": null,
@@ -16525,6 +16971,7 @@
     {
       "id": "yak-yeti-restaurant",
       "name": "Yak and Yeti Restaurant",
+      "destination_id": "wdw",
       "area_id": "animal-kingdom",
       "sub_area": "asia",
       "resort_id": null,
@@ -16568,6 +17015,7 @@
     {
       "id": "yesake",
       "name": "YeSake",
+      "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "west-side",
       "resort_id": null,
@@ -16612,6 +17060,7 @@
     {
       "id": "yorkshire-county-fish-shop",
       "name": "Yorkshire County Fish Shop",
+      "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "united-kingdom",
       "resort_id": null,

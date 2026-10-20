@@ -45,11 +45,15 @@ export const TRANSPORT_LABEL: Record<string, string> = {
  * when it wants to report staleness.
  */
 export function useResorts() {
-  const { resorts, loading, refreshError } = useCatalog();
+  const { resorts, loading, refreshError, destinationId } = useCatalog();
+  const data = useMemo(
+    () => resorts.filter((r) => r.destination_id === destinationId),
+    [resorts, destinationId],
+  );
   return {
-    data: resorts,
+    data,
     loading,
-    error: resorts.length === 0 ? refreshError : null,
+    error: data.length === 0 ? refreshError : null,
   };
 }
 

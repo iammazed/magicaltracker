@@ -319,6 +319,14 @@ because the bundle is generated from the same CSVs the database is imported from
 with `npm run data:bundle`; `prestart` and `eas-build-post-install` both run it, so a CSV edit
 cannot reach a build unseen.
 
+**Every catalog read is scoped to `ACTIVE_DESTINATION`.** `destination_id` has been on these
+rows since the first migration precisely so Disneyland can land inside this app, and the
+on-device catalog dropped it for a while — meaning both coasts would have shown in one list and
+the passport would have demanded you eat at Blue Bayou to finish Walt Disney World. It now runs
+the whole path: CSV, bundle, SQLite, the remote refresh columns, and the filters in `useVenues`,
+`useResorts` and `useAreas`. Adding a destination is a data import plus a picker, not a change
+to every screen.
+
 **A failed background refresh is not a load error.** In a local-first app those are different
 conditions, and conflating them is what put a full-page "Could not load resorts" over 35 resorts
 the app was already holding — and, through `useResort`, over every resort detail screen too. The

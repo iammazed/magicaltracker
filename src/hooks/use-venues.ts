@@ -20,13 +20,19 @@ export type Area = CatalogArea;
 export const EVENT_KIND = 'event';
 
 export function useVenues() {
-  const { venues, loading, refreshing, refreshError, refresh } = useCatalog();
+  const { venues, loading, refreshing, refreshError, refresh, destinationId } =
+    useCatalog();
 
-  // Permanently-closed venues stay in the catalog — the passport needs to know
-  // they existed — but nobody browsing dinner wants to see them.
+  // Two filters, for two different reasons. Permanently-closed venues stay in
+  // the catalog because the passport needs to know they existed, but nobody
+  // browsing dinner wants to see them. The destination filter is what keeps
+  // Disneyland out of a Walt Disney World list when it arrives.
   const data = useMemo(
-    () => venues.filter((v) => v.status !== 'permanently-closed'),
-    [venues],
+    () =>
+      venues.filter(
+        (v) => v.status !== 'permanently-closed' && v.destination_id === destinationId,
+      ),
+    [venues, destinationId],
   );
 
   // Same rule as `useResorts`: a refresh failure is only an error when there
@@ -41,8 +47,12 @@ export function useVenues() {
 }
 
 export function useAreas() {
-  const { areas, loading } = useCatalog();
-  return { data: areas, loading, error: null as string | null };
+  const { areas, loading, destinationId } = useCatalog();
+  const data = useMemo(
+    () => areas.filter((a) => a.destination_id === destinationId),
+    [areas, destinationId],
+  );
+  return { data, loading, error: null as string | null };
 }
 
 export type VenueFilters = {
