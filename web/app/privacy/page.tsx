@@ -11,7 +11,7 @@ export default function PrivacyPage() {
   return (
     <LegalShell
       title="Privacy Policy"
-      updated="7 October 2026"
+      updated="20 October 2026"
       intro="MagicalTracker keeps a record of your Walt Disney World trips. This policy explains exactly what that means for your data — what is collected, why, who else can see it, and how to get rid of it."
     >
       <p>
@@ -31,8 +31,17 @@ export default function PrivacyPage() {
         uses either Apple or a one-time email link.
       </p>
       <p>
-        You can use parts of the app without an account. Data logged before you
-        sign up stays on your device until you create one.
+        If you use Sign in with Apple and choose to share your name, Apple sends
+        it to us once, the first time you authorise the app, and we store it so
+        we can address you by it. Apple never sends it again. If you would
+        rather we did not have it, choose to hide it at that first screen.
+      </p>
+      <p>
+        <strong>You can use the entire app without an account.</strong> Every
+        feature works signed out, and nothing you log is sent anywhere until you
+        choose to create one. An account buys exactly one thing: your record
+        surviving a reinstall or reaching a second device. Anything you logged
+        beforehand stays on your device and is uploaded when you first sign in.
       </p>
 
       <h3>Content you create</h3>
@@ -40,33 +49,55 @@ export default function PrivacyPage() {
         This is the substance of the app and it belongs to you. It includes the
         restaurants and resorts you mark as visited, your ratings, visit dates,
         party size, trips and trip dates, and the achievements you earn. On a
-        premium subscription it also includes your notes, the dishes you record,
-        and any photos you attach to a visit.
+        premium subscription it also includes your notes and the dishes you
+        record.
+      </p>
+      <p>
+        <strong>Photos are different, and you should know how.</strong> A photo
+        you attach to a visit never leaves your phone. We do not upload it, we
+        cannot see it, and it is not part of the backup that signing in gives
+        you — which also means a photo is lost if you delete the app or move to
+        a new phone. Everything else you log is covered; photos are not.
       </p>
 
       <h3>Location</h3>
       <p>
         <strong>Only if you turn it on.</strong> The map can show what is near
-        you, which requires your device location while the app is open. Location
-        is used on your device to sort and filter what is nearby. We do not store
-        your location history, and the app does not track your location in the
-        background.
+        you, which requires your device location while the app is open.
+      </p>
+      <p>
+        Your location is read on your phone, used there to sort the list by
+        distance, and discarded. <strong>It is never sent to us or to anyone
+        else</strong>, so there is no location history to store, delete or hand
+        over. The app also never asks for background location, which is a
+        separate permission we have no reason to request.
       </p>
 
-      <h3>Diagnostics and usage</h3>
+      <h3>Crash reports</h3>
       <p>
-        We collect crash reports and basic usage analytics — which screens are
-        opened, which features are used, device model and operating system
-        version — so we can fix what breaks and understand what is worth
-        building. This data is tied to a random identifier, not to your name or
-        email. We do not use it for advertising, and we do not sell it.
+        When the app crashes or hits an error, it sends a report so we can fix
+        it. A report contains the technical details of the failure — the error
+        itself, where in our code it happened, which screen of the app you were
+        on, your device model and your iOS version.
+      </p>
+      <p>
+        It does not contain your name, your email, your IP address, or anything
+        you have logged. We have deliberately turned off the setting that would
+        attach your IP address, because a stack trace is what fixes a crash and
+        knowing who was holding the phone is not.
+      </p>
+      <p>
+        <strong>We do not collect usage analytics.</strong> There is no
+        analytics SDK in this app. We do not record which screens you visit,
+        which features you use, or how long you spend in the app. A crash
+        report is the only diagnostic information we ever receive.
       </p>
 
       <h3>Purchases</h3>
       <p>
-        Subscriptions are processed by Apple. We never see your payment card,
-        billing address, or any financial information. We receive only a
-        confirmation of whether your subscription is active.
+        If you subscribe, the purchase is processed by Apple. We never see your
+        payment card, billing address, or any financial information — only
+        whether a subscription is active.
       </p>
 
       <h2>What we do not do</h2>
@@ -85,26 +116,24 @@ export default function PrivacyPage() {
       </p>
       <ul>
         <li>
-          <strong>Supabase</strong> — database, authentication and file storage.
-          Your account and content are stored here.
+          <strong>Supabase</strong> — database and authentication. Your account
+          and the content you log are stored here.
         </li>
         <li>
-          <strong>Apple</strong> — sign-in and subscription processing.
+          <strong>Apple</strong> — sign-in, and payment processing if you
+          subscribe.
         </li>
         <li>
-          <strong>RevenueCat</strong> — manages subscription status on our
-          behalf.
-        </li>
-        <li>
-          <strong>Sentry</strong> — crash reporting.
-        </li>
-        <li>
-          <strong>PostHog</strong> — product analytics.
+          <strong>Sentry</strong> — crash reports, as described above.
         </li>
         <li>
           <strong>Cloudflare</strong> — hosting for magicaltracker.com.
         </li>
       </ul>
+      <p>
+        That is the complete list. If we ever add another, this page is updated
+        before the change ships.
+      </p>
       <p>
         We may also disclose information if we are legally required to, or to
         protect the safety or rights of our users.
@@ -112,28 +141,40 @@ export default function PrivacyPage() {
 
       <h2>Other users</h2>
       <p>
-        Some premium features summarise ratings across everyone who uses the
-        app, such as top-rated lists and trending restaurants. These are
-        aggregate figures. Your individual ratings, notes and photos are never
-        shown to other users with your name attached unless you explicitly
-        choose to share them.
+        No part of what you log is visible to anyone else. There are no profiles,
+        no feeds, no follower lists and no sharing. Your ratings and notes are
+        yours alone, enforced at the database level rather than by our
+        application code — every row is readable only by the account that wrote
+        it.
+      </p>
+      <p>
+        We may later add features that summarise ratings across everyone, such
+        as a top-rated list. Those would be aggregate figures only, and we will
+        update this page before shipping anything of the kind.
       </p>
 
       <h2>How long we keep it</h2>
       <p>
         Your content is kept as long as your account exists, because the point of
-        the app is a record that survives across years and trips. Diagnostic and
-        analytics data is retained for{" "}
-        12 months.
+        the app is a record that survives across years and trips. Crash reports
+        are deleted automatically by Sentry and are never kept longer than{" "}
+        90 days.
       </p>
 
       <h2>Deleting your data</h2>
       <p>
         You can delete your account from inside the app at any time, under
         Settings. Deleting your account permanently removes your account
-        information and all of your content — visits, ratings, trips, notes and
-        photos — from our systems. This cannot be undone, so export first if you
-        want to keep a copy.
+        information and all of your content — visits, ratings, trips and notes —
+        from our servers. This cannot be undone, so export first if you want to
+        keep a copy.
+      </p>
+      <p>
+        Deleting your account does <strong>not</strong> wipe the copy on your
+        phone, and that is deliberate: &ldquo;close my account&rdquo; and
+        &ldquo;erase the record I have spent years building&rdquo; are different
+        requests, and we will not assume the second from the first. To remove
+        the local copy as well, delete the app from your device.
       </p>
       <p>
         You can also email us at{" "}
