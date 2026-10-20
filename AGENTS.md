@@ -228,8 +228,14 @@ the copy. But a route param outlives a tab change, so inside that copy you can l
 back, and still be in add-to-trip mode with no explanation and no back button — tab screens run
 under `headerShown: false`.
 
-**A mode held in a route param must be cleared when the user leaves the tab**, and the listener
-has to watch the TAB NAVIGATOR's focused route, not the screen's own focus. Pushing the filter
+**A mode held in a route param must be abandoned in REACT STATE, never by clearing the param.**
+`router.setParams` mutates the navigation state, mutating navigation state emits a `state`
+event, and the handler for that event was the thing calling `setParams` — an infinite loop that
+surfaced as "Maximum update depth exceeded" pointing at `app-tabs.tsx`, which is only where the
+re-render storm landed. Recording it in component state cannot emit a navigation event, so the
+handler cannot re-enter itself, and once the flag is set the effect tears its own listener down.
+
+The listener still has to watch the TAB NAVIGATOR's focused route, not the screen's own focus. Pushing the filter
 sheet blurs the screen without changing which tab is selected, so a focus-based check would drop
 you out of the task every time you opened filters. Compare against `useRoute().name` rather than a
 hardcoded route name, and do not capture it at mount — a tab navigator can mount a screen while a

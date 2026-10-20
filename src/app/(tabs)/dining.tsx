@@ -67,7 +67,20 @@ export default function CatalogScreen() {
   // instead of opening the venue.
   const { addToTrip } = useLocalSearchParams<{ addToTrip?: string }>();
   const { trips, plansFor, addPlan, removePlan } = useTrips();
-  const planning = trips.find((t) => t.id === addToTrip) ?? null;
+  /**
+   * The trip being added to, unless the user has walked away from the task.
+   *
+   * "Walked away" is local state, NOT a cleared route param. Clearing the
+   * param was an infinite loop: `setParams` mutates the navigation state,
+   * which fires the `state` event, whose handler saw a still-unfocused tab
+   * and cleared the param again. The crash surfaced in `app-tabs.tsx` because
+   * that is where the re-render storm lands, but the cause was here.
+   */
+  const [abandoned, setAbandoned] = useState<string | null>(null);
+  const planning =
+    addToTrip && addToTrip !== abandoned
+      ? trips.find((t) => t.id === addToTrip) ?? null
+      : null;
   const plannedIds = useMemo(
     () => new Set(planning ? plansFor(planning.id).map((p) => p.venue_id) : []),
     [planning, plansFor],
@@ -80,15 +93,20 @@ export default function CatalogScreen() {
    * Switching tabs abandons the add-to-trip task.
    *
    * `addToTrip` is a route param, and params outlive a tab change — so after
-   * entering this mode, tapping Home and coming back to Dining left the screen
-   * still titled with the trip, still showing checkboxes, still showing a Done
-   * footer, with nothing on screen to explain why and no back button anywhere.
+   * entering this mode, tapping Home and coming back to Dining left the
+   * screen still titled with the trip, still showing checkboxes and a Done
+   * footer, with nothing to explain why and no back button anywhere.
    *
    * This watches the TAB NAVIGATOR's focused route rather than this screen's
-   * own focus, and the distinction is the whole point: opening the filter sheet
+   * own focus, and the distinction is the point: opening the filter sheet
    * pushes a modal that blurs this screen without changing which tab is
-   * selected. Keyed on focus, the filter round-trip would silently drop you out
-   * of the task you were in the middle of.
+   * selected. Keyed on focus, the filter round-trip would drop you out of the
+   * task mid-way.
+   *
+   * It records the abandonment in React state rather than clearing the param.
+   * A state update cannot trigger a navigation `state` event, so the handler
+   * cannot re-enter itself — and once `abandoned` is set, `planning` goes
+   * null and this effect tears the listener down.
    */
   const navigation = useNavigation();
   // This screen's own route name, compared against whichever tab is focused.
@@ -96,15 +114,25 @@ export default function CatalogScreen() {
   // make the comparison always true, and NOT captured at mount, because a tab
   // navigator may mount a screen while a different tab is focused.
   const routeName = useRoute().name;
+
+  // A fresh entry into the flow re-arms it: a different trip id means a new
+  // task, not the one that was walked away from.
+  useEffect(() => {
+    setAbandoned(null);
+  }, [addToTrip]);
+
   useEffect(() => {
     if (!planning) return;
+    const tripId = planning.id;
     const unsubscribe = navigation.addListener('state', () => {
       const state = navigation.getState();
       const focused = state?.routes[state.index]?.name;
-      if (focused && focused !== routeName) router.setParams({ addToTrip: undefined });
+      // Setting the same value twice is a no-op in React, so a burst of state
+      // events during a transition settles instead of compounding.
+      if (focused && focused !== routeName) setAbandoned(tripId);
     });
     return unsubscribe;
-  }, [planning, navigation, router, routeName]);
+  }, [planning, navigation, routeName]);
 
   // The map is a view of the same filtered set, not a separate screen, so
   // switching to it never loses the filters you just chose. It is also local
