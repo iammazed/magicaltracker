@@ -41,6 +41,9 @@ type AuthValue = {
   signInWithApple: () => Promise<{ ok: boolean; error?: string }>;
   sendMagicLink: (email: string) => Promise<{ ok: boolean; error?: string }>;
   signOut: () => Promise<void>;
+  /** Irreversible. Deletes the account and everything stored on the
+   *  server; the local copy on this device is left alone. */
+  deleteAccount: () => Promise<{ ok: boolean; error?: string }>;
 };
 
 const AuthContext = createContext<AuthValue | null>(null);
@@ -217,6 +220,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // and sync picks them up again on the next sign-in.
   }, []);
 
+  /**
+   * Account deletion, required by App Store review since 2022.
+   *
+   * The work happens in a SECURITY DEFINER function, because removing a row
+   * from `auth.users` needs privileges the `authenticated` role does not
+   * have. Every user table cascades from that row, so one call takes the
+   * visits, stays, trips, plans and sync state with it.
+   *
+   * Local SQLite is deliberately untouched. "Delete my account" and "erase
+   * this phone" are different requests, and silently doing the second would
+   * destroy the only copy of a log someone may have spent years building.
+   * The confirmation says exactly that.
+   */
+  const deleteAccount = useCallback(async () => {
+    setBusy(true);
+    try {
+      const { error } = await supabase.rpc('delete_own_account');
+      if (error) return { ok: false, error: error.message };
+      // The session now points at a user that no longer exists, so clear it
+      // locally rather than waiting for the next request to fail.
+      await supabase.auth.signOut();
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: message(e) };
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
   const value = useMemo<AuthValue>(
     () => ({
       status,
@@ -229,8 +261,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signInWithApple,
       sendMagicLink,
       signOut,
+      deleteAccount,
     }),
-    [status, session, busy, linkError, appleAvailable, signInWithApple, sendMagicLink, signOut],
+    [status, session, busy, linkError, appleAvailable, signInWithApple, sendMagicLink,
+     signOut, deleteAccount],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

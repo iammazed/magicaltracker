@@ -401,6 +401,30 @@ flows this app does not use.
 
 ---
 
+## Account deletion
+
+**Required by App Store review since 2022** for any app that creates accounts, and a guaranteed
+rejection without it. It lives on the account screen behind two confirmations.
+
+`public.delete_own_account()` is SECURITY DEFINER because removing a row from `auth.users` needs
+privileges `authenticated` does not have. Four things make that safe, and all four matter:
+
+- `set search_path = ''`, so a caller who can create objects cannot shadow an unqualified name
+  and have it run as `postgres`. Every relation in the body is schema-qualified.
+- The ownership check is **in the body**, not in a policy — a definer function bypasses RLS, so
+  `auth.uid()` is the only id it can ever delete, and a null caller raises instead.
+- `revoke` from `public` and `anon`, `grant` to `authenticated` only.
+- Every user table cascades from `auth.users`, so one statement takes all of it.
+
+Verified over the wire: an anonymous call gets `401 permission denied for function`, refused at
+the privilege layer before the body runs.
+
+**Deleting the account does not touch local SQLite.** "Delete my account" and "erase this phone"
+are different requests, and silently doing the second would destroy the only copy of a log
+someone may have spent years building. The confirmation says so explicitly.
+
+---
+
 ## Sync
 
 **Off by default.** `SYNC_ENABLED` in `use-sync.tsx` is `false`. This is the one feature whose

@@ -36,6 +36,13 @@
       "when": 1792438058936,
       "tag": "0004_flashy_cannonball",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792455225822,
+      "tag": "0005_delete_own_account",
+      "breakpoints": true
     }
   ]
 }

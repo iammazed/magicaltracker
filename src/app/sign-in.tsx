@@ -2,6 +2,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -35,7 +36,7 @@ export default function SignInScreen() {
   const scheme = useColorScheme();
   const {
     status, user, busy, linkError, clearLinkError,
-    appleAvailable, signInWithApple, sendMagicLink, signOut,
+    appleAvailable, signInWithApple, sendMagicLink, signOut, deleteAccount,
   } = useAuth();
   const { visits, stays } = useVisits();
   const { active: syncActive, status: syncStatus, pending, lastResult, lastSyncedAt, sync } =
@@ -44,6 +45,51 @@ export default function SignInScreen() {
   const [email, setEmail] = useState('');
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  /**
+   * Two confirmations, and the second names what is about to happen rather
+   * than asking "are you sure?". Apple requires account deletion to be
+   * reachable in-app; it does not require it to be easy to do by accident.
+   */
+  const onDelete = () => {
+    Alert.alert(
+      'Delete your account?',
+      'This removes your account and everything stored on our servers. It cannot be undone.\n\n' +
+        'Your visits, stays and trips stay on this phone — the app goes back to working without an account. ' +
+        'Export them from Settings first if you want a copy.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Continue',
+          style: 'destructive',
+          onPress: () =>
+            Alert.alert(
+              'Last chance',
+              'Deleting the account for ' + (user?.email ?? 'this account') + '. There is no undo.',
+              [
+                { text: 'Keep my account', style: 'cancel' },
+                {
+                  text: 'Delete it',
+                  style: 'destructive',
+                  onPress: async () => {
+                    const result = await deleteAccount();
+                    if (result.error) {
+                      Alert.alert('Could not delete the account', result.error);
+                      return;
+                    }
+                    Alert.alert(
+                      'Account deleted',
+                      'Everything on our servers is gone. Your log is still on this phone.',
+                    );
+                    router.back();
+                  },
+                },
+              ],
+            ),
+        },
+      ],
+    );
+  };
 
   const onApple = async () => {
     setError(null);
@@ -191,6 +237,17 @@ export default function SignInScreen() {
           <ThemedText type="small" themeColor="textFaint" style={styles.footnote}>
             Signing out leaves everything on this device. It is not a delete.
           </ThemedText>
+
+          <Pressable
+            onPress={onDelete}
+            disabled={busy}
+            accessibilityRole="button"
+            style={[styles.danger, { borderColor: theme.danger }]}
+          >
+            <ThemedText type="small" style={{ color: theme.danger }}>
+              Delete my account
+            </ThemedText>
+          </Pressable>
         </ScrollView>
       </ThemedView>
     );
@@ -471,4 +528,11 @@ const styles = StyleSheet.create({
   centerTitle: { fontSize: 28, lineHeight: 34 },
   centerBody: { lineHeight: 20 },
   footnote: { textAlign: 'center', lineHeight: 17 },
+  danger: {
+    marginTop: Spacing.four,
+    alignItems: 'center',
+    paddingVertical: Spacing.three,
+    borderRadius: Radius.medium,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
 });
