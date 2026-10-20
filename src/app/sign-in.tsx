@@ -39,8 +39,10 @@ export default function SignInScreen() {
     appleAvailable, signInWithApple, sendMagicLink, signOut, deleteAccount,
   } = useAuth();
   const { visits, stays } = useVisits();
-  const { active: syncActive, status: syncStatus, pending, lastResult, lastSyncedAt, sync } =
-    useSync();
+  const {
+    active: syncActive, status: syncStatus, pending, lastResult, lastSyncedAt,
+    sync, flushBeforeSignOut, releaseOwnership,
+  } = useSync();
 
   const [email, setEmail] = useState('');
   const [sentTo, setSentTo] = useState<string | null>(null);
@@ -73,6 +75,7 @@ export default function SignInScreen() {
                   style: 'destructive',
                   onPress: async () => {
                     const result = await deleteAccount();
+                    if (!result.error) await releaseOwnership();
                     if (result.error) {
                       Alert.alert('Could not delete the account', result.error);
                       return;
@@ -87,6 +90,33 @@ export default function SignInScreen() {
               ],
             ),
         },
+      ],
+    );
+  };
+
+  /**
+   * Sign out, but push first.
+   *
+   * Signing out leaves the rows on this device. The next person to sign in
+   * has them wiped — correct, because by then they belong to an account on
+   * the server. That is only true if they reached it, so anything outstanding
+   * goes up first and the user is warned rather than quietly losing it.
+   */
+  const onSignOut = async () => {
+    const { safe, pending: left } = await flushBeforeSignOut();
+    if (safe) {
+      await signOut();
+      return;
+    }
+    Alert.alert(
+      'Some changes have not uploaded',
+      `${left} ${left === 1 ? 'change is' : 'changes are'} still only on this phone. ` +
+        'Signing out keeps them here, but if someone else signs in on this device they ' +
+        'will be cleared.\n\nYou can export from Settings first, or try again with a ' +
+        'better connection.',
+      [
+        { text: 'Stay signed in', style: 'cancel' },
+        { text: 'Sign out anyway', style: 'destructive', onPress: () => void signOut() },
       ],
     );
   };
@@ -226,7 +256,7 @@ export default function SignInScreen() {
           </Pressable>
 
           <Pressable
-            onPress={() => void signOut()}
+            onPress={() => void onSignOut()}
             accessibilityRole="button"
             style={[styles.secondary, { borderColor: theme.border }]}
           >

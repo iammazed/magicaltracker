@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import { jsonList } from '@/lib/local-db';
+import { getSetting, jsonList, setSetting } from '@/lib/local-db';
 import { supabase } from '@/lib/supabase';
 
 /**
@@ -26,11 +26,28 @@ import { supabase } from '@/lib/supabase';
 export type SyncResult = {
   pushed: number;
   pulled: number;
+  /** Rows that existed before any account and were adopted by this one. */
+  claimed: number;
+  /** True when local rows belonging to a DIFFERENT account were cleared. */
+  switchedUser: boolean;
   /** User-facing, already phrased. Null when it worked. */
   error: string | null;
 };
 
-const EMPTY: SyncResult = { pushed: 0, pulled: 0, error: null };
+const EMPTY: SyncResult = {
+  pushed: 0,
+  pulled: 0,
+  claimed: 0,
+  switchedUser: false,
+  error: null,
+};
+
+/** Who the rows currently in SQLite belong to. Null means "nobody yet" —
+ *  guest data, free to be adopted by whoever signs in first. */
+const OWNER_KEY = 'sync_owner_id';
+
+/** Child tables first: `trip_plans` references `trips`. */
+const USER_TABLES = ['trip_plans', 'visits', 'stays', 'trips'] as const;
 
 /* ── Row shapes ───────────────────────────────────────────────────────── */
 
@@ -299,19 +316,59 @@ export async function syncNow(
 ): Promise<SyncResult> {
   if (!userId) return EMPTY;
   try {
+    const owner = (await getSetting(db, OWNER_KEY)) || null;
+
+    /**
+     * A different person on the same phone.
+     *
+     * Local tables carry no user column, so without this the previous
+     * account's rows simply stay in SQLite and start appearing as the new
+     * user's — and the moment one is edited, `synced_at` clears and it is
+     * pushed into the wrong account. Wiping is safe because those rows are
+     * already on the server under their real owner, which is exactly what
+     * `signOut` flushing pending changes is there to guarantee.
+     */
+    let switchedUser = false;
+    if (owner && owner !== userId) {
+      await db.withTransactionAsync(async () => {
+        for (const table of USER_TABLES) {
+          await db.runAsync(`DELETE FROM ${table}`);
+        }
+      });
+      switchedUser = true;
+    }
+
+    /**
+     * Rows that predate any account get adopted by this one. That is the
+     * whole guest-to-account story: there is no separate claim step, because
+     * an unsynced row has no owner and the push stamps it with this user's
+     * id. Counted before the push, since the push is what clears the flag.
+     */
+    const claimed = owner === null ? await pendingCount(db) : 0;
+
     const pushed = await push(db, userId);
     const pulled = await pull(db, userId);
-    return { pushed, pulled, error: null };
+
+    // Only after a clean round trip. Recording it earlier would mean a failed
+    // push left the device claiming to belong to an account it never reached.
+    await setSetting(db, OWNER_KEY, userId);
+
+    return { pushed, pulled, claimed, switchedUser, error: null };
   } catch (e) {
     const raw = e instanceof Error ? e.message : String(e);
     return {
-      pushed: 0,
-      pulled: 0,
+      ...EMPTY,
       error: /network|fetch/i.test(raw)
         ? 'Could not reach the server. Your data is safe on this device and will sync next time.'
         : raw,
     };
   }
+}
+
+/** Forgets which account owns the local rows. Only for a deleted account:
+ *  the rows are now genuinely ownerless again. */
+export async function clearOwner(db: SQLiteDatabase): Promise<void> {
+  await setSetting(db, OWNER_KEY, '');
 }
 
 /** How much is waiting to go up. Drives the "N not backed up yet" line. */

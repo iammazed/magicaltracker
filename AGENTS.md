@@ -472,6 +472,22 @@ false until the next launch.
 round trip that returns nothing — and if the push then failed, the user would be looking at an
 account that claims to be backed up and holds nothing.
 
+**The device records which account owns its rows** (`sync_owner_id` in `app_settings`), and that
+is what makes two accounts on one phone safe. Local tables carry no user column, so without it
+the previous account's rows simply stay in SQLite and start appearing as the new user's — and
+the moment one is edited, `synced_at` clears and it is pushed into the wrong account. On a user
+switch the local user tables are wiped, which is safe only because those rows are already on the
+server under their real owner.
+
+Which is why **signing out flushes first.** Anything still pending is pushed before the session
+ends, and if that fails the user is told rather than quietly losing it when the next person
+signs in. Deleting an account calls `releaseOwnership()`, so the rows become genuinely ownerless
+again and the next sign-in adopts rather than wipes them.
+
+**There is no separate "claim" step.** An unsynced row has no owner, and the push stamps it with
+whoever is signed in — so guest-to-account is just the first sync. `claimed` is counted before
+the push only so the UI can say how many were adopted.
+
 **Photos do not sync, and the UI says so.** They are `file:///var/mobile/...` URIs that mean
 nothing on another device. Pushing the paths would give a second device broken images while
 claiming they were backed up, which is worse than openly not having them.

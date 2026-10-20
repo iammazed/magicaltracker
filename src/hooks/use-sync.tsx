@@ -13,7 +13,7 @@ import {
 import { useAuth } from '@/hooks/use-auth';
 import { useVisits } from '@/hooks/use-visits';
 import { getSetting, setSetting } from '@/lib/local-db';
-import { pendingCount, syncNow, type SyncResult } from '@/lib/sync';
+import { clearOwner, pendingCount, syncNow, type SyncResult } from '@/lib/sync';
 
 /**
  * Sync, behind a switch.
@@ -50,6 +50,11 @@ type SyncValue = {
   lastSyncedAt: string | null;
   sync: () => Promise<void>;
   refreshPending: () => Promise<void>;
+  /** Pushes anything outstanding, then reports whether it is safe to sign
+   *  out — see `flushBeforeSignOut`. */
+  flushBeforeSignOut: () => Promise<{ safe: boolean; pending: number }>;
+  /** Forgets which account owns the local rows. For account deletion. */
+  releaseOwnership: () => Promise<void>;
   /** `__DEV__` only. Returns false in a release build without changing state. */
   setDevEnabled: (on: boolean) => Promise<boolean>;
   devEnabled: boolean;
@@ -161,6 +166,30 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     void refreshPending();
   }, [visits, refreshPending]);
 
+  /**
+   * Flush before signing out.
+   *
+   * Signing out leaves the rows on the device, and the next person to sign in
+   * causes them to be wiped — correct, because by then they live on the
+   * server. That is only true if they actually got there, so anything
+   * outstanding is pushed first and the caller is told whether it worked.
+   */
+  const flushBeforeSignOut = useCallback(async () => {
+    const outstanding = await pendingCount(db);
+    if (outstanding === 0) return { safe: true, pending: 0 };
+    if (!active || authStatus !== 'signed-in' || !user?.id) {
+      return { safe: false, pending: outstanding };
+    }
+    const result = await syncNow(db, user.id);
+    const left = await pendingCount(db);
+    setPending(left);
+    return { safe: !result.error && left === 0, pending: left };
+  }, [db, active, authStatus, user?.id]);
+
+  const releaseOwnership = useCallback(async () => {
+    await clearOwner(db);
+  }, [db]);
+
   const value = useMemo<SyncValue>(
     () => ({
       active,
@@ -170,6 +199,8 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       lastSyncedAt,
       sync,
       refreshPending,
+      flushBeforeSignOut,
+      releaseOwnership,
       devEnabled,
       setDevEnabled: async (on: boolean) => {
         if (!__DEV__) return false;
@@ -178,7 +209,8 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         return on;
       },
     }),
-    [active, status, pending, lastResult, lastSyncedAt, sync, refreshPending, devEnabled, db],
+    [active, status, pending, lastResult, lastSyncedAt, sync, refreshPending,
+     flushBeforeSignOut, releaseOwnership, devEnabled, db],
   );
 
   return <SyncContext.Provider value={value}>{children}</SyncContext.Provider>;
