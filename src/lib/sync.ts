@@ -319,17 +319,39 @@ export async function syncNow(
     const owner = (await getSetting(db, OWNER_KEY)) || null;
 
     /**
-     * A different person on the same phone.
+     * Rows that belong to somebody else.
      *
-     * Local tables carry no user column, so without this the previous
-     * account's rows simply stay in SQLite and start appearing as the new
-     * user's — and the moment one is edited, `synced_at` clears and it is
-     * pushed into the wrong account. Wiping is safe because those rows are
-     * already on the server under their real owner, which is exactly what
-     * `signOut` flushing pending changes is there to guarantee.
+     * The question is how to tell a genuine guest device from one that
+     * belonged to another account, and `synced_at` answers it:
+     *
+     *   nothing ever synced    nobody has owned this device — pure guest
+     *                          data, and the account signing in adopts it
+     *   something has synced   this device has been used with an account,
+     *                          so if that is not the account signing in,
+     *                          NONE of it is ours to show
+     *
+     * Keying on the stored owner id alone was not enough. A device that
+     * synced before the id existed looked exactly like a fresh guest, so the
+     * previous account's rows stayed in SQLite and appeared as the new
+     * user's — which is precisely what happened in testing.
+     *
+     * The wipe takes unsynced rows too, and that is a deliberate trade. A row
+     * logged by the previous user that never uploaded is lost rather than
+     * silently handed to whoever signs in next: a privacy failure is worse
+     * than a data loss the user was warned about, and `signOut` flushing
+     * pending changes — warning if it cannot — is what keeps that warning
+     * honest.
      */
+    const [{ synced }] = await db.getAllAsync<{ synced: number }>(
+      `SELECT (SELECT count(*) FROM visits     WHERE synced_at IS NOT NULL) +
+              (SELECT count(*) FROM stays      WHERE synced_at IS NOT NULL) +
+              (SELECT count(*) FROM trips      WHERE synced_at IS NOT NULL) +
+              (SELECT count(*) FROM trip_plans WHERE synced_at IS NOT NULL) AS synced`,
+    );
+    const foreignDevice = owner !== userId && synced > 0;
+
     let switchedUser = false;
-    if (owner && owner !== userId) {
+    if (foreignDevice) {
       await db.withTransactionAsync(async () => {
         for (const table of USER_TABLES) {
           await db.runAsync(`DELETE FROM ${table}`);
@@ -339,12 +361,12 @@ export async function syncNow(
     }
 
     /**
-     * Rows that predate any account get adopted by this one. That is the
+     * Whatever is left unsynced gets adopted by this account. That is the
      * whole guest-to-account story: there is no separate claim step, because
      * an unsynced row has no owner and the push stamps it with this user's
      * id. Counted before the push, since the push is what clears the flag.
      */
-    const claimed = owner === null ? await pendingCount(db) : 0;
+    const claimed = owner !== userId ? await pendingCount(db) : 0;
 
     const pushed = await push(db, userId);
     const pulled = await pull(db, userId);

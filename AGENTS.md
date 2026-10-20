@@ -472,6 +472,17 @@ false until the next launch.
 round trip that returns nothing — and if the push then failed, the user would be looking at an
 account that claims to be backed up and holds nothing.
 
+**"Has this device ever synced?" is what separates a guest from somebody else's phone**, and
+keying on the stored owner id alone was not enough — a device that synced before that id existed
+looked exactly like a fresh guest, so the previous account's rows stayed in SQLite and showed as
+the new user's. That failed in real testing, not in theory.
+
+The rule: if anything on the device has a non-null `synced_at` and the account signing in is not
+the recorded owner, **every** local user row is cleared. The wipe deliberately includes unsynced
+rows — losing a row the previous user never uploaded beats handing it to whoever signs in next,
+and `signOut` flushing first (warning when it cannot) is what makes that acceptable. A device
+where nothing has ever synced is a true guest device and gets adopted whole.
+
 **The device records which account owns its rows** (`sync_owner_id` in `app_settings`), and that
 is what makes two accounts on one phone safe. Local tables carry no user column, so without it
 the previous account's rows simply stay in SQLite and start appearing as the new user's — and
