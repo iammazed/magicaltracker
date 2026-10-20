@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import { CATALOG_DDL, seedCatalogIfNeeded } from '@/lib/catalog-db';
+import { seedCatalogIfNeeded, syncCatalogSchema } from '@/lib/catalog-db';
 
 /**
  * On-device store for the user's own data.
@@ -111,11 +111,12 @@ export async function migrate(db: SQLiteDatabase) {
   }
 
   if (version < 4) {
-    // Read-only replicas of the catalog. They live in the same database as the
-    // user's rows so there is one file, one connection and one migration
-    // ladder — but they are `catalog_`-prefixed because re-seeding truncates
-    // them, and nothing here may ever do that to a visit.
-    await db.execAsync(CATALOG_DDL);
+    // Version 4 created the catalog tables here, which was the mistake. They
+    // are read-only replicas of bundled data, so they do not belong on a
+    // ladder at all: a ladder step runs once, and "once" is wrong for a
+    // schema that changes whenever a column is added to the catalog. They are
+    // now owned entirely by `syncCatalogSchema` below, which runs on every
+    // launch and rebuilds them when the DDL changes. Nothing to do here.
     version = 4;
   }
 
@@ -145,9 +146,18 @@ export async function migrate(db: SQLiteDatabase) {
 
   await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
 
-  // After the DDL, never before: seeding inserts into tables version 4 creates.
-  // This runs inside `onInit`, so it completes before the first render and
-  // every catalog read can assume the tables are populated.
+  // The catalog tables are NOT governed by the ladder above, and must not be.
+  // The ladder ran `CATALOG_DDL` once at `version < 4`, so a device already
+  // past that never saw a later schema change — and `CREATE TABLE IF NOT
+  // EXISTS` would have been a no-op anyway. That is how `destination_id`
+  // reached new installs only, and killed `onInit` on every existing one.
+  // `syncCatalogSchema` compares a fingerprint of the DDL instead, so it
+  // cannot be forgotten the next time a column is added.
+  await syncCatalogSchema(db);
+
+  // After the DDL, never before: seeding inserts into the tables above. This
+  // runs inside `onInit`, so it completes before the first render and every
+  // catalog read can assume the tables are populated.
   await seedCatalogIfNeeded(db);
 }
 

@@ -327,6 +327,42 @@ the whole path: CSV, bundle, SQLite, the remote refresh columns, and the filters
 `useResorts` and `useAreas`. Adding a destination is a data import plus a picker, not a change
 to every screen.
 
+**The catalog tables are NOT on the migration ladder, and putting them there is what broke
+them.** Adding `destination_id` shipped green — typecheck, the seed test, `expo export`, all
+fine — and then killed `onInit` on every device that already had the app:
+
+```
+SQLiteErrorException: table catalog_venues has no column named destination_id
+```
+
+Two mistakes compounded. `CATALOG_DDL` ran in a single `version < 4` ladder step, so a device
+already at 5 never looked at it again; and `CREATE TABLE IF NOT EXISTS` is **a no-op on a table
+that already exists**, including one whose DDL has since grown a column — so even re-running it
+would have changed nothing. A fresh install got the new column, everybody else got a black screen
+before the first render.
+
+`syncCatalogSchema` owns them instead. It compares a **fingerprint of the DDL text**, and when it
+differs it drops all five `catalog_` tables and rebuilds them. Dropping is safe here and nowhere
+else: they are a disposable replica of data that ships in the app bundle, and losing them costs
+one re-seed, which fires automatically because `bundle_version` lives in the dropped
+`catalog_meta`. Visits, stays and trips are different tables and are never touched.
+
+A fingerprint rather than a version number precisely because the bug *was* somebody changing the
+schema and not bumping anything. A number you must remember to bump is a number you will forget.
+
+**Only `catalog_meta` is created before the fingerprint is read — never the full DDL.** Running
+`CATALOG_DDL` against a stale database throws, because `CREATE INDEX … ON catalog_venues
+(destination_id)` is not a no-op when the table lacks that column. The one statement that looks
+like a safe way to ensure the tables exist is the one that fails first, on exactly the devices
+being repaired. That was a real bug in the first version of the fix, caught by the test below
+rather than by a device.
+
+**`npm run check:catalog` is the guard, and it tests the UPGRADE path.** The seed test built a
+fresh in-memory database, where `IF NOT EXISTS` always yields the current schema — which is why
+it passed throughout. A fresh install and an upgrade are different code paths, and the one your
+users run is not the one that is easy to test. The check starts from the old schema, asserts the
+reported crash reproduces, upgrades, and then asserts the user's visits survived.
+
 **A failed background refresh is not a load error.** In a local-first app those are different
 conditions, and conflating them is what put a full-page "Could not load resorts" over 35 resorts
 the app was already holding — and, through `useResort`, over every resort detail screen too. The
@@ -979,6 +1015,10 @@ Transportation Challenge. Wrong value, unearnable badge.
 - `npm run typecheck` passes.
 - `npm run db:check` passes, if the schema changed.
 - `npm run validate:data` passes, if the CSVs changed.
-- Checked on a real device in **both** light and dark.
+- `npm run check:catalog` passes, if `CATALOG_DDL` changed. A fresh install is not a test —
+  this one upgrades an existing database, which is what every current user actually does.
+- Checked on a real device in **both** light and dark, **and on a device that already had the
+  previous build installed.** A clean install exercises a different code path from an upgrade,
+  and the upgrade path is the one with users on it.
 - No color literals added outside `theme.ts`.
 - No credentials in any committed file — real values go in `.env`, which is gitignored.

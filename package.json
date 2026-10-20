@@ -72,7 +72,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "check:tokens": "node ./scripts/check-tokens.mjs"
+    "check:tokens": "node ./scripts/check-tokens.mjs",
+    "check:catalog": "node ./scripts/check-catalog-schema.mjs"
   },
   "private": true,
   "expo": {

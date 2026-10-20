@@ -230,6 +230,93 @@ async function setMeta(db: SQLiteDatabase, key: string, value: string) {
   );
 }
 
+/* ── Keeping the on-device catalog schema honest ──────────────────────── */
+
+/** Every table `CATALOG_DDL` owns. Nothing user-written may ever be listed
+ *  here: this is the set that gets dropped and rebuilt. */
+const CATALOG_TABLES = [
+  'catalog_venues',
+  'catalog_resorts',
+  'catalog_areas',
+  'catalog_destinations',
+  'catalog_meta',
+] as const;
+
+/**
+ * FNV-1a over the DDL text. Not security, just change detection — it only has
+ * to differ when the schema differs, and it must not need a crypto module.
+ */
+function ddlFingerprint(ddl: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < ddl.length; i += 1) {
+    h ^= ddl.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, '0');
+}
+
+const DDL_FINGERPRINT = ddlFingerprint(CATALOG_DDL);
+
+/** The one table that must exist before anything can be decided, because the
+ *  fingerprint is stored in it. Kept byte-identical to its declaration in
+ *  `CATALOG_DDL`; `syncCatalogSchema` recreates it from the real DDL straight
+ *  after, so the two cannot drift in any way that outlives a single call. */
+const CATALOG_META_DDL = `
+  CREATE TABLE IF NOT EXISTS catalog_meta (
+    key   TEXT PRIMARY KEY NOT NULL,
+    value TEXT
+  );
+`;
+
+/**
+ * Rebuilds the catalog tables whenever `CATALOG_DDL` has changed since this
+ * device last ran, and returns whether it did.
+ *
+ * **This exists because `CREATE TABLE IF NOT EXISTS` is a no-op on a table
+ * that already exists, including when the DDL has grown a column.** Adding
+ * `destination_id` therefore reached new installs and nobody else: an
+ * upgrading device kept the old five-column table while the INSERT had
+ * started naming six, and `onInit` died with "table catalog_venues has no
+ * column named destination_id" — a black screen before the first render, for
+ * every existing user, on a release that tested clean.
+ *
+ * The migration ladder in `local-db.ts` could not catch it either. It ran the
+ * DDL once at `version < 4`, so a device already at 5 never looked at it again.
+ *
+ * Dropping rather than `ALTER TABLE`-ing is safe here, and only here: these
+ * five tables are a disposable replica of data that ships inside the app
+ * bundle. Losing them costs one re-seed from `catalog.json`, which happens
+ * automatically because `bundle_version` lives in the dropped `catalog_meta`.
+ * A user's visits and trips are in different tables and are never touched.
+ *
+ * Keyed on a fingerprint of the DDL rather than a hand-bumped number, because
+ * the bug above was precisely somebody changing the schema and not bumping
+ * anything. A fingerprint cannot be forgotten.
+ */
+export async function syncCatalogSchema(db: SQLiteDatabase): Promise<boolean> {
+  /**
+   * Only `catalog_meta`, never the full DDL — and that is not a shortcut.
+   *
+   * Running `CATALOG_DDL` against a stale database THROWS, because
+   * `CREATE INDEX IF NOT EXISTS catalog_venues_dest_idx ON catalog_venues
+   * (destination_id)` is not a no-op when the table exists without that
+   * column: SQLite raises "no such column: destination_id". So the one
+   * statement that looks like a safe way to make sure the tables are there
+   * is the statement that fails first, on precisely the devices this
+   * function exists to repair. A headless upgrade test caught it.
+   */
+  await db.execAsync(CATALOG_META_DDL);
+
+  if ((await meta(db, 'ddl_fingerprint')) === DDL_FINGERPRINT) return false;
+
+  await db.execAsync(
+    CATALOG_TABLES.map((t) => `DROP TABLE IF EXISTS ${t};`).join('\n'),
+  );
+  await db.execAsync(CATALOG_DDL);
+  await setMeta(db, 'ddl_fingerprint', DDL_FINGERPRINT);
+  return true;
+}
+
 /**
  * Writes a full catalog into SQLite, replacing whatever was there.
  *
