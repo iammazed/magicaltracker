@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
+import { DateField } from '@/components/date-field';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Radius, Spacing } from '@/constants/theme';
@@ -11,6 +12,9 @@ import { todayISO } from '@/lib/local-db';
 
 /** Only check-in is required — someone logging a stay they are currently on
  *  does not yet know the check-out date. */
+/** Walt Disney World opened on 1 October 1971. */
+const PARK_OPENED = '1971-10-01';
+
 export default function LogStayScreen() {
   const { resortId, name } = useLocalSearchParams<{ resortId: string; name?: string }>();
   const router = useRouter();
@@ -56,12 +60,33 @@ export default function LogStayScreen() {
           </ThemedText>
         ) : null}
 
-        <Field label="Check in">
-          <DateInput value={checkIn} onChange={setCheckIn} valid={inValid} />
-        </Field>
+        <DateField
+          label="Check in"
+          value={checkIn || null}
+          placeholder="Pick a date"
+          minISO={PARK_OPENED}
+          openOn={todayISO()}
+          onChange={(iso) => {
+            setCheckIn(iso);
+            // A check-in after the current check-out leaves the stay ending
+            // before it starts, so that choice is dropped rather than kept
+            // and rejected at save time.
+            if (checkOut && checkOut < iso) setCheckOut('');
+          }}
+        />
 
-        <Field label="Check out" hint="Optional">
-          <DateInput value={checkOut} onChange={setCheckOut} valid={outValid} placeholder="Still there?" />
+        <Field label="Check out" hint="Leave empty if you are still there">
+          {/* Earliest selectable day is the check-in, so a stay that ends
+              before it begins is not offerable rather than validated after
+              the fact. */}
+          <DateField
+            label="Check out"
+            value={checkOut || null}
+            placeholder="Still there"
+            minISO={checkIn || PARK_OPENED}
+            openOn={checkIn || todayISO()}
+            onChange={setCheckOut}
+          />
           {backwards ? (
             <ThemedText type="small" style={{ color: theme.danger }}>
               Check-out is before check-in.
@@ -125,38 +150,6 @@ export default function LogStayScreen() {
         </ThemedText>
       </ScrollView>
     </ThemedView>
-  );
-}
-
-function DateInput({
-  value,
-  onChange,
-  valid,
-  placeholder = 'YYYY-MM-DD',
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  valid: boolean;
-  placeholder?: string;
-}) {
-  const theme = useTheme();
-  return (
-    <TextInput
-      value={value}
-      onChangeText={onChange}
-      placeholder={placeholder}
-      placeholderTextColor={theme.textFaint}
-      autoCapitalize="none"
-      autoCorrect={false}
-      style={[
-        styles.input,
-        {
-          backgroundColor: theme.backgroundElement,
-          borderColor: valid ? theme.border : theme.danger,
-          color: theme.text,
-        },
-      ]}
-    />
   );
 }
 

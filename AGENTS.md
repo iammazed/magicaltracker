@@ -545,8 +545,17 @@ no reason to ask for.
 
 ## Dates
 
+**`SyncProvider` is the innermost data provider**, below both `VisitsProvider` and
+`TripsProvider`, because it has to refresh BOTH after a pull or a wipe. Mounted above
+`TripsProvider` it could only refresh visits — so pulled trips were written to SQLite and never
+displayed, and a wiped account's trips stayed on screen under the next user. Both looked like
+sync failures when the database was in fact correct, which cost two rounds of testing.
+
 **Never ask anyone to type a date.** `DateField` is a box the size of a text field that opens a
-small calendar when tapped, and `src/lib/calendar.ts` holds the arithmetic. The calendar is a
+small calendar when tapped, and it is used for EVERY date in the app — trip dates, visit dates,
+resort check-in and check-out. It takes `minISO`, an optional `maxISO`, and `openOn` for the
+month to show when empty: a picker floored at the park's 1971 opening would otherwise open in
+1971 and need fifty years of paging, and `src/lib/calendar.ts` holds the arithmetic. The calendar is a
 `Modal`, not an absolutely-positioned popover — a popover inside the home screen's ScrollView
 would be clipped by it and would scroll away from the field it belongs to. A typed date is the one input where a mistake is
 silent and consequential: `2027-04-31` does not exist, `2072-04-03` is a plausible slip, and a

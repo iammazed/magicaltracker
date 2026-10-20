@@ -36,8 +36,10 @@ export function DateField({
   value,
   placeholder,
   minISO,
+  maxISO,
   disabled,
   tone = 'surface',
+  openOn,
   onChange,
 }: {
   label: string;
@@ -45,9 +47,13 @@ export function DateField({
   placeholder: string;
   /** Nothing before this is selectable. */
   minISO: string;
+  /** Nothing after this is selectable. Omit for no ceiling. */
+  maxISO?: string;
   disabled?: boolean;
   /** `sky` for the twilight gradient, where theme text tokens are invisible. */
   tone?: 'surface' | 'sky';
+  /** Month to open on when empty. Defaults to the minimum. */
+  openOn?: string;
   onChange: (iso: string) => void;
 }) {
   const theme = useTheme();
@@ -108,6 +114,8 @@ export function DateField({
         title={`Choose ${label.toLowerCase()}`}
         value={value}
         minISO={minISO}
+        maxISO={maxISO}
+        openOn={openOn}
         onClose={() => setOpen(false)}
         onPick={(iso) => {
           onChange(iso);
@@ -130,6 +138,8 @@ function CalendarSheet({
   title,
   value,
   minISO,
+  maxISO,
+  openOn,
   onClose,
   onPick,
 }: {
@@ -137,6 +147,10 @@ function CalendarSheet({
   title: string;
   value: string | null;
   minISO: string;
+  maxISO?: string;
+  /** Which month to show when there is no value yet. Without it a picker
+   *  whose floor is 1971 opens in 1971, which is a lot of paging. */
+  openOn?: string;
   onClose: () => void;
   onPick: (iso: string) => void;
 }) {
@@ -148,10 +162,14 @@ function CalendarSheet({
   );
   // Opens on the month of the current value, or on the earliest allowed month.
   const [view, setView] = useState<YearMonth>(
-    () => monthOf(value ?? minISO) ?? minMonth,
+    () => monthOf(value ?? openOn ?? minISO) ?? minMonth,
   );
   const weeks = useMemo(() => monthGrid(view), [view]);
   const atMin = view.year === minMonth.year && view.month === minMonth.month;
+  const maxMonth = maxISO ? monthOf(maxISO) : null;
+  const atMax = maxMonth
+    ? view.year === maxMonth.year && view.month === maxMonth.month
+    : false;
 
   return (
     <Modal
@@ -161,7 +179,7 @@ function CalendarSheet({
       onRequestClose={onClose}
       // Reopening should land on the relevant month rather than wherever the
       // user paged to last time.
-      onShow={() => setView(monthOf(value ?? minISO) ?? minMonth)}
+      onShow={() => setView(monthOf(value ?? openOn ?? minISO) ?? minMonth)}
     >
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close">
         {/* A Pressable that swallows the tap, so pressing inside the card does
@@ -196,10 +214,11 @@ function CalendarSheet({
             <ThemedText type="small">{monthLabel(view)}</ThemedText>
             <Pressable
               onPress={() => setView(addMonths(view, 1))}
+              disabled={atMax}
               accessibilityRole="button"
               accessibilityLabel="Next month"
               hitSlop={8}
-              style={styles.nav}
+              style={[styles.nav, { opacity: atMax ? 0.25 : 1 }]}
             >
               <ThemedText style={[styles.navMark, { color: theme.accent }]}>›</ThemedText>
             </Pressable>
@@ -221,7 +240,8 @@ function CalendarSheet({
           {weeks.map((week, w) => (
             <View key={w} style={styles.week}>
               {week.map((cell) => {
-                const disabled = !cell.inMonth || cell.iso < minISO;
+                const disabled =
+                  !cell.inMonth || cell.iso < minISO || (!!maxISO && cell.iso > maxISO);
                 const selected = cell.iso === value;
                 return (
                   <Pressable

@@ -11,6 +11,7 @@ import {
 } from 'react';
 
 import { useAuth } from '@/hooks/use-auth';
+import { useTrips } from '@/hooks/use-trips';
 import { useVisits } from '@/hooks/use-visits';
 import { getSetting, setSetting } from '@/lib/local-db';
 import { clearOwner, pendingCount, syncNow, type SyncResult } from '@/lib/sync';
@@ -68,6 +69,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   const db = useSQLiteContext();
   const { status: authStatus, user } = useAuth();
   const { visits, refresh: refreshVisits } = useVisits();
+  const { trips, refresh: refreshTrips } = useTrips();
 
   const [status, setStatus] = useState<SyncStatus>('idle');
   const [pending, setPending] = useState(0);
@@ -119,13 +121,24 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         await setSetting(db, LAST_SYNC_KEY, now);
         setLastSyncedAt(now);
       }
-      // Pulled rows are invisible until the store re-reads SQLite.
-      if (result.pulled > 0) await refreshVisits();
+      /**
+       * Both stores, always — not just when rows came down.
+       *
+       * A wipe deletes from SQLite and changes nothing in memory, so without
+       * this the previous account's trips stayed on screen under the new
+       * user. And pulled trips were written but never displayed, because
+       * `TripsProvider` had already loaded an empty list. Refreshing only
+       * `visits` is what made both of those look like sync failures when the
+       * database was in fact correct.
+       */
+      if (result.pulled > 0 || result.switchedUser) {
+        await Promise.all([refreshVisits(), refreshTrips()]);
+      }
       await refreshPending();
     } finally {
       inFlight.current = false;
     }
-  }, [active, authStatus, user?.id, db, refreshVisits, refreshPending]);
+  }, [active, authStatus, user?.id, db, refreshVisits, refreshTrips, refreshPending]);
 
   /** On sign-in. Not on every render, and not on a timer. */
   useEffect(() => {
@@ -157,14 +170,12 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   /**
    * Keep the pending count honest as things are logged.
    *
-   * `visits` changes whenever the store writes, which is the cheapest signal
-   * available that something now needs uploading. Trips are not visible from
-   * here — `TripsProvider` mounts inside this one — so a trip created without
-   * a visit is only noticed on the next foreground or manual sync.
+   * `visits` and `trips` change whenever either store writes, which is the
+   * cheapest signal available that something now needs uploading.
    */
   useEffect(() => {
     void refreshPending();
-  }, [visits, refreshPending]);
+  }, [visits, trips, refreshPending]);
 
   /**
    * Flush before signing out.

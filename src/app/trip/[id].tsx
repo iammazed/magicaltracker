@@ -180,8 +180,18 @@ export default function TripScreen() {
           )}
         </Section>
 
-        <Pressable onPress={confirmDelete} accessibilityRole="button" style={styles.delete}>
-          <ThemedText type="small" style={{ color: theme.danger }}>
+        <Pressable
+          onPress={confirmDelete}
+          accessibilityRole="button"
+          style={({ pressed }) => [
+            styles.delete,
+            {
+              borderColor: theme.danger,
+              backgroundColor: pressed ? theme.backgroundSelected : 'transparent',
+            },
+          ]}
+        >
+          <ThemedText type="small" style={{ color: theme.danger, fontWeight: '600' }}>
             Delete trip
           </ThemedText>
         </Pressable>
@@ -201,8 +211,19 @@ function Section({
           {title.toUpperCase()}
         </ThemedText>
         {action && onAction ? (
-          <Pressable onPress={onAction} accessibilityRole="button" hitSlop={8}>
-            <ThemedText type="small" style={{ color: theme.accent }}>{action}</ThemedText>
+          <Pressable
+            onPress={onAction}
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              styles.sectionAction,
+              {
+                backgroundColor: pressed ? theme.accentPressed : theme.accent,
+              },
+            ]}
+          >
+            <ThemedText type="small" style={{ color: theme.onAccent, fontWeight: '600' }}>
+              {action}
+            </ThemedText>
           </Pressable>
         ) : null}
       </View>
@@ -247,5 +268,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.two, paddingVertical: 3,
     borderRadius: Radius.pill, borderWidth: StyleSheet.hairlineWidth,
   },
-  delete: { alignItems: 'center', paddingVertical: Spacing.three },
+  sectionAction: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one + 2,
+    borderRadius: Radius.pill,
+  },
+  // Outlined rather than filled: destructive, and not the thing anyone came
+  // to this screen to do.
+  delete: {
+    marginTop: Spacing.four,
+    alignItems: 'center',
+    paddingVertical: Spacing.three,
+    borderRadius: Radius.medium,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
 });

@@ -73,8 +73,12 @@ export default function RootLayout() {
       <CatalogProvider>
         <CatalogFiltersProvider>
         <VisitsProvider>
-          <SyncProvider>
-            <TripsProvider>
+          {/* Sync is innermost on purpose: it has to be able to refresh BOTH
+              stores after a pull or a wipe. Mounted above TripsProvider it
+              could only refresh visits, so pulled trips stayed invisible and
+              a wiped account's trips stayed on screen. */}
+          <TripsProvider>
+            <SyncProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <AnimatedSplashOverlay />
             <Stack
@@ -152,8 +156,8 @@ export default function RootLayout() {
               />
             </Stack>
         </ThemeProvider>
-            </TripsProvider>
-          </SyncProvider>
+            </SyncProvider>
+          </TripsProvider>
         </VisitsProvider>
         </CatalogFiltersProvider>
       </CatalogProvider>

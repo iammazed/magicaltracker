@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
+import { DateField } from '@/components/date-field';
 import { PremiumGate } from '@/components/premium-gate';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -18,6 +19,9 @@ import { todayISO } from '@/lib/local-db';
  * optional. A form that demands a rating before it will save is a form people
  * skip when they are tired and standing in a queue.
  */
+/** Walt Disney World opened on 1 October 1971. */
+const PARK_OPENED = '1971-10-01';
+
 export default function LogVisitScreen() {
   const { venueId, name } = useLocalSearchParams<{ venueId: string; name?: string }>();
   const router = useRouter();
@@ -74,7 +78,6 @@ export default function LogVisitScreen() {
   };
 
   const dateValid = /^\d{4}-\d{2}-\d{2}$/.test(visitedOn);
-  const future = dateValid && visitedOn > todayISO();
 
   const save = async () => {
     if (!venueId || !dateValid || saving) return;
@@ -108,35 +111,20 @@ export default function LogVisitScreen() {
           </ThemedText>
         ) : null}
 
-        <Field label="Date">
-          <TextInput
-            value={visitedOn}
-            onChangeText={setVisitedOn}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={theme.textFaint}
-            autoCapitalize="none"
-            autoCorrect={false}
-            style={[
-              styles.input,
-              {
-                backgroundColor: theme.backgroundElement,
-                borderColor: dateValid ? theme.border : theme.danger,
-                color: theme.text,
-              },
-            ]}
-          />
-          {!dateValid ? (
-            <ThemedText type="small" style={{ color: theme.danger }}>
-              Use the format YYYY-MM-DD.
-            </ThemedText>
-          ) : future ? (
-            // Warn, never block. Someone logging a trip they are mid-way
-            // through can be right about a date that looks wrong.
-            <ThemedText type="small" style={{ color: theme.warning }}>
-              That date is in the future. Saving it anyway is fine.
-            </ThemedText>
-          ) : null}
-        </Field>
+        {/* A calendar, not a text field. The same reasoning as the trip
+            planner: a typed date can be one that does not exist, and a visit
+            dated 2072 is wrong rather than broken, so nobody notices.
+            Floor is the day Walt Disney World opened; no ceiling, because
+            logging a meal mid-trip on a date the phone thinks is tomorrow is
+            a real thing that happens across time zones. */}
+        <DateField
+          label="Date"
+          value={visitedOn}
+          placeholder="Pick a date"
+          minISO={PARK_OPENED}
+          openOn={todayISO()}
+          onChange={setVisitedOn}
+        />
 
         <Field label="Rating" hint="Optional">
           <View style={styles.stars}>
