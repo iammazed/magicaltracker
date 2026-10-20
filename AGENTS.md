@@ -433,10 +433,11 @@ someone may have spent years building. The confirmation says so explicitly.
 
 ## Sync
 
-**Off by default.** `SYNC_ENABLED` in `use-sync.tsx` is `false`. This is the one feature whose
-bug destroys data rather than displaying something wrong, so it does not run until the
-guest-to-account path has been exercised on a throwaway account — including running a claim
-twice. Settings has a `__DEV__`-only override for testing without flipping the master switch.
+**On**, as of the end-to-end run on a real device — guest adoption, reinstall recovery, and two
+accounts on one phone staying separate in both directions. The `__DEV__` toggle in Settings
+remains for turning it back off while debugging. It is the one feature whose bug destroys data rather than
+displaying something wrong, which is why it shipped behind a flag and stayed there until a real
+device had exercised every account transition.
 
 **Device-generated ids are what make it safe.** Both sides key on the same UUID, so every write
 is an upsert and the whole cycle is idempotent. There is no id mapping to get wrong and no "did
@@ -550,6 +551,12 @@ no reason to ask for.
 `TripsProvider` it could only refresh visits — so pulled trips were written to SQLite and never
 displayed, and a wiped account's trips stayed on screen under the next user. Both looked like
 sync failures when the database was in fact correct, which cost two rounds of testing.
+
+**Never render a raw ISO date.** `2026-11-02 – 2026-11-06` reads badly for a specific reason:
+ISO dates are full of hyphens, so a hyphen between two of them looks like more date rather than
+a separator. `formatRange` collapses whatever the ends share — `Nov 2–6, 2026`,
+`Oct 30 – Nov 3, 2026`, `Dec 30, 2026 – Jan 2, 2027` — and `formatDate` handles a date
+standing alone.
 
 **Never ask anyone to type a date.** `DateField` is a box the size of a text field that opens a
 small calendar when tapped, and it is used for EVERY date in the app — trip dates, visit dates,

@@ -17,7 +17,7 @@ import { useResorts } from '@/hooks/use-resorts';
 import { useTheme } from '@/hooks/use-theme';
 import { daysUntil, tripStatus, useTrips } from '@/hooks/use-trips';
 import type { Trip } from '@/lib/local-db';
-import { formatShort } from '@/lib/calendar';
+import { formatRange } from '@/lib/calendar';
 import { useVenues } from '@/hooks/use-venues';
 import { useVisits } from '@/hooks/use-visits';
 
@@ -190,7 +190,7 @@ export default function HomeScreen() {
                   )}
 
                   <ThemedText style={styles.heroMeta}>
-                    {activeTrip.start_date} – {activeTrip.end_date}
+                    {formatRange(activeTrip.start_date, activeTrip.end_date)}
                   </ThemedText>
                   <ThemedText style={styles.heroMeta}>
                     {activeTrip.resort_id
@@ -375,7 +375,7 @@ function TripRow({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${trip.name}, ${trip.start_date} to ${trip.end_date}`}
+      accessibilityLabel={`${trip.name}, ${formatRange(trip.start_date, trip.end_date)}`}
       style={({ pressed }) => [
         styles.tripRow,
         {
@@ -390,7 +390,7 @@ function TripRow({
           {trip.name}
         </ThemedText>
         <ThemedText type="small" themeColor="textFaint" numberOfLines={1}>
-          {formatShort(trip.start_date)} – {formatShort(trip.end_date)}
+          {formatRange(trip.start_date, trip.end_date)}
           {plannedCount > 0
             ? `  ·  ${plannedCount} ${plannedCount === 1 ? 'place' : 'places'}`
             : ''}

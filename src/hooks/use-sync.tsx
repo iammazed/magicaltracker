@@ -32,10 +32,16 @@ import { clearOwner, pendingCount, syncNow, type SyncResult } from '@/lib/sync';
  */
 
 /**
- * The master switch. Set to `true` only after the guest-to-account path has
- * been verified end to end, including running a claim twice.
+ * The master switch.
+ *
+ * On, as of the end-to-end run on a real device: guest data adopted on first
+ * sign-in, a reinstall pulling an account back, and two accounts on one phone
+ * staying separate in both directions. Two bugs died in that run — a stale
+ * `TripsProvider` that made correct database state look like a failed sync,
+ * and an ownership check that treated a device which had synced before the
+ * owner id existed as a fresh guest.
  */
-export const SYNC_ENABLED = false;
+export const SYNC_ENABLED = true;
 
 /** Dev-only override, so it can be exercised while the master switch is off. */
 const DEV_KEY = 'sync_dev_enabled';

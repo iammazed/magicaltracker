@@ -17,6 +17,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { menuLinks, useVenue } from '@/hooks/use-venue';
 import { useVenueVisits } from '@/hooks/use-visits';
+import { formatDate } from '@/lib/calendar';
 import { jsonList } from '@/lib/local-db';
 import { formatArray, formatCuisine, formatSubArea, titleCase } from '@/lib/labels';
 
@@ -121,7 +122,7 @@ export default function VenueDetailScreen() {
                     <ThemedText type="smallBold">
                       {/* An onboarding backfill has today's date as a
                           placeholder, so showing it would be a small lie. */}
-                      {v.date_exact ? v.visited_on : 'Visited — date not set'}
+                      {v.date_exact ? formatDate(v.visited_on) : 'Visited — date not set'}
                       {i === 0 && visits.length > 1 ? '  (most recent)' : ''}
                     </ThemedText>
                     <ThemedText type="small" themeColor="textSecondary">
@@ -163,7 +164,7 @@ export default function VenueDetailScreen() {
                   <Pressable
                     onPress={() => void deleteVisit(v.id)}
                     accessibilityRole="button"
-                    accessibilityLabel={`Delete visit on ${v.visited_on}`}
+                    accessibilityLabel={`Delete visit on ${formatDate(v.visited_on)}`}
                     hitSlop={8}
                   >
                     <ThemedText type="small" style={{ color: theme.danger }}>

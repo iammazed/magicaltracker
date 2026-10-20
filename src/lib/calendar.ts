@@ -122,6 +122,49 @@ export function nightsBetween(startISO: string, endISO: string): number {
   return Math.round(ms / 86_400_000);
 }
 
+/**
+ * `2027-04-03` -> `Apr 3, 2027`. For a date standing on its own.
+ */
+export function formatDate(iso: string): string {
+  const p = parseISO(iso);
+  if (!p) return '';
+  return `${MONTHS[p.month].slice(0, 3)} ${p.day}, ${p.year}`;
+}
+
+/**
+ * A trip's dates as one readable span.
+ *
+ * `2026-11-02 – 2026-11-06` was the previous rendering, and it reads badly
+ * for a specific reason: ISO dates are full of hyphens, so a hyphen BETWEEN
+ * them does not look like a separator, it looks like more date. Spelling the
+ * months out removes the ambiguity entirely.
+ *
+ * Collapses whatever the two ends share:
+ *   same month   Nov 2–6, 2026
+ *   same year    Oct 30 – Nov 3, 2026
+ *   neither      Dec 30, 2026 – Jan 2, 2027
+ *
+ * The tight en dash in the first case is deliberate — a numeric range closes
+ * up, a range of two separate dates does not.
+ */
+export function formatRange(startISO: string, endISO: string): string {
+  const a = parseISO(startISO);
+  const b = parseISO(endISO);
+  if (!a || !b) return '';
+
+  const month = (m: number) => MONTHS[m].slice(0, 3);
+
+  if (a.year === b.year && a.month === b.month) {
+    return a.day === b.day
+      ? `${month(a.month)} ${a.day}, ${a.year}`
+      : `${month(a.month)} ${a.day}–${b.day}, ${a.year}`;
+  }
+  if (a.year === b.year) {
+    return `${month(a.month)} ${a.day} – ${month(b.month)} ${b.day}, ${a.year}`;
+  }
+  return `${month(a.month)} ${a.day}, ${a.year} – ${month(b.month)} ${b.day}, ${b.year}`;
+}
+
 /** `2027-04-03` -> `Sat, Apr 3`. */
 export function formatShort(iso: string): string {
   const parsed = parseISO(iso);

@@ -15,6 +15,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Radius, Spacing } from '@/constants/theme';
 import { TIER_LABEL, TRANSPORT_LABEL, useResort } from '@/hooks/use-resorts';
 import { useTheme } from '@/hooks/use-theme';
+import { formatDate, formatRange } from '@/lib/calendar';
 import { useResortStays } from '@/hooks/use-visits';
 
 export default function ResortDetailScreen() {
@@ -85,8 +86,9 @@ export default function ResortDetailScreen() {
                 <View key={s.id} style={[styles.listRow, { borderColor: theme.borderSoft }]}>
                   <View style={styles.listMain}>
                     <ThemedText type="smallBold">
-                      {s.check_in}
-                      {s.check_out ? ` – ${s.check_out}` : '  (no check-out logged)'}
+                      {s.check_out
+                        ? formatRange(s.check_in, s.check_out)
+                        : `${formatDate(s.check_in)}  ·  still there`}
                     </ThemedText>
                     <ThemedText type="small" themeColor="textSecondary">
                       {s.rating ? '★'.repeat(s.rating) + '☆'.repeat(5 - s.rating) : 'Not rated'}
@@ -96,7 +98,7 @@ export default function ResortDetailScreen() {
                   <Pressable
                     onPress={() => void deleteStay(s.id)}
                     accessibilityRole="button"
-                    accessibilityLabel={`Delete stay from ${s.check_in}`}
+                    accessibilityLabel={`Delete stay from ${formatDate(s.check_in)}`}
                     hitSlop={8}
                   >
                     <ThemedText type="small" style={{ color: theme.danger }}>

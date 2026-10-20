@@ -11,6 +11,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { daysUntil, tripStatus, useTrips } from '@/hooks/use-trips';
 import { useVenues } from '@/hooks/use-venues';
 import { useVisits } from '@/hooks/use-visits';
+import { formatRange } from '@/lib/calendar';
 import { formatCuisine } from '@/lib/labels';
 
 export default function TripScreen() {
@@ -74,7 +75,7 @@ export default function TripScreen() {
               </ThemedText>
             )}
             <ThemedText style={styles.meta}>
-              {trip.start_date} – {trip.end_date}
+              {formatRange(trip.start_date, trip.end_date)}
             </ThemedText>
           </View>
         </SkyCard>
