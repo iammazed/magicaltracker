@@ -1,3 +1,9 @@
+// FIRST, and the order is load-bearing: imports evaluate top-down, so this is
+// what gets Sentry running before SQLiteProvider starts migrating. A crash in
+// a migration is precisely the one nobody can reproduce by hand.
+import '@/lib/sentry';
+
+import * as Sentry from '@sentry/react-native';
 import {
   DarkTheme,
   DefaultTheme,
@@ -32,7 +38,7 @@ SplashScreen.preventAutoHideAsync();
  * Deliberately styled with literals rather than tokens: this has to work even
  * when the thing that broke is the theme.
  */
-export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+function AppErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   return (
     <View style={styles.errorRoot}>
       <ScrollView contentContainerStyle={styles.errorScroll}>
@@ -47,6 +53,22 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   );
 }
 
+/**
+ * The boundary above, wrapped so Sentry actually hears about the error.
+ *
+ * This is not belt-and-braces. **A render error caught by a boundary does not
+ * reach Sentry on its own** — React considers it handled the moment the
+ * boundary renders, so it never reaches the global `ErrorUtils` handler the
+ * SDK hooks. Every screen that threw would have shown "Something broke" to
+ * the user and reported precisely nothing, which is the worst of both: the
+ * failure is visible to the one person who cannot fix it and invisible to the
+ * one who can.
+ *
+ * The wrapper captures the error with the route name, path and params
+ * attached, and leaves the UI above exactly as it was.
+ */
+export const ErrorBoundary = Sentry.wrapExpoRouterErrorBoundary(AppErrorBoundary);
+
 
 /**
  * Root navigator — a Stack, with the tab group as its first screen.
@@ -55,7 +77,7 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
  * tabs (venue detail, log-visit sheet, /theme) must be declared here rather
  * than inside `(tabs)`.
  */
-export default function RootLayout() {
+function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
@@ -168,6 +190,13 @@ export default function RootLayout() {
     </SQLiteProvider>
   );
 }
+
+/**
+ * `Sentry.wrap` adds the touch-event breadcrumbs and the app-start timings.
+ * It has to go on the ROOT component — wrapping anything lower would only see
+ * part of the tree, and app start would already be over by the time it mounted.
+ */
+export default Sentry.wrap(RootLayout);
 
 const styles = StyleSheet.create({
   errorRoot: { flex: 1, backgroundColor: '#0C1418' },

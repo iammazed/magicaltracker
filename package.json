@@ -8,6 +8,7 @@
     "@expo-google-fonts/pacifico": "^0.4.1",
     "@expo/ui": "~57.0.19",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@sentry/react-native": "~8.31.0",
     "@supabase/supabase-js": "^2.117.3",
     "drizzle-orm": "^0.45.2",
     "expo": "~57.0.24",
@@ -73,5 +74,12 @@
     "lint": "expo lint",
     "check:tokens": "node ./scripts/check-tokens.mjs"
   },
-  "private": true
+  "private": true,
+  "expo": {
+    "install": {
+      "exclude": [
+        "@sentry/react-native"
+      ]
+    }
+  }
 }

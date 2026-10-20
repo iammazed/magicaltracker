@@ -63,6 +63,14 @@
           "isIosBackgroundLocationEnabled": false,
           "isAndroidBackgroundLocationEnabled": false
         }
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "organization": "grey-fox-creations-llc",
+          "project": "magicaltracker"
+        }
       ]
     ],
     "experiments": {

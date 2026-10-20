@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/react-native';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -15,6 +16,7 @@ import { useSync } from '@/hooks/use-sync';
 import { useTheme } from '@/hooks/use-theme';
 import { useVisits } from '@/hooks/use-visits';
 import { exportFilename, shareCsv, staysCsv, visitsCsv } from '@/lib/export-csv';
+import { SENTRY_ENABLED } from '@/lib/sentry';
 
 /**
  * Settings, export, and the About block.
@@ -233,6 +235,17 @@ export default function SettingsScreen() {
             action="Open"
             onPress={() => void Linking.openURL('https://magicaltracker.com/support')}
           />
+          {/* Stated in every build, not just dev, because the failure this
+              catches is a RELEASE one: if EXPO_PUBLIC_SENTRY_DSN is missing
+              from an EAS environment, crash reporting is off and absolutely
+              nothing else says so — an empty Sentry dashboard reads exactly
+              like a stable app. Same lesson as the heartbeat workflow that
+              exited 0 and showed green ticks while pinging nothing. */}
+          <ThemedText type="small" themeColor="textFaint">
+            {SENTRY_ENABLED
+              ? 'Crash reports are sent anonymously to help fix problems.'
+              : 'Crash reporting is not configured in this build.'}
+          </ThemedText>
         </Section>
 
         {__DEV__ ? (
@@ -247,6 +260,32 @@ export default function SettingsScreen() {
               }
               action={devEnabled ? 'Turn off' : 'Turn on'}
               onPress={() => void setDevEnabled(!devEnabled)}
+            />
+            {/* Proves the whole chain in one tap: SDK initialised, DSN
+                reachable, event accepted. `captureException` rather than a
+                real throw, so verifying crash reporting does not require
+                crashing the app you are standing in. */}
+            <Row
+              label="Send a test event to Sentry"
+              sub={
+                SENTRY_ENABLED
+                  ? 'Appears in the Sentry dashboard within a minute'
+                  : 'No DSN in this build — nothing would be sent'
+              }
+              action={SENTRY_ENABLED ? 'Send' : 'Off'}
+              onPress={() => {
+                if (!SENTRY_ENABLED) {
+                  Alert.alert(
+                    'Crash reporting is off',
+                    'EXPO_PUBLIC_SENTRY_DSN is not set in this build.',
+                  );
+                  return;
+                }
+                const id = Sentry.captureException(
+                  new Error('MagicalTracker test event from Settings'),
+                );
+                Alert.alert('Sent to Sentry', `Event ${id.slice(0, 8)}…`);
+              }}
             />
           </Section>
         ) : null}

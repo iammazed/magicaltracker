@@ -724,6 +724,60 @@ exists to be handed to another app, and iOS reclaims it on its own.
 
 ---
 
+## Crash reporting
+
+Sentry, configured in `src/lib/sentry.ts`, which is the **first import in
+`src/app/_layout.tsx`** — imports evaluate top-down, so that is what gets the SDK running before
+`SQLiteProvider` starts migrating. A crash inside a migration is exactly the one nobody can
+reproduce by hand, and initialising inside a component would be too late to see it.
+
+**A render error caught by a boundary does not reach Sentry on its own.** React considers the
+error handled the moment the boundary renders, so it never reaches the global `ErrorUtils`
+handler the SDK hooks. This app has a custom `ErrorBoundary` in the root layout, which meant
+every screen that threw would have shown "Something broke" to the one person who cannot fix it
+and reported nothing to the one who can. `Sentry.wrapExpoRouterErrorBoundary` wraps it, keeps the
+UI exactly as it was, and attaches the route name, path and params.
+
+**The SDK is v8, deliberately against Expo's pin.** `npx expo install` resolves
+`@sentry/react-native` to `~7.11.0` from `bundledNativeModules.json`, which was published two
+weeks before Sentry v8 existed and still lists the deprecated `sentry-expo` beside it — it is
+stale, not a judgement. The v7→v8 break is entirely native floors (iOS 15, Xcode 16.4, AGP 7.4,
+Kotlin 1.8) and SDK 57 already requires iOS 16.4 and Xcode 26.4, so every floor is cleared and
+the JS API is unchanged. `expo.install.exclude` in `package.json` is what stops `expo-doctor`
+and `expo install --check` quietly pulling 7.11 back.
+
+**`metro.config.js` exists only for Sentry.** There was none before; Metro used the default
+implicitly. `getSentryExpoConfig` is that same default plus a Debug ID stamped into every bundle
+and its source map, which is what matches a minified frame back to a line of TypeScript. Without
+it a crash report is a wall of `index.bundle:1:84213`. Verify after a config change by grepping
+an export for `sentry-dbid-`.
+
+**`sendDefaultPii` is false, and that is a decision.** Sentry's own example sets it `true`, which
+attaches the user's IP address and request headers to every event — making IP a collected
+identifier that the Privacy Nutrition Label must declare and the privacy policy must describe. A
+stack trace fixes a crash in a trip log; who was holding the phone does not.
+
+**A missing DSN warns, it does not throw** — the opposite of `supabase.ts`, and for a reason. No
+Supabase key means the app cannot work. No DSN means only that crashes go unrecorded, and taking
+the app down over that would make the crash reporter the largest single source of crashes.
+
+The real risk is the inverse, and it is the heartbeat workflow's `exit 0` again: **an empty
+Sentry dashboard reads exactly like a stable app.** If `EXPO_PUBLIC_SENTRY_DSN` is missing from
+an EAS environment, a release build reports nothing and nothing says so. Hence `SENTRY_ENABLED`,
+and hence the line in Settings → About stating it in *every* build rather than only in dev.
+
+**`SENTRY_AUTH_TOKEN` is build-time only.** It must never take an `EXPO_PUBLIC_` prefix and never
+go in `app.json` — the plugin accepts an `authToken` prop and deletes it again precisely because
+it would otherwise be written into the shipped package. Org and project slugs *do* appear in the
+public manifest, which is fine: both are visible in any Sentry URL and the DSN encodes them
+anyway.
+
+Sentry needs a **new development build**; the config plugin adds native code, so Expo Go reports
+JS errors over HTTP and nothing else. `isRunningInExpoGo()` gates the options that read native
+frames, so Expo Go does not warn on every launch about a module that was never going to be there.
+
+---
+
 ## Builds
 
 The bundle identifier is **`com.greyfoxcreations.magicaltracker`** on both platforms, and it is
@@ -736,6 +790,36 @@ Disneyland and the other destinations are NOT one of them, they land inside this
 numbers live on EAS servers and the values in `app.json` are ignored, so nothing needs committing
 per build. `autoIncrement` is on for `production` only; it bumps `ios.buildNumber` and does not
 touch the user-facing `version`, which you bump yourself for a release.
+
+**EAS environments do not inherit from each other, and `.env` reaches none of them.** `.env` is
+gitignored, so it exists only on this machine; EAS reads `development`, `preview` and
+`production` as three separate buckets, and setting a variable in one puts it in exactly one.
+
+That combination was nearly fatal once. The Supabase vars had been set in `development` and
+nowhere else, which looked completely fine — every local run worked — while `preview` and
+`production` held nothing at all. `supabase.ts` **throws at module scope** when its two vars are
+missing, and `use-catalog` imports it into the root layout, so the first TestFlight or App Store
+build would have thrown before rendering a single pixel. A crash on open is also an automatic
+review rejection, so the failure would have arrived with a week of latency attached.
+
+Nothing in the build output would have said so: a build with no env vars succeeds. **After adding
+any `EXPO_PUBLIC_` variable, set it in all three environments and then `eas env:list` each one to
+confirm** — the success line from `env:set` tells you a write happened, not that the other two
+environments are complete.
+
+Current state, which `eas env:list` should keep matching:
+
+| Variable | development | preview | production | visibility |
+|---|---|---|---|---|
+| `EXPO_PUBLIC_SUPABASE_URL` | ✅ | ✅ | ✅ | sensitive |
+| `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | ✅ | ✅ | ✅ | sensitive |
+| `EXPO_PUBLIC_SENTRY_DSN` | ✅ | ✅ | ✅ | plaintext |
+| `SENTRY_AUTH_TOKEN` | — | ✅ | ✅ | **secret** |
+
+`SENTRY_AUTH_TOKEN` is absent from `development` on purpose: a dev build serves JS from Metro, so
+no source map is ever uploaded and the token has nothing to do. It is `secret` rather than
+`sensitive` because secret values cannot be read back out of EAS at all — appropriate for a
+credential that can write to the whole Sentry org, and unnecessary for a publishable key.
 
 **Check what `eas init` writes into `app.json`.** It does not only add the project id — evaluating
 the config also materialises whatever the installed config plugins ask for. It added
