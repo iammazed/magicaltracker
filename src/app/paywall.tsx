@@ -50,7 +50,11 @@ import {
 const PLANS = [
   {
     id: 'annual',
-    productId: 'premium_annual',
+    // `premium_yearly`, not `premium_annual`, because that is what exists in
+    // RevenueCat — and the App Store Connect product must be created with the
+    // same string. A product identifier can never be renamed once Apple has
+    // it, so the spelling is settled here and copied there, not the reverse.
+    productId: 'premium_yearly',
     name: 'Annual',
     fallbackPrice: '$24.99',
     per: 'per year',

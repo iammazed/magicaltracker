@@ -1061,6 +1061,10 @@ Transportation Challenge. Wrong value, unearnable badge.
 - `npm run validate:data` passes, if the CSVs changed.
 - `npm run check:catalog` passes, if `CATALOG_DDL` changed. A fresh install is not a test —
   this one upgrades an existing database, which is what every current user actually does.
+- `npm run check:iap` passes, if a product identifier or the paywall changed. A mismatch has
+  no symptom: the plan shows its fallback price, says "Not available here" when tapped, and the
+  only sign is revenue that never arrives. It caught `premium_annual` vs `premium_yearly` on its
+  very first run.
 - Checked on a real device in **both** light and dark, **and on a device that already had the
   previous build installed.** A clean install exercises a different code path from an upgrade,
   and the upgrade path is the one with users on it.
