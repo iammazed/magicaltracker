@@ -8,7 +8,9 @@ import {
   useState,
 } from 'react';
 
+import { useAuth } from '@/hooks/use-auth';
 import { getSetting, setSetting } from '@/lib/local-db';
+import { isEntitled, linkUser, USING_TEST_STORE } from '@/lib/purchases';
 
 /**
  * The premium boundary, in one place.
@@ -77,6 +79,12 @@ type PremiumValue = {
   simulated: boolean;
   /** `__DEV__` only. Returns false in a release build without changing state. */
   setSimulated: (on: boolean) => Promise<boolean>;
+  /** Re-reads the entitlement. Called after a purchase or a restore, so the
+   *  gates open without waiting for the next launch. */
+  refresh: () => Promise<void>;
+  /** True when purchases are running against RevenueCat's Test Store, so the
+   *  UI can say a purchase was simulated rather than implying a real charge. */
+  usingTestStore: boolean;
 };
 
 const PremiumContext = createContext<PremiumValue | null>(null);
@@ -84,26 +92,46 @@ const PremiumContext = createContext<PremiumValue | null>(null);
 const SIMULATED_KEY = 'premium_simulated';
 
 /**
- * Where the real entitlement will come from.
+ * Where the real entitlement comes from.
  *
- * Deliberately a separate function with no React in it, so swapping it for
- * `Purchases.getCustomerInfo()` is a change to this body and nothing else.
+ * This was a stub returning `false` with a TODO, and keeping it as a separate
+ * React-free function with exactly one caller is what made wiring RevenueCat a
+ * change to this line rather than to every gate in the app.
+ *
+ * It returns false whenever RevenueCat cannot be reached, which is the safe
+ * direction: a paying customer briefly seeing a lock recovers on the next
+ * launch, and handing out premium because a network call failed does not.
  */
-async function resolveEntitlement(): Promise<boolean> {
-  // TODO(apple): RevenueCat. Needs the Apple Developer Program, three products
-  // in App Store Connect and the Paid Apps agreement signed.
-  return false;
-}
+const resolveEntitlement = isEntitled;
 
 export function PremiumProvider({ children }: { children: React.ReactNode }) {
   const db = useSQLiteContext();
+  const { user } = useAuth();
   const [purchased, setPurchased] = useState(false);
   const [simulated, setSimulatedState] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  /**
+   * A primitive, deliberately. Depending on the `user` object would re-run
+   * this on every render that produced a new reference, and an effect that
+   * re-runs forever is the failure this codebase has already paid for once.
+   */
+  const userId = user?.id ?? null;
+
+  const refresh = useCallback(async () => {
+    setPurchased(await resolveEntitlement());
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      /**
+       * Link BEFORE reading, or the entitlement read belongs to whoever was
+       * signed in a moment ago. `linkUser` also aliases a guest's purchase
+       * onto the account they just made, so buying premium and then signing
+       * up does not lose the purchase.
+       */
+      await linkUser(userId);
       const [entitled, override] = await Promise.all([
         resolveEntitlement(),
         __DEV__ ? getSetting(db, SIMULATED_KEY) : Promise.resolve(null),
@@ -116,7 +144,7 @@ export function PremiumProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [db]);
+  }, [db, userId]);
 
   const setSimulated = useCallback(
     async (on: boolean) => {
@@ -134,8 +162,10 @@ export function PremiumProvider({ children }: { children: React.ReactNode }) {
       loading,
       simulated: !purchased && __DEV__ && simulated,
       setSimulated,
+      refresh,
+      usingTestStore: USING_TEST_STORE,
     }),
-    [purchased, simulated, loading, setSimulated],
+    [purchased, simulated, loading, setSimulated, refresh],
   );
 
   return <PremiumContext.Provider value={value}>{children}</PremiumContext.Provider>;

@@ -581,6 +581,50 @@ Purchases** button, **price and renewal terms** at the purchase point rather tha
 and reachable **terms and privacy** links. In-app **account deletion** becomes mandatory the
 moment accounts exist.
 
+### RevenueCat
+
+**Nothing outside `src/lib/purchases.ts` imports `react-native-purchases`**, the same rule as
+`supabase` and `use-catalog`. `use-premium` asks whether someone is entitled, the paywall asks
+what they can buy, and neither knows who answers. That indirection is why wiring the real store
+changed `resolveEntitlement` from a stub to one identifier and touched no gate anywhere.
+
+**There are TWO API key variables, and that is a safety decision rather than a style one.** A
+Test Store key (`test_…`) in a release build does not degrade — **the SDK shows an alert and
+crashes the app.** With one variable holding a different value per environment, a single wrong
+value in the EAS production environment ships a guaranteed launch crash to every user, and
+nothing in the build output would say so. With `EXPO_PUBLIC_REVENUECAT_KEY_TEST` and
+`EXPO_PUBLIC_REVENUECAT_KEY_APPLE`, a release build cannot select the test key, because the line
+that chooses reads only the Apple one outside `__DEV__`. The remaining hole — somebody pasting a
+`test_` key into the Apple variable — is caught at runtime and refused, because premium being
+unavailable is a bad day and a launch crash is a one-star review.
+
+**Every failure resolves to "not entitled".** Network down, SDK unconfigured, Expo Go: all false.
+A paying customer who briefly sees a lock recovers on the next launch; premium handed out because
+a call failed does not come back.
+
+**The paywall reads `offerings.current`, never a hardcoded offering identifier.** `current` is
+whichever offering is marked Default in the dashboard, so pricing, packaging, targeting and
+experiments change without an App Store release. Looking up an identifier in code throws away
+most of the reason for using RevenueCat at all.
+
+**Prices come from `package.product.priceString`.** The paywall used to hold `'$24.99'` as a
+literal, which shows dollars to a British customer who is then charged pounds — a rejection, and
+wrong regardless. The literals survive only as `fallbackPrice`, rendered when the store cannot be
+reached at all so the layout stays reviewable in Expo Go.
+
+**`linkUser` ties purchases to the account.** Without it a guest's purchase lives under an
+anonymous RevenueCat id, and signing in on a second phone finds nothing — the subscription they
+paid for appears to have vanished. `logIn` aliases the anonymous id onto the real one, so buying
+before signing up survives signing up. It runs BEFORE the entitlement is read, or the answer
+belongs to whoever was signed in a moment ago.
+
+**`logOut` throws when the current user is already anonymous**, which is the normal state on a
+guest launch — so it is guarded by `isAnonymous()`. Calling it blind reports an error to Sentry
+on most app starts and buries the real ones.
+
+`PremiumProvider` depends on `user?.id`, a primitive, never the `user` object: an effect keyed on
+a fresh object reference re-runs forever, and this codebase has already paid for that once.
+
 **Permission strings are reviewed by a human.** `app.json` spells out what is collected, why, and
 that it is optional, for photos and location. Location is foreground-only and taken as a single
 reading at the point of use — background location is a second, much harder permission the app has

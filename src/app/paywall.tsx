@@ -1,5 +1,7 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import type { PurchasesPackage } from 'react-native-purchases';
 
 import { SkyCard, Stars } from '@/components/sky-card';
 import { ThemedText } from '@/components/themed-text';
@@ -11,6 +13,12 @@ import {
   type PremiumFeature,
 } from '@/hooks/use-premium';
 import { useTheme } from '@/hooks/use-theme';
+import {
+  fetchPackages,
+  purchase,
+  restore,
+  type PurchaseOutcome,
+} from '@/lib/purchases';
 
 /**
  * The paywall.
@@ -31,13 +39,22 @@ import { useTheme } from '@/hooks/use-theme';
  *   - reachable links to the terms and the privacy policy.
  */
 
+/**
+ * `productId` must match the identifier in App Store Connect and RevenueCat
+ * exactly. `fallbackPrice` is shown ONLY when the store cannot be reached —
+ * in Expo Go, or before products are configured — so the layout stays
+ * reviewable. A real purchase always renders `priceString` from the store,
+ * because a hardcoded "$24.99" charges a British customer £22.99 while
+ * showing them dollars, which is both a rejection and a lie.
+ */
 const PLANS = [
   {
     id: 'annual',
+    productId: 'premium_annual',
     name: 'Annual',
-    price: '$24.99',
+    fallbackPrice: '$24.99',
     per: 'per year',
-    note: '7-day free trial, then $24.99/year. Renews automatically.',
+    note: (price: string) => `7-day free trial, then ${price}/year. Renews automatically.`,
     hero: true,
     // People take a Disney trip about once a year, so the annual plan matches
     // the cadence and is the defence against the real risk: someone subscribes
@@ -46,19 +63,21 @@ const PLANS = [
   },
   {
     id: 'monthly',
+    productId: 'premium_monthly',
     name: 'Monthly',
-    price: '$4.99',
+    fallbackPrice: '$4.99',
     per: 'per month',
-    note: '$4.99/month. Renews automatically until cancelled.',
+    note: (price: string) => `${price}/month. Renews automatically until cancelled.`,
     hero: false,
     badge: null,
   },
   {
     id: 'lifetime',
+    productId: 'premium_lifetime',
     name: 'Lifetime',
-    price: '$59.99',
+    fallbackPrice: '$59.99',
     per: 'one time',
-    note: 'One payment. No subscription, nothing to cancel.',
+    note: () => 'One payment. No subscription, nothing to cancel.',
     hero: false,
     badge: null,
   },
@@ -70,17 +89,78 @@ export default function PaywallScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { feature } = useLocalSearchParams<{ feature?: PremiumFeature }>();
-  const { isPremium, simulated, setSimulated } = usePremium();
+  const { isPremium, simulated, setSimulated, refresh, usingTestStore } = usePremium();
 
   const asked = feature && FEATURE_COPY[feature] ? FEATURE_COPY[feature] : null;
 
-  const notYet = (what: string) =>
+  const [packages, setPackages] = useState<PurchasesPackage[]>([]);
+  /** Blocks a second tap while the Apple sheet is up. */
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchPackages().then((p) => {
+      if (!cancelled) setPackages(p);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /** The store's package for a plan, or undefined when it cannot be bought
+   *  here — Expo Go, no API key, or the product not yet configured. */
+  const packageFor = (productId: string) =>
+    packages.find((p) => p.product.identifier === productId);
+
+  const unavailable = (what: string) =>
     Alert.alert(
-      'Not available yet',
-      `${what} needs the App Store subscription to be live, which is waiting on ` +
-        'the Apple Developer Program enrollment. Nothing has been charged.',
+      'Not available here',
+      `${what} needs a development or TestFlight build with the store configured. ` +
+        'Nothing has been charged.',
       [{ text: 'OK' }],
     );
+
+  /** Shared by buying and restoring: both end by re-reading the entitlement. */
+  const settle = async (outcome: PurchaseOutcome, successTitle: string) => {
+    if (!outcome.ok) {
+      // Backing out of the Apple sheet is a normal thing to do, not an error
+      // worth an alert.
+      if (!outcome.cancelled) Alert.alert('Something went wrong', outcome.message);
+      return;
+    }
+    await refresh();
+    if (outcome.entitled) {
+      Alert.alert(
+        successTitle,
+        usingTestStore
+          ? 'Simulated through RevenueCat’s Test Store — no real payment was taken.'
+          : 'Premium is unlocked. Thank you.',
+        [{ text: 'Done', onPress: () => router.back() }],
+      );
+    } else {
+      Alert.alert('Nothing to restore', 'No active purchase was found for this Apple ID.');
+    }
+  };
+
+  const buy = async (productId: string, name: string) => {
+    const pkg = packageFor(productId);
+    if (!pkg) return unavailable(name);
+    setBusy(true);
+    try {
+      await settle(await purchase(pkg), 'You’re all set');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const restorePurchases = async () => {
+    setBusy(true);
+    try {
+      await settle(await restore(), 'Purchases restored');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -157,10 +237,14 @@ export default function PaywallScreen() {
 
         {/* ── Plans ────────────────────────────────────────────────── */}
         <Section title="Plans">
-          {PLANS.map((p) => (
+          {PLANS.map((p) => {
+            const pkg = packageFor(p.productId);
+            const price = pkg?.product.priceString ?? p.fallbackPrice;
+            return (
             <Pressable
               key={p.id}
-              onPress={() => notYet(p.name)}
+              onPress={() => void buy(p.productId, p.name)}
+              disabled={busy}
               accessibilityRole="button"
               style={[
                 styles.plan,
@@ -181,7 +265,7 @@ export default function PaywallScreen() {
               </View>
               <View style={styles.priceRow}>
                 <ThemedText style={[styles.price, { color: theme.text }]}>
-                  {p.price}
+                  {price}
                 </ThemedText>
                 <ThemedText type="small" themeColor="textFaint">
                   {p.per}
@@ -189,15 +273,17 @@ export default function PaywallScreen() {
               </View>
               {/* Renewal terms at the purchase point, not buried in a link. */}
               <ThemedText type="small" themeColor="textSecondary">
-                {p.note}
+                {p.note(price)}
               </ThemedText>
             </Pressable>
-          ))}
+            );
+          })}
         </Section>
 
         {/* Required by Apple, and a guaranteed rejection without it. */}
         <Pressable
-          onPress={() => notYet('Restoring a purchase')}
+          onPress={() => void restorePurchases()}
+          disabled={busy}
           accessibilityRole="button"
           style={[styles.restore, { borderColor: theme.border }]}
         >
