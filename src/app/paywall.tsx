@@ -128,8 +128,10 @@ export default function PaywallScreen() {
   const settle = async (outcome: PurchaseOutcome, successTitle: string) => {
     if (!outcome.ok) {
       // Backing out of the Apple sheet is a normal thing to do, not an error
-      // worth an alert.
-      if (!outcome.cancelled) Alert.alert('Something went wrong', outcome.message);
+      // worth an alert. Everything else carries its own title, because
+      // "Something went wrong" over a declined card or an Ask to Buy waiting
+      // on a parent is both unhelpful and more alarming than the truth.
+      if (!outcome.cancelled) Alert.alert(outcome.title, outcome.message);
       return;
     }
     await refresh();

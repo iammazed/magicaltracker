@@ -3,6 +3,8 @@ import { isRunningInExpoGo } from 'expo';
 import { Platform } from 'react-native';
 import Purchases, {
   LOG_LEVEL,
+  PURCHASES_ERROR_CODE,
+  type PurchasesError,
   type PurchasesPackage,
 } from 'react-native-purchases';
 
@@ -135,46 +137,132 @@ export async function fetchPackages(): Promise<PurchasesPackage[]> {
 export type PurchaseOutcome =
   | { ok: true; entitled: boolean }
   | { ok: false; cancelled: true }
-  | { ok: false; cancelled: false; message: string };
+  | { ok: false; cancelled: false; title: string; message: string };
+
+/**
+ * Failures that are the customer's situation rather than our bug.
+ *
+ * These get plain copy and are NOT reported to Sentry. The first version of
+ * this file captured every non-cancelled failure, which means a declined card
+ * — the single most common outcome of a paywall — would have filed an issue.
+ * A dashboard full of other people's expired cards is a dashboard where a
+ * genuine misconfiguration goes unnoticed, which is the same argument as
+ * guarding `logOut` with `isAnonymous`.
+ *
+ * Anything NOT listed here is reported, because the unlisted cases are the
+ * ones that mean we got something wrong: a product missing from App Store
+ * Connect, a bad key, a rejected `.p8`.
+ */
+const EXPECTED: Partial<Record<PURCHASES_ERROR_CODE, { title: string; message: string }>> = {
+  [PURCHASES_ERROR_CODE.TEST_STORE_SIMULATED_PURCHASE_ERROR]: {
+    title: 'Simulated failure',
+    message: 'The Test Store declined this on purpose. Nothing was charged.',
+  },
+  [PURCHASES_ERROR_CODE.STORE_PROBLEM_ERROR]: {
+    title: 'The App Store had a problem',
+    message: 'Apple could not complete the purchase. Nothing was charged — please try again.',
+  },
+  [PURCHASES_ERROR_CODE.PURCHASE_NOT_ALLOWED_ERROR]: {
+    title: 'Purchases are not allowed',
+    message:
+      'This device does not permit purchases. Check Screen Time restrictions, then try again.',
+  },
+  [PURCHASES_ERROR_CODE.PURCHASE_INVALID_ERROR]: {
+    title: 'Payment declined',
+    message: 'Your payment method was declined. Check it in your Apple ID settings.',
+  },
+  [PURCHASES_ERROR_CODE.PAYMENT_PENDING_ERROR]: {
+    // Ask to Buy. Not a failure at all, and calling it one would be alarming
+    // in a family app where a child is waiting on a parent to approve.
+    title: 'Waiting for approval',
+    message:
+      'This purchase needs approval before it completes. Premium unlocks as soon as it is approved.',
+  },
+  [PURCHASES_ERROR_CODE.PRODUCT_ALREADY_PURCHASED_ERROR]: {
+    title: 'Already purchased',
+    message: 'You already own this. Tap Restore purchases to unlock it here.',
+  },
+  [PURCHASES_ERROR_CODE.INELIGIBLE_ERROR]: {
+    title: 'Not eligible',
+    message: 'This offer is not available on your account.',
+  },
+  [PURCHASES_ERROR_CODE.NETWORK_ERROR]: {
+    title: 'No connection',
+    message: 'Could not reach the App Store. Nothing was charged.',
+  },
+  [PURCHASES_ERROR_CODE.OFFLINE_CONNECTION_ERROR]: {
+    title: 'No connection',
+    message: 'Could not reach the App Store. Nothing was charged.',
+  },
+  [PURCHASES_ERROR_CODE.PRODUCT_REQUEST_TIMED_OUT_ERROR]: {
+    title: 'The App Store timed out',
+    message: 'Nothing was charged. Please try again.',
+  },
+  [PURCHASES_ERROR_CODE.OPERATION_ALREADY_IN_PROGRESS_ERROR]: {
+    title: 'Already in progress',
+    message: 'A purchase is already underway.',
+  },
+};
+
+const UNAVAILABLE = {
+  ok: false,
+  cancelled: false,
+  title: 'Not available here',
+  message:
+    'Purchases need a development or TestFlight build with the store configured. ' +
+    'Nothing has been charged.',
+} as const satisfies PurchaseOutcome;
+
+/**
+ * `userCancelled` still works but is deprecated in favour of the error code,
+ * so the code is checked first and the old field kept as a fallback — the
+ * Test Store does not always populate both.
+ */
+function isCancellation(e: unknown): boolean {
+  const err = e as PurchasesError | undefined;
+  return err?.code === PURCHASES_ERROR_CODE.PURCHASE_CANCELLED_ERROR || err?.userCancelled === true;
+}
+
+/** Turns a thrown value into copy for the user, and decides whether it is
+ *  worth waking anyone up about. */
+function describe(e: unknown): { title: string; message: string; report: boolean } {
+  const code = (e as PurchasesError | undefined)?.code;
+  const known = code ? EXPECTED[code] : undefined;
+  if (known) return { ...known, report: false };
+  return {
+    title: 'Something went wrong',
+    message: e instanceof Error ? e.message : 'The purchase could not be completed.',
+    report: true,
+  };
+}
 
 /** Buys a package. A user cancelling is a normal outcome, not an error. */
 export async function purchase(pkg: PurchasesPackage): Promise<PurchaseOutcome> {
-  if (!configurePurchases()) {
-    return { ok: false, cancelled: false, message: 'Purchases are not available on this device.' };
-  }
+  if (!configurePurchases()) return UNAVAILABLE;
   try {
     const { customerInfo } = await Purchases.purchasePackage(pkg);
     return { ok: true, entitled: customerInfo.entitlements.active[ENTITLEMENT_ID] !== undefined };
   } catch (e) {
-    // Backing out of the Apple sheet raises, and reporting that as a failure
+    // Backing out of the Apple sheet raises, and treating that as a failure
     // would be both wrong and alarming.
-    if (typeof e === 'object' && e !== null && 'userCancelled' in e && e.userCancelled) {
-      return { ok: false, cancelled: true };
-    }
-    Sentry.captureException(e);
-    return {
-      ok: false,
-      cancelled: false,
-      message: e instanceof Error ? e.message : 'The purchase could not be completed.',
-    };
+    if (isCancellation(e)) return { ok: false, cancelled: true };
+
+    const { title, message, report } = describe(e);
+    if (report) Sentry.captureException(e);
+    return { ok: false, cancelled: false, title, message };
   }
 }
 
 /** Restores previous purchases. Required by App Store review. */
 export async function restore(): Promise<PurchaseOutcome> {
-  if (!configurePurchases()) {
-    return { ok: false, cancelled: false, message: 'Purchases are not available on this device.' };
-  }
+  if (!configurePurchases()) return UNAVAILABLE;
   try {
     const info = await Purchases.restorePurchases();
     return { ok: true, entitled: info.entitlements.active[ENTITLEMENT_ID] !== undefined };
   } catch (e) {
-    Sentry.captureException(e);
-    return {
-      ok: false,
-      cancelled: false,
-      message: e instanceof Error ? e.message : 'Could not restore purchases.',
-    };
+    const { title, message, report } = describe(e);
+    if (report) Sentry.captureException(e);
+    return { ok: false, cancelled: false, title, message };
   }
 }
 
