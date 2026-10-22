@@ -583,6 +583,19 @@ moment accounts exist.
 
 ### RevenueCat
 
+**Wired and verified end to end** — a real StoreKit sandbox purchase on a `preview` build: Apple's
+sheet, Face ID, Apple's own "[Environment: Sandbox]" confirmation, the entitlement granted, and
+the gates opening without a relaunch. That run is what proves the parts no script can reach: the
+`appl_` key resolving in a build where `__DEV__` is false, Apple actually serving the products,
+and the In-App Purchase Key being accepted.
+
+`npm run check:iap` validates RevenueCat's configuration and **nothing about Apple's willingness
+to serve the products**. It caught `premium_annual` vs `premium_yearly`, which was worth having,
+but a green run is not evidence that a purchase works. Only a device purchase is.
+
+**Still unverified on a device:** Restore Purchases (which App Store review does test),
+expiry re-locking the gates, and `linkUser` carrying a guest's purchase onto a new account.
+
 **Nothing outside `src/lib/purchases.ts` imports `react-native-purchases`**, the same rule as
 `supabase` and `use-catalog`. `use-premium` asks whether someone is entitled, the paywall asks
 what they can buy, and neither knows who answers. That indirection is why wiring the real store
