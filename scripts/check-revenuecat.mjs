@@ -28,19 +28,40 @@ function envValue(name) {
   return m[1].trim().replace(/^["']|["']$/g, '') || null;
 }
 
-const key =
-  envValue('EXPO_PUBLIC_REVENUECAT_KEY_TEST') ??
-  envValue('EXPO_PUBLIC_REVENUECAT_KEY_APPLE');
+/**
+ * Which store to check. The two keys return DIFFERENT product identifiers for
+ * the same offering — the Test Store ones under `test_`, the App Store ones
+ * under `appl_` — so "it passed" is meaningless without saying which was used.
+ *
+ *   npm run check:iap            prefers the test key (everyday use)
+ *   npm run check:iap -- --apple forces the real App Store products
+ */
+const forced = process.argv.includes('--apple')
+  ? 'apple'
+  : process.argv.includes('--test')
+    ? 'test'
+    : null;
+
+const TEST = envValue('EXPO_PUBLIC_REVENUECAT_KEY_TEST');
+const APPLE = envValue('EXPO_PUBLIC_REVENUECAT_KEY_APPLE');
+
+const key = forced === 'apple' ? APPLE : forced === 'test' ? TEST : (TEST ?? APPLE);
+const using = key && key === APPLE ? 'App Store (appl_)' : 'Test Store (test_)';
 
 if (!key) {
   // Deliberately a failure, not a skip. A check that reports success when it
   // did not run is the `exit 0` mistake the heartbeat workflow already made.
   console.error(
-    '✗ No RevenueCat key in .env (EXPO_PUBLIC_REVENUECAT_KEY_TEST or _APPLE).\n' +
-      '  This check cannot run, which is not the same as passing.',
+    forced
+      ? `✗ No ${forced === 'apple' ? 'EXPO_PUBLIC_REVENUECAT_KEY_APPLE' : 'EXPO_PUBLIC_REVENUECAT_KEY_TEST'} in .env.\n` +
+          '  This check cannot run, which is not the same as passing.'
+      : '✗ No RevenueCat key in .env (EXPO_PUBLIC_REVENUECAT_KEY_TEST or _APPLE).\n' +
+          '  This check cannot run, which is not the same as passing.',
   );
   process.exit(1);
 }
+
+console.log(`Checking against: ${using}\n`);
 
 /* ── What the app expects, read from the real file ───────────────────── */
 const paywall = fs.readFileSync(join(ROOT, 'src', 'app', 'paywall.tsx'), 'utf8');
