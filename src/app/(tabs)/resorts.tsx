@@ -51,7 +51,7 @@ export default function ResortsScreen() {
   // it was showing a map is surprising when you come back to look something
   // up by name.
   const [view, setView] = useState<'list' | 'map'>('list');
-  const { collapsed, onScroll, reset: resetHeader } = useHeaderCollapse();
+  const { collapsed, onScroll, reset: resetHeader, debug } = useHeaderCollapse();
   const filtered = useFilteredResorts(resorts, { search, tier });
 
   const stayedIds = useMemo(() => new Set(byResort.keys()), [byResort]);
@@ -83,6 +83,7 @@ export default function ResortsScreen() {
           title="Resorts"
           progress={{ done: stayedCount, total: resorts.length, label: 'stayed at' }}
           collapsed={collapsed}
+          debug={debug}
         >
           <TextInput
             value={search}

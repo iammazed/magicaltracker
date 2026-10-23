@@ -51,8 +51,17 @@ const EXPAND_AT = 20;
 export function useHeaderCollapse() {
   const [collapsed, setCollapsed] = useState(false);
 
+  /** TEMPORARY. Three implementations of this collapse behaved identically on
+   *  device, which points at `onScroll` never firing rather than at anything
+   *  downstream of it. Counts events so one reload can say so. Remove once
+   *  the cause is known. */
+  const [debug, setDebug] = useState('no scroll events yet');
+  const count = useRef(0);
+
   const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const y = e.nativeEvent.contentOffset.y;
+    count.current += 1;
+    if (__DEV__) setDebug(`y=${Math.round(y)} events=${count.current}`);
     setCollapsed((prev) => {
       if (!prev && y > COLLAPSE_AT) return true;
       if (prev && y < EXPAND_AT) return false;
@@ -62,7 +71,7 @@ export function useHeaderCollapse() {
 
   const reset = useCallback(() => setCollapsed(false), []);
 
-  return { collapsed, onScroll, reset };
+  return { collapsed, onScroll, reset, debug };
 }
 
 /**
@@ -87,6 +96,7 @@ export function SkyHeader({
   progress,
   action,
   collapsed = false,
+  debug,
   children,
 }: {
   eyebrow?: string;
@@ -101,6 +111,8 @@ export function SkyHeader({
   action?: { label: string; onPress: () => void };
   /** From `useHeaderCollapse()`. Omit it and the header never collapses. */
   collapsed?: boolean;
+  /** TEMPORARY diagnostic from `useHeaderCollapse()`. Dev builds only. */
+  debug?: string;
   children?: React.ReactNode;
 }) {
   const pct =
@@ -255,6 +267,14 @@ export function SkyHeader({
           )}
 
           {children}
+
+          {/* TEMPORARY. Remove with the `debug` plumbing once the
+              collapse is understood. */}
+          {__DEV__ && debug ? (
+            <ThemedText style={styles.debug}>
+              {debug} · measured={Math.round(blockHeight)} · collapsed={String(collapsed)}
+            </ThemedText>
+          ) : null}
         </View>
       </SafeAreaView>
     </SkyCard>
@@ -346,6 +366,7 @@ const styles = StyleSheet.create({
   /** `overflow: hidden` is what lets the inner view keep its natural height
    *  and simply be clipped, which is what makes measuring it safe. */
   collapsible: { overflow: 'hidden' },
+  debug: { color: '#E5B45F', fontSize: 11, fontVariant: ['tabular-nums'] },
   collapsibleInner: { gap: Spacing.three },
   headingRow: {
     flexDirection: 'row',
