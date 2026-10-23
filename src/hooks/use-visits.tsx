@@ -4,11 +4,13 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useMemo,
   useState,
 } from 'react';
 
 import { todayISO, type Stay, type Visit } from '@/lib/local-db';
+import { pruneOrphanPhotos } from '@/lib/photos';
 
 /**
  * The visit log, shared across the whole app.
@@ -87,6 +89,8 @@ export function VisitsProvider({ children }: { children: React.ReactNode }) {
   const [visits, setVisits] = useState<Visit[]>([]);
   const [stays, setStays] = useState<Stay[]>([]);
   const [loading, setLoading] = useState(true);
+  /** Guards the one-shot orphan prune below. */
+  const pruned = useRef(false);
 
   const refresh = useCallback(async () => {
     const [v, s] = await Promise.all([
@@ -100,6 +104,32 @@ export function VisitsProvider({ children }: { children: React.ReactNode }) {
     setVisits(v);
     setStays(s);
     setLoading(false);
+
+    /**
+     * Once per launch, and only here — not on every refresh.
+     *
+     * Imported photos live in the document directory now, so a photo picked
+     * and then abandoned by cancelling the sheet would otherwise sit there
+     * forever. Pruning reconciles the directory against what visits actually
+     * reference.
+     *
+     * It must NOT run on later refreshes. A sync pull refreshes this store,
+     * and if that happened while someone had the log-visit sheet open with
+     * photos picked but not yet saved, those files are referenced by nothing
+     * and would be deleted out from under them.
+     */
+    if (!pruned.current) {
+      pruned.current = true;
+      const referenced = v.flatMap((row) => {
+        try {
+          const list: unknown = JSON.parse(row.photos ?? '[]');
+          return Array.isArray(list) ? (list as string[]) : [];
+        } catch {
+          return [];
+        }
+      });
+      pruneOrphanPhotos(referenced);
+    }
   }, [db]);
 
   useEffect(() => {

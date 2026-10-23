@@ -2,7 +2,15 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { DateField } from '@/components/date-field';
 import { PremiumGate } from '@/components/premium-gate';
@@ -13,6 +21,7 @@ import { usePremium } from '@/hooks/use-premium';
 import { useTheme } from '@/hooks/use-theme';
 import { useVisits } from '@/hooks/use-visits';
 import { todayISO } from '@/lib/local-db';
+import { importPhoto } from '@/lib/photos';
 
 /**
  * Logging is two taps from the venue screen and everything below the date is
@@ -37,6 +46,9 @@ export default function LogVisitScreen() {
   const [dishes, setDishes] = useState<string[]>([]);
   const [dish, setDish] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
+  /** Resizing six photos takes a visible moment; without this the Add
+   *  button looks dead and gets tapped again. */
+  const [importing, setImporting] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const addDish = () => {
@@ -65,16 +77,30 @@ export default function LogVisitScreen() {
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
       selectionLimit: 6,
+      // `quality` only applies when the picker re-encodes. `importPhoto` does
+      // the real work: it caps the long edge and moves the file somewhere iOS
+      // will not reclaim.
       quality: 0.7,
     });
     if (result.canceled) return;
-    setPhotos((existing) => {
-      const merged = [...existing];
+
+    setImporting(true);
+    try {
+      // Sequential rather than Promise.all: six full-size images decoded at
+      // once is a memory spike on an older phone, and the user is waiting
+      // either way.
+      const imported: string[] = [];
       for (const asset of result.assets) {
-        if (!merged.includes(asset.uri)) merged.push(asset.uri);
+        imported.push(await importPhoto(asset));
       }
-      return merged.slice(0, 6);
-    });
+      setPhotos((existing) => {
+        const merged = [...existing];
+        for (const uri of imported) if (!merged.includes(uri)) merged.push(uri);
+        return merged.slice(0, 6);
+      });
+    } finally {
+      setImporting(false);
+    }
   };
 
   const dateValid = /^\d{4}-\d{2}-\d{2}$/.test(visitedOn);
@@ -279,10 +305,16 @@ export default function LogVisitScreen() {
               {photos.length < 6 ? (
                 <Pressable
                   onPress={pickPhotos}
+                  disabled={importing}
                   accessibilityRole="button"
+                  accessibilityLabel={importing ? 'Adding photos' : 'Add photos'}
                   style={[styles.addPhoto, { borderColor: theme.border }]}
                 >
-                  <ThemedText style={{ color: theme.accent, fontSize: 22 }}>+</ThemedText>
+                  {importing ? (
+                    <ActivityIndicator color={theme.accent} />
+                  ) : (
+                    <ThemedText style={{ color: theme.accent, fontSize: 22 }}>+</ThemedText>
+                  )}
                 </Pressable>
               ) : null}
             </View>
