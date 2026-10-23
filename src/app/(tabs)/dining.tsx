@@ -12,7 +12,15 @@ import {
 } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { SKY_PLACEHOLDER, SkyHeader, SkySegment, skyInput } from '@/components/sky-header';
+import Animated from 'react-native-reanimated';
+
+import {
+  SKY_PLACEHOLDER,
+  SkyHeader,
+  SkySegment,
+  skyInput,
+  useHeaderCollapse,
+} from '@/components/sky-header';
 import { ThemedView } from '@/components/themed-view';
 import { CatalogMap, type MapPlace } from '@/components/catalog-map';
 import { VenueRow } from '@/components/venue-row';
@@ -139,6 +147,7 @@ export default function CatalogScreen() {
   // state rather than a route: a tab that remembers it was showing a map is
   // surprising when you come back to find a restaurant by name.
   const [view, setView] = useState<'list' | 'map'>('list');
+  const { scrollY, onScroll, reset: resetHeader } = useHeaderCollapse();
 
   const areaName = useMemo(
     () => Object.fromEntries(areas.map((a) => [a.id, a.name])),
@@ -217,6 +226,7 @@ export default function CatalogScreen() {
               : { done: visitedCount, total: venues.length, label: 'eaten at' }
           }
           action={planning ? { label: 'Done', onPress: () => router.back() } : undefined}
+          scrollY={scrollY}
         >
           <View style={styles.searchRow}>
             <TextInput
@@ -245,7 +255,18 @@ export default function CatalogScreen() {
           </View>
 
           {!planning ? (
-            <SkySegment options={VIEW_OPTIONS} value={view} onChange={setView} />
+            <SkySegment
+              options={VIEW_OPTIONS}
+              value={view}
+              onChange={(next) => {
+                // The list unmounts on the way to the map, taking its scroll
+                // offset with it — but the shared value keeps the last one,
+                // which would leave the header collapsed over a full map
+                // with no way to expand it again.
+                resetHeader();
+                setView(next);
+              }}
+            />
           ) : null}
         </SkyHeader>
 
@@ -323,8 +344,11 @@ export default function CatalogScreen() {
             }}
           />
         ) : (
-          <FlatList
+          <Animated.FlatList
             style={styles.listFill}
+            // A plain FlatList cannot drive a Reanimated scroll handler.
+            onScroll={onScroll}
+            scrollEventThrottle={16}
             data={filtered}
             keyExtractor={(v) => v.id}
             renderItem={({ item }) => (

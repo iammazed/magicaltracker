@@ -9,10 +9,17 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/themed-text';
 import { CatalogMap, type MapPlace } from '@/components/catalog-map';
-import { SKY_PLACEHOLDER, SkyHeader, SkySegment, skyInput } from '@/components/sky-header';
+import {
+  SKY_PLACEHOLDER,
+  SkyHeader,
+  SkySegment,
+  skyInput,
+  useHeaderCollapse,
+} from '@/components/sky-header';
 import { ThemedView } from '@/components/themed-view';
 import { Radius, Spacing, TierTone } from '@/constants/theme';
 import {
@@ -46,6 +53,7 @@ export default function ResortsScreen() {
   // it was showing a map is surprising when you come back to look something
   // up by name.
   const [view, setView] = useState<'list' | 'map'>('list');
+  const { scrollY, onScroll, reset: resetHeader } = useHeaderCollapse();
   const filtered = useFilteredResorts(resorts, { search, tier });
 
   const stayedIds = useMemo(() => new Set(byResort.keys()), [byResort]);
@@ -76,6 +84,7 @@ export default function ResortsScreen() {
           eyebrow="WALT DISNEY WORLD"
           title="Resorts"
           progress={{ done: stayedCount, total: resorts.length, label: 'stayed at' }}
+          scrollY={scrollY}
         >
           <TextInput
             value={search}
@@ -87,7 +96,16 @@ export default function ResortsScreen() {
             style={skyInput}
           />
 
-          <SkySegment options={VIEW_OPTIONS} value={view} onChange={setView} />
+          <SkySegment
+            options={VIEW_OPTIONS}
+            value={view}
+            onChange={(next) => {
+              // Same reason as Dining: the shared value outlives the list,
+              // so without this the header stays collapsed over the map.
+              resetHeader();
+              setView(next);
+            }}
+          />
         </SkyHeader>
 
         <ScrollView
@@ -139,8 +157,11 @@ export default function ResortsScreen() {
             onOpen={(p) => router.push({ pathname: '/resort/[id]', params: { id: p.id } })}
           />
         ) : (
-          <FlatList
+          <Animated.FlatList
             style={styles.listFill}
+            // A plain FlatList cannot drive a Reanimated scroll handler.
+            onScroll={onScroll}
+            scrollEventThrottle={16}
             data={filtered}
             keyExtractor={(r) => r.id}
             contentContainerStyle={[

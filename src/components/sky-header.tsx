@@ -1,9 +1,44 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { type LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
+import Animated, {
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SkyCard, Stars } from '@/components/sky-card';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
+
+/** How far you scroll before the title block is fully gone. Short enough that
+ *  one flick reclaims the space, long enough not to twitch on a small nudge. */
+const COLLAPSE_DISTANCE = 90;
+
+/**
+ * Drives the header collapse from a list's scroll position.
+ *
+ * Lives here rather than in each screen because Dining and Resorts need
+ * identical behaviour, and the last control these screens shared — the
+ * List/Map toggle — was unreadable on one of them for a while precisely
+ * because there were two copies.
+ *
+ * Returns an `onScroll` for an `Animated.FlatList` (a plain FlatList will not
+ * drive a Reanimated handler) and a `reset` for when the list unmounts, such
+ * as switching to the map: the shared value would otherwise keep its last
+ * offset and the header would still be collapsed over a full-height map.
+ */
+export function useHeaderCollapse() {
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+  });
+  const reset = useCallback(() => {
+    scrollY.value = 0;
+  }, [scrollY]);
+  return { scrollY, onScroll, reset };
+}
 
 /**
  * The twilight band at the top of a list screen.
@@ -26,6 +61,7 @@ export function SkyHeader({
   title,
   progress,
   action,
+  scrollY,
   children,
 }: {
   eyebrow?: string;
@@ -38,6 +74,8 @@ export function SkyHeader({
    *  bar and no back button, and its only way out was a footer that turned
    *  out to be behind the tab bar. Two exits, not one. */
   action?: { label: string; onPress: () => void };
+  /** From `useHeaderCollapse()`. Omit it and the header never collapses. */
+  scrollY?: SharedValue<number>;
   children?: React.ReactNode;
 }) {
   const pct =
@@ -45,11 +83,48 @@ export function SkyHeader({
       ? Math.min(1, progress.done / progress.total)
       : 0;
 
+  /**
+   * Measured ONCE, from an inner view the animation does not touch.
+   *
+   * Measuring the animated view itself would feed its own output back in:
+   * the height shrinks, `onLayout` fires with the smaller value, that becomes
+   * the new natural height, and the block walks itself to zero. The inner
+   * view keeps its natural height and is clipped by the parent instead.
+   */
+  const [blockHeight, setBlockHeight] = useState(0);
+  const measure = useCallback(
+    (e: LayoutChangeEvent) => {
+      const h = e.nativeEvent.layout.height;
+      if (h > 0 && blockHeight === 0) setBlockHeight(h);
+    },
+    [blockHeight],
+  );
+
+  const collapsing = useAnimatedStyle(() => {
+    if (!scrollY || blockHeight === 0) return {};
+    const t = Math.min(1, Math.max(0, scrollY.value / COLLAPSE_DISTANCE));
+    return {
+      height: blockHeight * (1 - t),
+      opacity: 1 - t,
+      // `inner` lays its children out with `gap`, which survives a child
+      // collapsing to zero height — so without this the band keeps a stripe
+      // of empty space exactly where the title used to be.
+      marginBottom: -Spacing.three * t,
+    };
+  });
+
   return (
     <SkyCard radius={0} style={styles.card}>
       <Stars />
       <SafeAreaView edges={['top']}>
         <View style={styles.inner}>
+          {/* The identity block: who you are and how far through you are.
+              Both are orientation, not controls — so this is what gives way
+              on scroll, while the search field and the List/Map toggle below
+              stay put. Collapsing those would mean scrolling back up to
+              change a filter. */}
+          <Animated.View style={[styles.collapsible, collapsing]}>
+            <View onLayout={measure} style={styles.collapsibleInner}>
           <View style={styles.headingRow}>
             <View style={styles.heading}>
               {eyebrow ? <ThemedText style={styles.eyebrow}>{eyebrow}</ThemedText> : null}
@@ -88,6 +163,8 @@ export function SkyHeader({
               </ThemedText>
             </View>
           ) : null}
+            </View>
+          </Animated.View>
 
           {children}
         </View>
@@ -178,6 +255,10 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.three,
     gap: Spacing.three,
   },
+  /** `overflow: hidden` is what lets the inner view keep its natural height
+   *  and simply be clipped, which is what makes measuring it safe. */
+  collapsible: { overflow: 'hidden' },
+  collapsibleInner: { gap: Spacing.three },
   headingRow: {
     flexDirection: 'row',
     alignItems: 'center',
