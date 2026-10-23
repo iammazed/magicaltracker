@@ -9,8 +9,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import Animated from 'react-native-reanimated';
-
 import { ThemedText } from '@/components/themed-text';
 import { CatalogMap, type MapPlace } from '@/components/catalog-map';
 import {
@@ -157,9 +155,8 @@ export default function ResortsScreen() {
             onOpen={(p) => router.push({ pathname: '/resort/[id]', params: { id: p.id } })}
           />
         ) : (
-          <Animated.FlatList
+          <FlatList
             style={styles.listFill}
-            // A plain FlatList cannot drive a Reanimated scroll handler.
             onScroll={onScroll}
             scrollEventThrottle={16}
             data={filtered}

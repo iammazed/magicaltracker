@@ -1,7 +1,13 @@
 import { useCallback, useState } from 'react';
-import { type LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
+import {
+  type LayoutChangeEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  Pressable,
+  StyleSheet,
+  View,
+} from 'react-native';
 import Animated, {
-  useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
   type SharedValue,
@@ -24,16 +30,27 @@ const COLLAPSE_DISTANCE = 90;
  * List/Map toggle — was unreadable on one of them for a while precisely
  * because there were two copies.
  *
- * Returns an `onScroll` for an `Animated.FlatList` (a plain FlatList will not
- * drive a Reanimated handler) and a `reset` for when the list unmounts, such
- * as switching to the map: the shared value would otherwise keep its last
- * offset and the header would still be collapsed over a full-height map.
+ * **A plain `onScroll`, deliberately, not `useAnimatedScrollHandler`.** The
+ * worklet version is the canonical Reanimated pattern and is smoother, and
+ * it did nothing here — with no error to explain why. Writing the offset
+ * into a shared value from JS costs one bridge-free assignment per scroll
+ * event at `scrollEventThrottle={16}`, the interpolation still runs on the
+ * UI thread, and it works on an ordinary `FlatList` with no
+ * `Animated.FlatList` wrapper. For a header that slides 90pt that trade is
+ * free; it would not be for a gesture tracking a finger.
+ *
+ * `reset` is for when the list unmounts, such as switching to the map: the
+ * shared value would otherwise keep its last offset and leave the header
+ * collapsed over a full-height map.
  */
 export function useHeaderCollapse() {
   const scrollY = useSharedValue(0);
-  const onScroll = useAnimatedScrollHandler((e) => {
-    scrollY.value = e.contentOffset.y;
-  });
+  const onScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      scrollY.value = e.nativeEvent.contentOffset.y;
+    },
+    [scrollY],
+  );
   const reset = useCallback(() => {
     scrollY.value = 0;
   }, [scrollY]);

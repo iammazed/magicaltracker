@@ -12,8 +12,6 @@ import {
 } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import Animated from 'react-native-reanimated';
-
 import {
   SKY_PLACEHOLDER,
   SkyHeader,
@@ -344,9 +342,8 @@ export default function CatalogScreen() {
             }}
           />
         ) : (
-          <Animated.FlatList
+          <FlatList
             style={styles.listFill}
-            // A plain FlatList cannot drive a Reanimated scroll handler.
             onScroll={onScroll}
             scrollEventThrottle={16}
             data={filtered}
