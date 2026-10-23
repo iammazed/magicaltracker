@@ -1,3 +1,4 @@
+import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -5,6 +6,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   Pressable,
+  ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
@@ -13,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { SkyCard, Stars } from '@/components/sky-card';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 /**
  * Two thresholds, not one, so the header cannot flicker.
@@ -346,6 +349,21 @@ const styles = StyleSheet.create({
   /** `overflow: hidden` is what lets the inner view keep its natural height
    *  and simply be clipped, which is what makes measuring it safe. */
   collapsible: { overflow: 'hidden' },
+  chipScroll: { flexGrow: 0, flexShrink: 0 },
+  chips: {
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.three,
+    alignItems: 'center',
+  },
+  chipBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
   collapsibleInner: { gap: Spacing.three },
   headingRow: {
     flexDirection: 'row',
@@ -397,3 +415,74 @@ const styles = StyleSheet.create({
   segmentItemOn: { backgroundColor: '#E5B45F' },
   segmentText: { fontSize: 14 },
 });
+
+/**
+ * The filter chips, which fold into a thin bar as you scroll.
+ *
+ * Sits BELOW the gradient, so unlike everything else in this file it uses
+ * theme tokens rather than colour literals — the rule is about the sky
+ * surface, not about this component.
+ *
+ * **The summary is the point, not decoration.** A collapsed filter row hides
+ * which filter is on, and a list quietly showing only EPCOT with no visible
+ * reason is worse than a row that takes up space. The bar always says what is
+ * filtering the list, so the state is never invisible.
+ *
+ * Scroll drives it and a tap overrides: `collapsed` re-syncs `open` whenever
+ * it changes, so opening the chips to change a filter sticks until you next
+ * cross a scroll threshold, rather than snapping shut under your thumb.
+ */
+export function CollapsibleChips({
+  collapsed,
+  summary,
+  children,
+}: {
+  collapsed: boolean;
+  /** What is filtering the list right now, e.g. "EPCOT" or "All areas". */
+  summary: string;
+  children: React.ReactNode;
+}) {
+  const theme = useTheme();
+  const [open, setOpen] = useState(true);
+
+  useEffect(() => setOpen(!collapsed), [collapsed]);
+
+  if (open) {
+    return (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.chips}
+        // A horizontal ScrollView in a flex column has no intrinsic height and
+        // will fight the list below it for space. flexGrow 0 sizes it to its
+        // content instead.
+        style={styles.chipScroll}
+      >
+        {children}
+      </ScrollView>
+    );
+  }
+
+  return (
+    <Pressable
+      onPress={() => setOpen(true)}
+      accessibilityRole="button"
+      accessibilityLabel={`Filters: ${summary}. Tap to change.`}
+      style={({ pressed }) => [
+        styles.chipBar,
+        { borderBottomColor: theme.borderSoft },
+        pressed ? { backgroundColor: theme.backgroundSelected } : null,
+      ]}
+    >
+      <ThemedText type="small" themeColor="textSecondary">
+        {summary}
+      </ThemedText>
+      <SymbolView
+        name={{ ios: 'chevron.down', android: 'expand_more', web: 'expand_more' }}
+        size={12}
+        weight="semibold"
+        tintColor={theme.textSecondary}
+      />
+    </Pressable>
+  );
+}

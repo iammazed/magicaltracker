@@ -5,7 +5,6 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   TextInput,
   View,
@@ -14,6 +13,7 @@ import {
 import { ThemedText } from '@/components/themed-text';
 import {
   SKY_PLACEHOLDER,
+  CollapsibleChips,
   SkyHeader,
   SkySegment,
   skyInput,
@@ -268,14 +268,13 @@ export default function CatalogScreen() {
           ) : null}
         </SkyHeader>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chips}
-          // A horizontal ScrollView in a flex column has no intrinsic height
-          // and will fight the list below it for space. flexGrow 0 makes it
-          // size to its content instead.
-          style={styles.chipScroll}
+        <CollapsibleChips
+          collapsed={collapsed}
+          summary={
+            filters.areaId
+              ? (areaName[filters.areaId] ?? filters.areaId)
+              : 'All areas'
+          }
         >
           <Chip
             label="All"
@@ -290,7 +289,7 @@ export default function CatalogScreen() {
               onPress={() => set('areaId', filters.areaId === a.id ? null : a.id)}
             />
           ))}
-        </ScrollView>
+        </CollapsibleChips>
 
         {/* The header's bar answers "how much have I done"; this answers
             "what am I looking at right now", which the filters change. The
@@ -496,13 +495,6 @@ const styles = StyleSheet.create({
   },
   filterText: { fontSize: 14, fontWeight: '600' },
   resultCount: { paddingHorizontal: Spacing.three, paddingTop: Spacing.two },
-  chipScroll: { flexGrow: 0, flexShrink: 0 },
-  chips: {
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.three,
-    alignItems: 'center',
-  },
   chip: {
     paddingHorizontal: Spacing.three,
     height: 34,

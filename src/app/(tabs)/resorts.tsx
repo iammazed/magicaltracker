@@ -4,7 +4,6 @@ import {
   ActivityIndicator,
   FlatList,
   Pressable,
-  ScrollView,
   StyleSheet,
   TextInput,
   View,
@@ -13,6 +12,7 @@ import { ThemedText } from '@/components/themed-text';
 import { CatalogMap, type MapPlace } from '@/components/catalog-map';
 import {
   SKY_PLACEHOLDER,
+  CollapsibleChips,
   SkyHeader,
   SkySegment,
   skyInput,
@@ -106,11 +106,9 @@ export default function ResortsScreen() {
           />
         </SkyHeader>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chips}
-          style={styles.chipScroll}
+        <CollapsibleChips
+          collapsed={collapsed}
+          summary={tier ? TIER_LABEL[tier] : 'All resorts'}
         >
           <Chip label="All" active={tier === null} onPress={() => setTier(null)} />
           {TIERS.map((t) => {
@@ -125,7 +123,7 @@ export default function ResortsScreen() {
               />
             );
           })}
-        </ScrollView>
+        </CollapsibleChips>
 
         {/* List-only: the map has its own count badge. */}
         {view === 'list' && !loading && resorts.length > 0 ? (
@@ -281,13 +279,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   safe: { flex: 1 },
   resultCount: { paddingHorizontal: Spacing.three, paddingTop: Spacing.two },
-  chipScroll: { flexGrow: 0, flexShrink: 0 },
-  chips: {
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.three,
-    alignItems: 'center',
-  },
   chip: {
     paddingHorizontal: Spacing.three,
     height: 34,
