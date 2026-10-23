@@ -100,9 +100,23 @@ export function SkyHeader({
     [blockHeight],
   );
 
+  /**
+   * Always returns the SAME three properties, which is the part that was
+   * broken the first time.
+   *
+   * Reanimated initialises an animated style from the worklet's first run.
+   * The first version returned `{}` while the height was still unmeasured
+   * and three properties afterwards, so the style registered empty and the
+   * later properties never took effect — the header simply never moved, with
+   * no error anywhere. A stable property set is not a style preference.
+   *
+   * The block below only mounts this view once `blockHeight` is known, so the
+   * first run already has real numbers.
+   */
   const collapsing = useAnimatedStyle(() => {
-    if (!scrollY || blockHeight === 0) return {};
-    const t = Math.min(1, Math.max(0, scrollY.value / COLLAPSE_DISTANCE));
+    const t = scrollY
+      ? Math.min(1, Math.max(0, scrollY.value / COLLAPSE_DISTANCE))
+      : 0;
     return {
       height: blockHeight * (1 - t),
       opacity: 1 - t,
@@ -111,7 +125,7 @@ export function SkyHeader({
       // of empty space exactly where the title used to be.
       marginBottom: -Spacing.three * t,
     };
-  });
+  }, [blockHeight, scrollY]);
 
   return (
     <SkyCard radius={0} style={styles.card}>
@@ -122,8 +136,15 @@ export function SkyHeader({
               Both are orientation, not controls — so this is what gives way
               on scroll, while the search field and the List/Map toggle below
               stay put. Collapsing those would mean scrolling back up to
-              change a filter. */}
-          <Animated.View style={[styles.collapsible, collapsing]}>
+              change a filter.
+
+              Rendered plainly until it has been measured, then swapped for
+              the animated copy. That ordering is what makes the animation
+              work at all: Reanimated fixes an animated style's property set
+              from the worklet's FIRST run, so mounting it before the height
+              was known registered an empty style that later values could not
+              fill in. */}
+          {blockHeight === 0 ? (
             <View onLayout={measure} style={styles.collapsibleInner}>
           <View style={styles.headingRow}>
             <View style={styles.heading}>
@@ -164,7 +185,50 @@ export function SkyHeader({
             </View>
           ) : null}
             </View>
-          </Animated.View>
+          ) : (
+            <Animated.View style={[styles.collapsible, collapsing]}>
+              <View style={styles.collapsibleInner}>
+          <View style={styles.headingRow}>
+            <View style={styles.heading}>
+              {eyebrow ? <ThemedText style={styles.eyebrow}>{eyebrow}</ThemedText> : null}
+              <ThemedText style={styles.title} numberOfLines={1}>
+                {title}
+              </ThemedText>
+            </View>
+            {action ? (
+              <Pressable
+                onPress={action.onPress}
+                accessibilityRole="button"
+                hitSlop={10}
+                style={styles.action}
+              >
+                <ThemedText style={styles.actionText}>{action.label}</ThemedText>
+              </Pressable>
+            ) : null}
+          </View>
+
+          {progress ? (
+            <View style={styles.progress}>
+              <View style={styles.track}>
+                {/* Width as a percentage string, so it needs no layout
+                    measurement and cannot be wrong on first paint. A floor of
+                    2% keeps a single visit visible instead of rounding to
+                    nothing. */}
+                <View
+                  style={[
+                    styles.fill,
+                    { width: `${pct > 0 ? Math.max(pct * 100, 2) : 0}%` },
+                  ]}
+                />
+              </View>
+              <ThemedText style={styles.progressLabel}>
+                {progress.done} of {progress.total} {progress.label}
+              </ThemedText>
+            </View>
+          ) : null}
+              </View>
+            </Animated.View>
+          )}
 
           {children}
         </View>
