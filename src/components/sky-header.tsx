@@ -27,6 +27,10 @@ import { useTheme } from '@/hooks/use-theme';
 const COLLAPSE_AT = 60;
 const EXPAND_AT = 20;
 
+/** One duration for the header and the chips. They collapse for the same
+ *  reason, so they have to move on the same clock or they look unrelated. */
+const COLLAPSE_MS = 180;
+
 /**
  * Drives the header collapse from a list's scroll position.
  *
@@ -137,7 +141,7 @@ export function SkyHeader({
   useEffect(() => {
     Animated.timing(open, {
       toValue: collapsed ? 0 : 1,
-      duration: 180,
+      duration: COLLAPSE_MS,
       useNativeDriver: false,
     }).start();
   }, [collapsed, open]);
@@ -349,6 +353,8 @@ const styles = StyleSheet.create({
   /** `overflow: hidden` is what lets the inner view keep its natural height
    *  and simply be clipped, which is what makes measuring it safe. */
   collapsible: { overflow: 'hidden' },
+  chipHost: { overflow: 'hidden' },
+  chipBarLayer: { position: 'absolute', left: 0, right: 0, top: 0 },
   chipScroll: { flexGrow: 0, flexShrink: 0 },
   chips: {
     gap: Spacing.two,
@@ -444,45 +450,98 @@ export function CollapsibleChips({
 }) {
   const theme = useTheme();
   const [open, setOpen] = useState(true);
-
   useEffect(() => setOpen(!collapsed), [collapsed]);
 
-  if (open) {
-    return (
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chips}
-        // A horizontal ScrollView in a flex column has no intrinsic height and
-        // will fight the list below it for space. flexGrow 0 sizes it to its
-        // content instead.
-        style={styles.chipScroll}
-      >
-        {children}
-      </ScrollView>
-    );
-  }
+  /**
+   * Both states are mounted and crossfade, with the container's height moving
+   * between them — rather than swapping one for the other.
+   *
+   * A swap was the first version and it read as a glitch: the chips vanished
+   * and a bar appeared instantly while the header above was still animating,
+   * so two things that happen for the same reason looked unrelated.
+   *
+   * Same mechanism and the same 180ms as the header on purpose. Matching the
+   * duration is most of what makes a transition look intended rather than
+   * incidental; two correct animations on different curves still look wrong
+   * together.
+   */
+  const t = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    Animated.timing(t, {
+      toValue: open ? 1 : 0,
+      duration: COLLAPSE_MS,
+      useNativeDriver: false,
+    }).start();
+  }, [open, t]);
+
+  const [chipsH, setChipsH] = useState(0);
+  const [barH, setBarH] = useState(0);
+  const measured = chipsH > 0 && barH > 0;
+
+  /**
+   * No height until both parts have been measured, which is safe because the
+   * initial state is open: the container takes the chips' natural height and
+   * the bar is already transparent, so the first paint is correct and nothing
+   * flashes.
+   */
+  const height = measured
+    ? t.interpolate({ inputRange: [0, 1], outputRange: [barH, chipsH] })
+    : undefined;
 
   return (
-    <Pressable
-      onPress={() => setOpen(true)}
-      accessibilityRole="button"
-      accessibilityLabel={`Filters: ${summary}. Tap to change.`}
-      style={({ pressed }) => [
-        styles.chipBar,
-        { borderBottomColor: theme.borderSoft },
-        pressed ? { backgroundColor: theme.backgroundSelected } : null,
-      ]}
-    >
-      <ThemedText type="small" themeColor="textSecondary">
-        {summary}
-      </ThemedText>
-      <SymbolView
-        name={{ ios: 'chevron.down', android: 'expand_more', web: 'expand_more' }}
-        size={12}
-        weight="semibold"
-        tintColor={theme.textSecondary}
-      />
-    </Pressable>
+    <Animated.View style={[styles.chipHost, measured ? { height } : null]}>
+      {/* The bar sits underneath, absolutely positioned, so the two can
+          crossfade without either reserving space for the other. */}
+      <Animated.View
+        style={[styles.chipBarLayer, { opacity: t.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) }]}
+        pointerEvents={open ? 'none' : 'auto'}
+      >
+        <Pressable
+          onPress={() => setOpen(true)}
+          onLayout={(e) => {
+            const h = e.nativeEvent.layout.height;
+            if (h > 0 && barH === 0) setBarH(h);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={`Filters: ${summary}. Tap to change.`}
+          style={({ pressed }) => [
+            styles.chipBar,
+            { borderBottomColor: theme.borderSoft },
+            pressed ? { backgroundColor: theme.backgroundSelected } : null,
+          ]}
+        >
+          <ThemedText type="small" themeColor="textSecondary">
+            {summary}
+          </ThemedText>
+          <SymbolView
+            name={{ ios: 'chevron.down', android: 'expand_more', web: 'expand_more' }}
+            size={12}
+            weight="semibold"
+            tintColor={theme.textSecondary}
+          />
+        </Pressable>
+      </Animated.View>
+
+      <Animated.View style={{ opacity: t }} pointerEvents={open ? 'auto' : 'none'}>
+        <View
+          onLayout={(e) => {
+            const h = e.nativeEvent.layout.height;
+            if (h > 0 && chipsH === 0) setChipsH(h);
+          }}
+        >
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chips}
+            // A horizontal ScrollView in a flex column has no intrinsic height
+            // and will fight the list below it for space. flexGrow 0 sizes it
+            // to its content instead.
+            style={styles.chipScroll}
+          >
+            {children}
+          </ScrollView>
+        </View>
+      </Animated.View>
+    </Animated.View>
   );
 }
