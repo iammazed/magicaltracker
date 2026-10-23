@@ -145,7 +145,7 @@ export default function CatalogScreen() {
   // state rather than a route: a tab that remembers it was showing a map is
   // surprising when you come back to find a restaurant by name.
   const [view, setView] = useState<'list' | 'map'>('list');
-  const { collapsed, onScroll, reset: resetHeader, debug } = useHeaderCollapse();
+  const { collapsed, onScroll, reset: resetHeader } = useHeaderCollapse();
 
   const areaName = useMemo(
     () => Object.fromEntries(areas.map((a) => [a.id, a.name])),
@@ -225,7 +225,6 @@ export default function CatalogScreen() {
           }
           action={planning ? { label: 'Done', onPress: () => router.back() } : undefined}
           collapsed={collapsed}
-          debug={debug}
         >
           <View style={styles.searchRow}>
             <TextInput
