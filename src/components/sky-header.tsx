@@ -1,5 +1,6 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   type LayoutChangeEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -7,20 +8,21 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  type SharedValue,
-} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SkyCard, Stars } from '@/components/sky-card';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 
-/** How far you scroll before the title block is fully gone. Short enough that
- *  one flick reclaims the space, long enough not to twitch on a small nudge. */
-const COLLAPSE_DISTANCE = 90;
+/**
+ * Two thresholds, not one, so the header cannot flicker.
+ *
+ * With a single boundary, a list resting at exactly that offset toggles on
+ * every pixel of movement. Collapsing at 60 and only re-expanding below 20
+ * means the gap has to be crossed deliberately.
+ */
+const COLLAPSE_AT = 60;
+const EXPAND_AT = 20;
 
 /**
  * Drives the header collapse from a list's scroll position.
@@ -30,31 +32,37 @@ const COLLAPSE_DISTANCE = 90;
  * List/Map toggle — was unreadable on one of them for a while precisely
  * because there were two copies.
  *
- * **A plain `onScroll`, deliberately, not `useAnimatedScrollHandler`.** The
- * worklet version is the canonical Reanimated pattern and is smoother, and
- * it did nothing here — with no error to explain why. Writing the offset
- * into a shared value from JS costs one bridge-free assignment per scroll
- * event at `scrollEventThrottle={16}`, the interpolation still runs on the
- * UI thread, and it works on an ordinary `FlatList` with no
- * `Animated.FlatList` wrapper. For a header that slides 90pt that trade is
- * free; it would not be for a gesture tracking a finger.
+ * **No Reanimated here, and that is the result of two failed attempts.** A
+ * shared value driving `useAnimatedStyle` is the idiomatic way to do this and
+ * it did nothing on device — twice, with no error, no warning and nothing
+ * wrong on inspection. Rather than guess at a third variation, this uses
+ * plain React state and React Native's own `Animated`, which cannot fail
+ * silently: if the state flips, the view re-renders.
  *
- * `reset` is for when the list unmounts, such as switching to the map: the
- * shared value would otherwise keep its last offset and leave the header
- * collapsed over a full-height map.
+ * It is also cheaper than it looks. The state is a BOOLEAN, not an offset, so
+ * `setCollapsed` bails out on every scroll event that does not cross a
+ * threshold — two re-renders per scroll session rather than one per frame.
+ * A per-frame interpolation would have needed the UI thread; a binary flip
+ * does not.
+ *
+ * `reset` is for when the list unmounts, such as switching to the map, which
+ * would otherwise leave the header collapsed over a full-height map.
  */
 export function useHeaderCollapse() {
-  const scrollY = useSharedValue(0);
-  const onScroll = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      scrollY.value = e.nativeEvent.contentOffset.y;
-    },
-    [scrollY],
-  );
-  const reset = useCallback(() => {
-    scrollY.value = 0;
-  }, [scrollY]);
-  return { scrollY, onScroll, reset };
+  const [collapsed, setCollapsed] = useState(false);
+
+  const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const y = e.nativeEvent.contentOffset.y;
+    setCollapsed((prev) => {
+      if (!prev && y > COLLAPSE_AT) return true;
+      if (prev && y < EXPAND_AT) return false;
+      return prev;
+    });
+  }, []);
+
+  const reset = useCallback(() => setCollapsed(false), []);
+
+  return { collapsed, onScroll, reset };
 }
 
 /**
@@ -78,7 +86,7 @@ export function SkyHeader({
   title,
   progress,
   action,
-  scrollY,
+  collapsed = false,
   children,
 }: {
   eyebrow?: string;
@@ -92,7 +100,7 @@ export function SkyHeader({
    *  out to be behind the tab bar. Two exits, not one. */
   action?: { label: string; onPress: () => void };
   /** From `useHeaderCollapse()`. Omit it and the header never collapses. */
-  scrollY?: SharedValue<number>;
+  collapsed?: boolean;
   children?: React.ReactNode;
 }) {
   const pct =
@@ -118,31 +126,30 @@ export function SkyHeader({
   );
 
   /**
-   * Always returns the SAME three properties, which is the part that was
-   * broken the first time.
-   *
-   * Reanimated initialises an animated style from the worklet's first run.
-   * The first version returned `{}` while the height was still unmeasured
-   * and three properties afterwards, so the style registered empty and the
-   * later properties never took effect — the header simply never moved, with
-   * no error anywhere. A stable property set is not a style preference.
-   *
-   * The block below only mounts this view once `blockHeight` is known, so the
-   * first run already has real numbers.
+   * 1 is open, 0 is collapsed. `useNativeDriver` is false because height and
+   * margin are layout properties, which the native driver cannot touch — at
+   * 180ms on a single view that is not worth caring about.
    */
-  const collapsing = useAnimatedStyle(() => {
-    const t = scrollY
-      ? Math.min(1, Math.max(0, scrollY.value / COLLAPSE_DISTANCE))
-      : 0;
-    return {
-      height: blockHeight * (1 - t),
-      opacity: 1 - t,
-      // `inner` lays its children out with `gap`, which survives a child
-      // collapsing to zero height — so without this the band keeps a stripe
-      // of empty space exactly where the title used to be.
-      marginBottom: -Spacing.three * t,
-    };
-  }, [blockHeight, scrollY]);
+  const open = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    Animated.timing(open, {
+      toValue: collapsed ? 0 : 1,
+      duration: 180,
+      useNativeDriver: false,
+    }).start();
+  }, [collapsed, open]);
+
+  const collapsing = {
+    height: open.interpolate({ inputRange: [0, 1], outputRange: [0, blockHeight] }),
+    opacity: open,
+    // `inner` lays its children out with `gap`, which survives a child
+    // collapsing to zero height — so without this the band keeps a stripe of
+    // empty space exactly where the title used to be.
+    marginBottom: open.interpolate({
+      inputRange: [0, 1],
+      outputRange: [-Spacing.three, 0],
+    }),
+  };
 
   return (
     <SkyCard radius={0} style={styles.card}>

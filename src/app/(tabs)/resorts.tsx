@@ -51,7 +51,7 @@ export default function ResortsScreen() {
   // it was showing a map is surprising when you come back to look something
   // up by name.
   const [view, setView] = useState<'list' | 'map'>('list');
-  const { scrollY, onScroll, reset: resetHeader } = useHeaderCollapse();
+  const { collapsed, onScroll, reset: resetHeader } = useHeaderCollapse();
   const filtered = useFilteredResorts(resorts, { search, tier });
 
   const stayedIds = useMemo(() => new Set(byResort.keys()), [byResort]);
@@ -82,7 +82,7 @@ export default function ResortsScreen() {
           eyebrow="WALT DISNEY WORLD"
           title="Resorts"
           progress={{ done: stayedCount, total: resorts.length, label: 'stayed at' }}
-          scrollY={scrollY}
+          collapsed={collapsed}
         >
           <TextInput
             value={search}
