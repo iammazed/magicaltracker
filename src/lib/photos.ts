@@ -1,6 +1,5 @@
 import * as Sentry from '@sentry/react-native';
 import { Directory, File, Paths } from 'expo-file-system';
-import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
 /**
  * Photos attached to a visit, on disk.
@@ -26,6 +25,41 @@ const MAX_EDGE = 1600;
 /** JPEG quality for the re-encode. */
 const QUALITY = 0.7;
 const DIR_NAME = 'visit-photos';
+
+/**
+ * The resizer is loaded at the point of use, never at import. That is a
+ * launch-crash fix, not a performance one.
+ *
+ * `expo-image-manipulator` calls `requireNativeModule('ExpoImageManipulator')`
+ * while its own module body evaluates, and that THROWS when the native module
+ * is not in the binary — a development build made before this package was
+ * added, or a prebuild that lost it. Expo's Metro config sets
+ * `experimentalImportSupport: true` with `inlineRequires: false`, so a static
+ * `import` is hoisted and runs on module load rather than on first use.
+ *
+ * This file is reachable from `use-visits`, which the root layout mounts, so
+ * an eager import turns a missing resizer into a white screen before React
+ * renders — and it happens outside every try/catch below, so none of the
+ * fallbacks here would run. Same judgement as the missing Sentry DSN: losing
+ * photo resizing is a bad day, and an app that will not launch is a one-star
+ * review.
+ *
+ * `false` records a load that already failed, so a binary without the module
+ * reports once instead of on every photo.
+ */
+type Manipulator = typeof import('expo-image-manipulator');
+let manipulator: Manipulator | false | null = null;
+
+async function loadManipulator(): Promise<Manipulator | false> {
+  if (manipulator !== null) return manipulator;
+  try {
+    manipulator = await import('expo-image-manipulator');
+  } catch (e) {
+    Sentry.captureException(e);
+    manipulator = false;
+  }
+  return manipulator;
+}
 
 function photosDirectory(): Directory {
   const dir = new Directory(Paths.document, DIR_NAME);
@@ -61,8 +95,9 @@ export async function importPhoto(asset: PickedPhoto): Promise<string> {
     const longest = Math.max(width, height);
 
     // Re-encoding an already-small photo costs quality and gains nothing.
-    if (longest > MAX_EDGE) {
-      const context = ImageManipulator.manipulate(asset.uri);
+    const mod = longest > MAX_EDGE ? await loadManipulator() : false;
+    if (mod) {
+      const context = mod.ImageManipulator.manipulate(asset.uri);
       // Constrain the LONG edge, whichever it is. Passing only one dimension
       // lets the manipulator keep the aspect ratio; passing width on a
       // portrait photo would leave a 1600×2133 image, which is not a cap.
@@ -70,10 +105,13 @@ export async function importPhoto(asset: PickedPhoto): Promise<string> {
       const rendered = await context.renderAsync();
       const saved = await rendered.saveAsync({
         compress: QUALITY,
-        format: SaveFormat.JPEG,
+        format: mod.SaveFormat.JPEG,
       });
       source = saved.uri;
     }
+    // No resizer is a reason to keep the photo at its original size, not to
+    // drop it — so the move below still runs, which is the half of this
+    // function that prevents actual data loss.
 
     const destination = new File(photosDirectory(), filename());
     await new File(source).move(destination);
