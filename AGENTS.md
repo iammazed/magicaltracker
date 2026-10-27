@@ -804,6 +804,25 @@ is only `true` for the selected pin, which genuinely needs one more frame. And
 zoom mounts all 366 pins at once. Together they keep the mounted count at roughly 14–57 instead
 of 366.
 
+**A tap on a pin fires TWO native handlers, and nothing orders them.** On Apple Maps the marker
+has its own `UITapGestureRecognizer` and the map's runs alongside it — `cancelsTouchesInView = NO`,
+`shouldRecognizeSimultaneouslyWithGestureRecognizer` returns `YES`, and `handleMapTap:` never
+checks whether the tap landed on an annotation. So `MapView.onPress` fires on a pin tap as well
+as on bare map. The marker's handler selected the place and the map's cleared it, in the same
+React batch — so **tapping a pin did nothing at all**, and had done since the map shipped. The
+card was selected and deselected before anything rendered, which is indistinguishable from a
+dead tap target.
+
+`stopPropagation` on the `<Marker>` closes the React-level bubble, which is only ONE of the two
+routes. The map's own recognizer is the other and no JS can stop it, so `onMapPress` defers a
+tick and backs off if a marker claimed the same tap. Deferring rather than reading a flag
+synchronously is deliberate: the observed order on one device is not a contract, and a guard
+that depends on it is a guard that breaks on the next iOS release.
+
+**The pin's hit area is a transparent 34pt box around an 18pt dot.** Apple asks for 44pt and an
+18pt marker is less than half of that, but 44 has neighbouring pins overlapping each other's hit
+areas at the closest zoom, which trades a missed tap for a wrong one.
+
 Filtering and search happen **in memory**. The catalog is ~400 rows and already loaded, so a
 round trip per keystroke would be slower and would break offline.
 

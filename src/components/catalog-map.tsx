@@ -49,6 +49,20 @@ export type MapPlace = {
  *  marker does need one more frame to redraw. */
 const STATIC_MARKERS = false;
 
+/**
+ * How long after a marker press a map press is still part of the same tap.
+ *
+ * See `onMapPress` below. 100ms is comfortably longer than the gap between
+ * two gesture recognizers firing for one touch, and far shorter than the gap
+ * between two deliberate taps.
+ */
+const SAME_TAP_MS = 100;
+
+/** A transparent 34pt box around an 18pt dot. Apple asks for 44pt targets and
+ *  an 18pt pin is less than half that, but 44 would have neighbouring pins
+ *  overlapping each other's hit areas at the closest zoom. */
+const PIN_HIT = 34;
+
 export function CatalogMap({
   places,
   doneIds,
@@ -69,6 +83,40 @@ export function CatalogMap({
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const pins = useMemo(() => clusterPins(places, viewport), [places, viewport]);
+
+  /**
+   * One tap on a pin fires TWO native handlers, and nothing orders them.
+   *
+   * On Apple Maps the marker has its own tap recognizer, and the map's runs
+   * alongside it — `cancelsTouchesInView = NO`, with
+   * `shouldRecognizeSimultaneouslyWithGestureRecognizer` returning YES and no
+   * check anywhere for whether the tap landed on an annotation. So
+   * `MapView.onPress` fires when you tap a pin, not only when you tap bare
+   * map. It cleared the selection in the same batch that the marker set it,
+   * which is why tapping a pin did nothing at all: the card was selected and
+   * deselected before anything rendered.
+   *
+   * `stopPropagation` on the marker closes the React-level bubble, which is
+   * one of the two routes to `MapView.onPress`. The map's own recognizer is
+   * the other and no JS can stop it, so the map press has to work out whether
+   * it was really a tap on bare map. It defers a tick and backs off if a
+   * marker claimed the same tap — which holds whichever order the two arrive
+   * in, rather than relying on the one observed on this device.
+   */
+  const markerTapAt = useRef(0);
+
+  const selectPlace = useCallback((id: string) => {
+    markerTapAt.current = Date.now();
+    setSelectedId(id);
+  }, []);
+
+  const onMapPress = useCallback(() => {
+    const at = Date.now();
+    setTimeout(() => {
+      if (markerTapAt.current >= at - SAME_TAP_MS) return;
+      setSelectedId(null);
+    }, SAME_TAP_MS);
+  }, []);
 
   const selected = useMemo(
     () => places.find((p) => p.id === selectedId) ?? null,
@@ -96,8 +144,9 @@ export function CatalogMap({
         initialRegion={WDW_REGION}
         onRegionChangeComplete={setViewport}
         // Tapping bare map dismisses the card, the same way tapping outside
-        // any other transient surface does.
-        onPress={() => setSelectedId(null)}
+        // any other transient surface does. Via `onMapPress`, because a tap
+        // on a pin lands here too.
+        onPress={onMapPress}
         showsPointsOfInterests={false}
         showsCompass={false}
         toolbarEnabled={false}
@@ -126,7 +175,11 @@ export function CatalogMap({
             <Marker
               key={pin.key}
               coordinate={{ latitude: pin.lat, longitude: pin.lng }}
-              onPress={() => setSelectedId(pin.item.id)}
+              onPress={() => selectPlace(pin.item.id)}
+              // Keeps this press from also arriving at the map's `onPress` as
+              // a React bubble. Apple Maps only, which is the provider here;
+              // Android never propagates marker presses.
+              stopPropagation
               // The selected pin grows, so it needs one more render pass.
               tracksViewChanges={pin.item.id === selectedId}
               anchor={{ x: 0.5, y: 0.5 }}
@@ -207,19 +260,23 @@ function PlacePin({
   // Done is a filled pin with a tick; not-yet is a hollow ring in the same
   // colour. Shape carries the state as well as colour does, so it still reads
   // for anyone who cannot tell the two hues apart.
+  // The dot sits inside a transparent box, so the tap target is a finger
+  // rather than 18 points. The marker is anchored at its centre either way.
   return (
-    <View
-      style={[
-        styles.pin,
-        selected && styles.pinSelected,
-        done
-          ? { backgroundColor: tone, borderColor: theme.background }
-          : { backgroundColor: theme.background, borderColor: tone },
-      ]}
-    >
-      {done ? (
-        <ThemedText style={[styles.pinMark, { color: theme.onAccent }]}>✓</ThemedText>
-      ) : null}
+    <View style={styles.pinHit}>
+      <View
+        style={[
+          styles.pin,
+          selected && styles.pinSelected,
+          done
+            ? { backgroundColor: tone, borderColor: theme.background }
+            : { backgroundColor: theme.background, borderColor: tone },
+        ]}
+      >
+        {done ? (
+          <ThemedText style={[styles.pinMark, { color: theme.onAccent }]}>✓</ThemedText>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -227,6 +284,12 @@ function PlacePin({
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
+  pinHit: {
+    width: PIN_HIT,
+    height: PIN_HIT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   pin: {
     width: 18,
     height: 18,
