@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
@@ -35,6 +36,34 @@ import { TIER_COLOR } from '@/hooks/use-passport';
 /** How long it sits there before leaving on its own. Long enough to read two
  *  short lines and decide to tap, short enough not to be in the way. */
 const DWELL_MS = 4200;
+
+/**
+ * A tap you feel, scaled to what was earned.
+ *
+ * Finishing something gets the Success notification pattern — three taps,
+ * unmistakably a result. A rung on the way up gets a single medium impact,
+ * because spending the big pattern on Bronze leaves nothing louder for
+ * Platinum.
+ *
+ * **Statically imported, unlike the image manipulator, and the difference is
+ * in the package rather than in the judgement.** `expo-haptics` resolves its
+ * native module with `requireOptionalNativeModule`, which returns null rather
+ * than throwing, so importing it on a binary that predates it is harmless;
+ * the call then rejects with an `UnavailabilityError`, which is what the
+ * catch is for. `expo-image-manipulator` uses `requireNativeModule`, which
+ * throws while the module body evaluates — nothing downstream can catch
+ * that, hence the lazy load over there.
+ *
+ * Failure is silent on purpose. A phone with haptics switched off, a
+ * simulator, and an older binary all land here, and none of them is worth a
+ * Sentry event for a missing buzz.
+ */
+function celebrate(finished: boolean) {
+  const tap = finished
+    ? Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    : Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  void tap.catch(() => {});
+}
 /** Past this much upward drag, a release dismisses rather than springs back. */
 const SWIPE_CLOSE = 40;
 
@@ -76,6 +105,11 @@ function Banner({ unlock, onDone }: { unlock: Unlock; onDone: () => void }) {
   };
 
   useEffect(() => {
+    // With the animation, not before it: the buzz and the card arriving are
+    // one event, and a haptic that lands early reads as a notification from
+    // somewhere else.
+    celebrate(unlock.tier === 'Platinum' || unlock.tier === null);
+
     Animated.parallel([
       Animated.spring(enter, {
         toValue: 1,
@@ -110,7 +144,7 @@ function Banner({ unlock, onDone }: { unlock: Unlock; onDone: () => void }) {
 
     const timer = setTimeout(() => close.current(), DWELL_MS);
     return () => clearTimeout(timer);
-  }, [enter, pop, shine]);
+  }, [enter, pop, shine, unlock.tier]);
 
   /**
    * Swipe up to dismiss. `onMoveShouldSet` only claims clearly upward drags,
