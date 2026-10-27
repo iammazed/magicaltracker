@@ -8,9 +8,15 @@ import { Directory, File, Paths } from 'expo-file-system';
  *
  * **Resize.** The picker was handing back whatever the camera produced — a
  * 12MP iPhone photo at `quality: 0.7` is 1–2 MB, and a visit can hold six.
- * Capped at 1600px on the long edge that becomes roughly 200–400 KB, which is
- * the difference between Supabase Storage being affordable later and not. It
- * is still far more resolution than a thumbnail or a full-screen view needs.
+ * Capped at 1600px on the long edge that becomes **roughly 500 KB**, still far
+ * more resolution than a thumbnail or a full-screen view needs.
+ *
+ * That 500 KB is measured on a device, not estimated. This comment claimed
+ * 200–400 KB first and was optimistic by a third, which matters because the
+ * number is the input to the storage budget: six photos is about 3 MB per
+ * visit, not 1.8 MB. If that proves too expensive the levers are `QUALITY`
+ * and then `MAX_EDGE` — at these sizes, quality costs less that anyone can
+ * actually see than resolution does.
  *
  * **Move out of the cache.** `expo-image-picker` returns a URI inside the
  * CACHE directory, and so does the manipulator. iOS reclaims that directory

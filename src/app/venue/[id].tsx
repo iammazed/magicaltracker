@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import {
@@ -11,6 +10,7 @@ import {
   View,
 } from 'react-native';
 
+import { PhotoStrip } from '@/components/photo-viewer';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Radius, Spacing } from '@/constants/theme';
@@ -148,18 +148,7 @@ export default function VenueDetailScreen() {
                         {v.note}
                       </ThemedText>
                     ) : null}
-                    {jsonList(v.photos).length ? (
-                      <View style={styles.visitPhotos}>
-                        {jsonList(v.photos).map((uri) => (
-                          <Image
-                            key={uri}
-                            source={{ uri }}
-                            style={styles.visitThumb}
-                            contentFit="cover"
-                          />
-                        ))}
-                      </View>
-                    ) : null}
+                    <PhotoStrip uris={jsonList(v.photos)} />
                   </View>
                   <Pressable
                     onPress={() => void deleteVisit(v.id)}
@@ -314,8 +303,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   visitNote: { lineHeight: 18, fontStyle: 'italic' },
-  visitPhotos: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two, marginTop: Spacing.one },
-  visitThumb: { width: 56, height: 56, borderRadius: Radius.small },
   visitMain: { flex: 1, gap: 2 },
   primary: {
     marginTop: Spacing.two,
