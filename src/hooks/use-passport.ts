@@ -208,6 +208,43 @@ export function usePassport() {
       };
     };
 
+    /**
+     * Every venue carrying a tag, all or nothing, naming what is left.
+     *
+     * Distinct from `tagChallenge`, which tiers. The same reasoning as the
+     * pavilions: a short, closed set that people set out to COMPLETE is not
+     * improved by a Bronze medal at a quarter of the way through, and nobody
+     * claims a partial bar crawl. Tiers exist to make "4 of 61" survivable;
+     * "4 of 10" is already a next step.
+     *
+     * `remaining` holds venue names rather than ids, because it is rendered
+     * straight into "Still to go".
+     */
+    const setChallenge = (
+      id: string,
+      title: string,
+      blurb: string,
+      tag: string,
+    ): Challenge => {
+      // `tags` is string[] here, not the pipe-joined CSV form — `catalog-db`
+      // parses the JSON column on the way out — so this is exact membership.
+      const all = tagRows.filter((r) => r.tags?.includes(tag));
+      const done = all.filter((r) => visitedIds.has(r.id));
+      return {
+        id,
+        title,
+        blurb,
+        earned: done.length,
+        target: all.length,
+        complete: all.length > 0 && done.length === all.length,
+        tiered: false,
+        tier: null,
+        nextTier: null,
+        toNext: 0,
+        remaining: all.filter((r) => !visitedIds.has(r.id)).map((r) => r.name),
+      };
+    };
+
     const tagChallenge = (
       id: string,
       title: string,
@@ -239,6 +276,12 @@ export function usePassport() {
 
     return [
       ...areaChallenges,
+      setChallenge(
+        'monorail-bar-crawl',
+        'The Monorail Bar Crawl',
+        'A drink at every bar on the monorail loop — Grand Floridian, Contemporary and Polynesian.',
+        'monorail-bar-crawl',
+      ),
       pavilionChallenge(
         'drinking-around-the-world',
         'Drinking Around the World',

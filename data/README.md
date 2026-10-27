@@ -239,6 +239,13 @@ the eleven is enough. So tag *every* qualifying venue, not one per country: some
 at La Cava del Tequila and someone who drinks at Choza de Margarita have both done Mexico, and
 both must count.
 
+- `monorail-bar-crawl` — the ten stops on the monorail-loop bar crawl, across the
+  Grand Floridian, the Contemporary and the Polynesian. **Load-bearing**: it is the
+  only thing defining that challenge, and it cannot be derived from `resort_id`
+  because Wailulu sits under `polynesian-villas-and-bungalows` rather than
+  `polynesian-village-resort`. Two stops are tagged on a restaurant rather than a
+  bar — `narcoossees` and `california-grill` — because the catalog has no separate
+  bar row for either.
 - `world-showcase-bar` — any World Showcase venue serving alcohol (47 rows)
 - `world-showcase-snack` — any you can grab food from without a sit-down meal: kiosks, carts,
   snack stands, quick service (23 rows)
@@ -252,6 +259,7 @@ drink in Mexico.
 Pipe-delimited. These drive achievements, so they are functional, not descriptive:
 
 `world-showcase-bar` · `world-showcase-snack` · `character-dining` · `signature` ·
+`monorail-bar-crawl` ·
 `breakfast` · `lunch` · `dinner` · `mobile-order` · `outdoor-seating`
 
 Tag as you go. Retrofitting tags across 200 rows later costs a full day.

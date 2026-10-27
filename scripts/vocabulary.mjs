@@ -77,6 +77,7 @@ export const WORLD_SHOWCASE = [
 
 export const TAGS = [
   'world-showcase-bar', 'world-showcase-snack', 'character-dining', 'signature',
+  'monorail-bar-crawl',
   'breakfast', 'lunch', 'dinner', 'mobile-order', 'outdoor-seating',
 ];
 

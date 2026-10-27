@@ -1,6 +1,6 @@
 {
-  "version": "71cea2a4893a",
-  "generated_at": "2026-10-20T02:56:26.887Z",
+  "version": "d2ff6af07249",
+  "generated_at": "2026-10-27T04:08:57.649Z",
   "destinations": [
     {
       "id": "wdw",
@@ -2683,7 +2683,8 @@
       "description": "Premier rooftop restaurant offering seafood and steak with panoramic views of the Magic Kingdom fireworks.",
       "tags": [
         "dinner",
-        "signature"
+        "signature",
+        "monorail-bar-crawl"
       ],
       "keywords": [
         "contemporary"
@@ -3751,7 +3752,9 @@
       "lat": 28.410364,
       "lng": -81.588701,
       "description": "Elegant, walk-up bar where you can enjoy signature cocktails and order from the full Mediterranean-inspired dinner menu.",
-      "tags": [],
+      "tags": [
+        "monorail-bar-crawl"
+      ],
       "keywords": [
         "lounge",
         "grand-floridian",
@@ -5126,7 +5129,9 @@
       "lat": 28.4114,
       "lng": -81.5868,
       "description": "Upscale, Beauty and the Beast-inspired cocktail lounge and gourmet small plates like truffle fries.",
-      "tags": [],
+      "tags": [
+        "monorail-bar-crawl"
+      ],
       "keywords": [
         "lounge",
         "alcohol",
@@ -10235,7 +10240,8 @@
       "description": "Upscale, waterfront signature restaurant offering panoramic lagoon views, premium seafood, and steaks.",
       "tags": [
         "dinner",
-        "signature"
+        "signature",
+        "monorail-bar-crawl"
       ],
       "keywords": [
         "grand-floridian",
@@ -10729,7 +10735,9 @@
       "lat": 28.4159,
       "lng": -81.5742,
       "description": "Casual fourth-floor cocktail lounge offering specialty drinks and scenic views of Bay Lake.",
-      "tags": [],
+      "tags": [
+        "monorail-bar-crawl"
+      ],
       "keywords": [
         "lounge",
         "alcohol",
@@ -13837,7 +13845,8 @@
       "description": "Sleek, walk-up friendly lounge offering 1970s-inspired cocktails and elevated comfort bites in a retro mid-century setting.",
       "tags": [
         "lunch",
-        "dinner"
+        "dinner",
+        "monorail-bar-crawl"
       ],
       "keywords": [
         "lounge",
@@ -14336,7 +14345,8 @@
       "lng": -81.5794,
       "description": "An exciting, Polynesian-themed bar known for its tropical cocktails and island-inspired appetizers.",
       "tags": [
-        "dinner"
+        "dinner",
+        "monorail-bar-crawl"
       ],
       "keywords": [
         "lounge",
@@ -15109,7 +15119,9 @@
       "lat": 28.410364,
       "lng": -81.588701,
       "description": "Elegant, Victorian-inspired lobby bar that serves signature cocktails and champagne in a beautifully crafted space inspired by the lobby's iconic historic birdcage.",
-      "tags": [],
+      "tags": [
+        "monorail-bar-crawl"
+      ],
       "keywords": [
         "lounge",
         "alcohol",
@@ -15750,7 +15762,9 @@
       "lat": 28.4058265,
       "lng": -81.5854149,
       "description": "Iteractive tiki lounge where ordering tropical cocktails triggers chaotic special effects, playful bartender antics, and theatrical room transformations.",
-      "tags": [],
+      "tags": [
+        "monorail-bar-crawl"
+      ],
       "keywords": [
         "lounge",
         "bar",
@@ -16461,7 +16475,8 @@
       "description": "Indoor-outdoor eatery offering South Pacific-inspired cuisine, tropical cocktails, and stunning views of the Seven Seas Lagoon and Magic Kingdom fireworks.",
       "tags": [
         "lunch",
-        "dinner"
+        "dinner",
+        "monorail-bar-crawl"
       ],
       "keywords": [
         "alcohol",
