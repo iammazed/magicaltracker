@@ -2,6 +2,7 @@ import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { Platform, useColorScheme } from 'react-native';
 
 import { Colors } from '@/constants/theme';
+import { useAchievements } from '@/hooks/use-achievements';
 
 /**
  * Four tabs. SF Symbols rather than bundled PNGs — they are vector, respect
@@ -50,6 +51,7 @@ const LABEL = { fontSize: 11, fontWeight: '600' } as const;
 export default function AppTabs() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const { unseen } = useAchievements();
 
   return (
     <NativeTabs
@@ -93,6 +95,14 @@ export default function AppTabs() {
 
       <NativeTabs.Trigger name="passport" disableAutomaticContentInsets>
         <NativeTabs.Trigger.Label>Passport</NativeTabs.Trigger.Label>
+        {/* The count rather than a bare dot. UIKit draws a dot for an empty
+            badge string, but a number is unambiguous, survives the platform
+            deciding otherwise, and "2" answers the question the dot only
+            raises. Left at the system red: that is what an unread marker
+            looks like everywhere else on the phone. */}
+        <NativeTabs.Trigger.Badge hidden={unseen.length === 0}>
+          {unseen.length ? String(unseen.length) : undefined}
+        </NativeTabs.Trigger.Badge>
         {/* `medal` rather than `rosette`: rosette has no fill variant either,
             and a medal reads straight onto the Bronze/Silver/Gold tiers. */}
         <NativeTabs.Trigger.Icon

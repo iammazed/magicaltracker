@@ -791,6 +791,48 @@ because no bar would ever be tagged in Refreshment Outpost.
 **Pavilion challenges count pavilions covered, not venues visited.** A drink at either Mexico bar
 completes Mexico. `require: all` over the tagged venues would demand all 47 bars.
 
+### Celebrating an achievement: a badge and a banner are different things
+
+`use-achievements` splits them deliberately, and conflating them is the bug waiting to happen.
+
+**The badge is derived, the banner is a transition.** Only the acknowledged set is stored, as
+`achievements_seen` in `app_settings`; the unread count is `current \ seen`, computed. There is
+no counter to increment, so there is nothing to drift out of step with what the user has
+actually reached. The banner, by contrast, fires on a change observed WITHIN a session, tracked
+in a ref. A badge should survive a relaunch; a celebration should not. Being congratulated on
+launch for something earned last Tuesday is confusing rather than exciting.
+
+**The first computation after load is a silent baseline, and the feature is unusable without
+it.** Onboarding backfills twenty-odd visits in one go, so a ledger starting empty would open
+the app on a stack of banners for achievements the user did not just earn — and a device pulling
+a synced account's history would celebrate meals eaten years ago. Seeding the baseline costs
+nothing and is the difference between a reward and a spam folder.
+
+**One milestone per challenge, not one per tier crossed.** Somebody who logs a backlog and jumps
+from nothing to Gold is told they got Gold. Three banners climbing the ladder they skipped would
+bury the actual news.
+
+**The milestone key is `challengeId@Tier`**, so Silver on the same challenge is a distinct
+unlock from Bronze and gets its own celebration. All-or-nothing challenges use `@earned`.
+
+**Looking is acknowledging, but the highlight outlives the badge.** Opening the Passport clears
+the count immediately and captures what was new into component state for the length of the
+visit. Without that capture, arriving from the banner would clear the badge and show nothing to
+explain why you came — `unseen` is empty by the time the list renders.
+
+**Every animation in the banner is `useNativeDriver: true`**, which is possible only because
+nothing animated is a layout property — transform and opacity, no height, no margin. It runs on
+the UI thread and cannot be stuttered by whatever JS is doing. The header collapse animates
+height and therefore cannot do this; the two are different for a reason, not by accident.
+Reanimated is not used here either, for the reason recorded above: it silently did nothing on
+device twice, and a celebration that fails invisibly means the user never learns the feature
+exists.
+
+**Known gap:** switching accounts does not clear `achievements_seen`, so the next user may see
+the previous one's acknowledgements. It is in `app_settings`, which the user-table wipe does not
+touch. Harmless today — worst case a badge that should have appeared does not — but it belongs
+in the wipe once a second account on one phone is a real scenario rather than a test.
+
 **The map is Apple Maps via `PROVIDER_DEFAULT`, and that is a choice, not a placeholder.** It
 needs no API key and runs in Expo Go, so it works before the Apple Developer Program clears.
 Styled Google Maps needs a key through a config plugin, which needs a development build, which

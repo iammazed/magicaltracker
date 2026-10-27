@@ -1,30 +1,47 @@
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 
+import { useEffect, useRef, useState } from 'react';
+
 import { ProgressBar } from '@/components/progress-bar';
 import { SkyHeader, useHeaderCollapse } from '@/components/sky-header';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { AreaTone, Radius, Spacing, type RampToken } from '@/constants/theme';
+import { useAchievements, currentMilestone } from '@/hooks/use-achievements';
 import { useBottomInset } from '@/hooks/use-bottom-inset';
-import { type Challenge, type Coverage, usePassport } from '@/hooks/use-passport';
+import {
+  TIER_COLOR,
+  type Challenge,
+  type Coverage,
+  usePassport,
+} from '@/hooks/use-passport';
 import { titleCase } from '@/lib/labels';
 import { useTheme } from '@/hooks/use-theme';
-
-// Medal colours are literal, not theme tokens: bronze is bronze in both
-// themes, and a tier that changed colour with the OS would stop reading
-// as a medal.
-const TIER_COLOR: Record<string, string> = {
-  Bronze: '#B08D57',
-  Silver: '#A8B2BC',
-  Gold: '#E5B45F',
-  Platinum: '#8FD6D2',
-};
 
 export default function PassportScreen() {
   const theme = useTheme();
   const { loading, overall, byArea, resortCoverage, challenges } = usePassport();
   const bottomInset = useBottomInset();
   const { collapsed, onScroll } = useHeaderCollapse();
+  const { unseen, markAllSeen } = useAchievements();
+
+  /**
+   * What was new WHEN THIS SCREEN OPENED, held for the length of the visit.
+   *
+   * Looking is acknowledging, so the badge clears immediately — but the
+   * highlight has to outlive it, or arriving here from the banner would clear
+   * the count and show nothing to explain why you came. Captured once:
+   * re-reading `unseen` after `markAllSeen` would return an empty set and the
+   * highlight would vanish mid-render.
+   */
+  const [fresh, setFresh] = useState<Set<string>>(() => new Set());
+  const captured = useRef(false);
+  useEffect(() => {
+    if (captured.current || !unseen.length) return;
+    captured.current = true;
+    setFresh(new Set(unseen.map((u) => u.key)));
+    markAllSeen();
+  }, [unseen, markAllSeen]);
 
   if (loading) {
     return (
@@ -114,12 +131,12 @@ export default function PassportScreen() {
             {challenges
               .filter((c) => !c.tiered)
               .map((c) => (
-                <ChallengeCard key={c.id} challenge={c} />
+                <ChallengeCard key={c.id} challenge={c} fresh={isFresh(c, fresh)} />
               ))}
             {challenges
               .filter((c) => c.tiered && !c.id.startsWith('area-'))
               .map((c) => (
-                <ChallengeCard key={c.id} challenge={c} />
+                <ChallengeCard key={c.id} challenge={c} fresh={isFresh(c, fresh)} />
               ))}
           </Section>
 
@@ -130,6 +147,7 @@ export default function PassportScreen() {
                 <ChallengeCard
                   key={c.id}
                   challenge={c}
+                  fresh={isFresh(c, fresh)}
                   tone={AreaTone[c.id.replace('area-', '')] ?? 'brandTeal'}
                 />
               ))}
@@ -195,12 +213,21 @@ function AreaTile({ area }: { area: Coverage }) {
   );
 }
 
+/** Does this card correspond to a milestone the user has not yet looked at? */
+function isFresh(c: Challenge, fresh: Set<string>): boolean {
+  const key = currentMilestone(c)?.key;
+  return key ? fresh.has(key) : false;
+}
+
 function ChallengeCard({
   challenge: c,
   tone,
+  fresh = false,
 }: {
   challenge: Challenge;
   tone?: RampToken;
+  /** Reached since the user last opened this screen. */
+  fresh?: boolean;
 }) {
   const theme = useTheme();
   const medalColor = c.tier ? TIER_COLOR[c.tier.name] : null;
@@ -212,8 +239,11 @@ function ChallengeCard({
         styles.card,
         {
           backgroundColor: c.complete ? theme.goldSurface : theme.backgroundElement,
-          borderColor: c.complete ? theme.gold : medalColor ?? theme.border,
+          borderColor: fresh ? theme.gold : c.complete ? theme.gold : medalColor ?? theme.border,
         },
+        // A full-weight gold edge rather than a hairline, so the card the
+        // banner was talking about is findable in a long list at a glance.
+        fresh ? styles.cardFresh : null,
       ]}
     >
       {/* The same colour spine the dining rows use, so a challenge for a park
@@ -242,6 +272,13 @@ function ChallengeCard({
             {c.tier ? (
               <ThemedText style={[styles.tierTag, { color: medalColor ?? theme.gold }]}>
                 {c.tier.name.toUpperCase()}
+              </ThemedText>
+            ) : null}
+            {fresh ? (
+              <ThemedText
+                style={[styles.newTag, { backgroundColor: theme.gold, color: theme.onGold }]}
+              >
+                NEW
               </ThemedText>
             ) : null}
           </View>
@@ -362,4 +399,14 @@ const styles = StyleSheet.create({
   titleLine: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   cardTitle: { flexShrink: 1 },
   tierTag: { fontSize: 9, fontWeight: '700', letterSpacing: 0.8 },
+  cardFresh: { borderWidth: 2 },
+  newTag: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    overflow: 'hidden',
+    borderRadius: Radius.pill,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
 });

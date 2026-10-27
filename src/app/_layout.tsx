@@ -15,7 +15,9 @@ import { SQLiteProvider } from 'expo-sqlite';
 import * as SplashScreen from 'expo-splash-screen';
 import { Pressable, ScrollView, StyleSheet, Text, View, useColorScheme } from 'react-native';
 
+import { AchievementBanner } from '@/components/achievement-banner';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { AchievementsProvider } from '@/hooks/use-achievements';
 import { AuthProvider } from '@/hooks/use-auth';
 import { BrandFontsProvider } from '@/hooks/use-brand-fonts';
 import { CatalogProvider } from '@/hooks/use-catalog';
@@ -101,6 +103,9 @@ function RootLayout() {
               a wiped account's trips stayed on screen. */}
           <TripsProvider>
             <SyncProvider>
+            {/* Inside the catalog and visit stores, because it derives
+                milestones from both. */}
+            <AchievementsProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <AnimatedSplashOverlay />
             <Stack
@@ -177,7 +182,13 @@ function RootLayout() {
                 options={{ title: 'Design tokens', presentation: 'modal' }}
               />
             </Stack>
+            {/* After the Stack, so it draws over every screen including the
+                modals. The visit that completes a challenge is logged in one
+                of those modals, and a celebration confined to the Passport
+                tab would fire where nobody is standing. */}
+            <AchievementBanner />
         </ThemeProvider>
+            </AchievementsProvider>
             </SyncProvider>
           </TripsProvider>
         </VisitsProvider>

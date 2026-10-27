@@ -53,6 +53,20 @@ export const TIERS = [
 
 export type Tier = (typeof TIERS)[number];
 
+/**
+ * Medal colours, and they are literals on purpose: bronze is bronze in both
+ * schemes, and a tier that changed colour with the OS would stop reading as a
+ * medal. Defined here beside `TIERS` rather than in the Passport screen,
+ * because the achievement banner needs the same four and two copies of a
+ * colour map drift.
+ */
+export const TIER_COLOR: Record<string, string> = {
+  Bronze: '#B08D57',
+  Silver: '#A8B2BC',
+  Gold: '#E5B45F',
+  Platinum: '#8FD6D2',
+};
+
 export type Challenge = {
   id: string;
   title: string;
