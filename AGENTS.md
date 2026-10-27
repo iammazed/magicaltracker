@@ -1046,6 +1046,35 @@ workflow silently starts pinging a host that no longer exists. Re-add them, and 
 to the schema now would make `db:generate` emit a `CREATE TABLE` for a table that already
 exists. Recorded here so the omission is a decision rather than a gap.
 
+### Photo storage will outgrow the Free Plan, and a date is the wrong alarm
+
+Measured on a device, not estimated: a resized photo is **~500 KB**, a visit holds up to six, so
+a fully-photographed visit is **~3 MB**. The Free Plan's 1 GB of file storage is therefore about
+**340 six-photo visits across every user combined** — not per user. Pro's 100 GB is the answer
+and is deliberately NOT a launch requirement: at launch there is no photo sync at all, and the
+first users will not fill a gigabyte.
+
+**The upgrade trigger is usage, not a date.** A calendar reminder set today fires when the
+calendar says so, which is uncorrelated with when the storage actually fills — it will go off
+while the bucket is at 4%, get dismissed, and not go off again on the month that matters. So:
+
+- The daily `keep-supabase-awake` workflow is where the check belongs, and it **fails** above a
+  threshold rather than printing a warning nobody reads. Same reasoning as that workflow's
+  `exit 0` bug: a check that cannot fail is a check that costs attention and returns nothing.
+- Alert at **60% of the plan's storage**, not 90%. The point is to have time to upgrade
+  deliberately, not to be told while uploads are already failing.
+- Reading the number needs `storage.objects`, which PostgREST does not expose. A
+  `SECURITY DEFINER` function in `public` is the way in, with the same four protections as
+  `delete_own_account`.
+
+**What happens at the limit is an app problem, not only a billing one.** Uploads start failing,
+and the photo-sync work must treat that as expected: the photo stays on the device, the visit
+still saves, and nothing tells the user their picture was rejected by a quota. A failed upload
+that loses the photo, or blocks the visit from saving, turns a bill into data loss.
+
+Build the check as part of the storage migration, not as a follow-up. An alarm added after the
+thing it watches is an alarm that gets added after the thing it watches overflows.
+
 **Never change tables in the Supabase dashboard.** The dashboard has no migration history, so a
 dashboard change makes the repo lie about the database and the next `db:generate` will try to
 undo it.
