@@ -1,8 +1,7 @@
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ProgressBar } from '@/components/progress-bar';
-import { SkyCard, Stars } from '@/components/sky-card';
+import { SkyHeader, useHeaderCollapse } from '@/components/sky-header';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { AreaTone, Radius, Spacing, type RampToken } from '@/constants/theme';
@@ -25,6 +24,7 @@ export default function PassportScreen() {
   const theme = useTheme();
   const { loading, overall, byArea, resortCoverage, challenges } = usePassport();
   const bottomInset = useBottomInset();
+  const { collapsed, onScroll } = useHeaderCollapse();
 
   if (loading) {
     return (
@@ -38,51 +38,54 @@ export default function PassportScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView edges={['top']} style={styles.safe}>
+      <View style={styles.safe}>
+        {/**
+         * The same twilight band as Dining and Resorts.
+         *
+         * This was a plain title over a separate gradient hero card, and that
+         * card scrolled away whole — so the one number the tab exists to show
+         * was gone the moment you went looking at your areas.
+         *
+         * What gives way is the eyebrow and the title, exactly as on the other
+         * two tabs. The percentage and the three counts are the content rather
+         * than the chrome, so they are what stays.
+         *
+         * That also retires the "12 of 394 places · 3 of 35 resorts · 2 of 18
+         * challenges" line that used to sit under the title. It was the stats
+         * row again in sentence form, directly above the stats row.
+         */}
+        <SkyHeader eyebrow="WALT DISNEY WORLD" title="Passport" collapsed={collapsed}>
+          <View style={styles.summary}>
+            <ThemedText style={styles.pct}>
+              {Math.round(overall.pct * 100)}
+              <ThemedText style={styles.pctSign}>%</ThemedText>
+            </ThemedText>
+            <View style={styles.summaryStats}>
+              <HeroStat value={overall.visited} total={overall.total} label="Places" />
+              <HeroStat
+                value={resortCoverage.visited}
+                total={resortCoverage.total}
+                label="Resorts"
+              />
+              <HeroStat value={earned} total={challenges.length} label="Earned" />
+            </View>
+          </View>
+        </SkyHeader>
+
         <ScrollView
+          onScroll={onScroll}
+          scrollEventThrottle={16}
           contentContainerStyle={[
             styles.scroll,
             { paddingBottom: bottomInset + Spacing.five },
           ]}
         >
-          <View style={styles.header}>
-            <ThemedText type="title" style={styles.heading}>
-              Passport
+          {/* Below the gradient, so this one reads theme tokens. */}
+          {overall.visited === 0 ? (
+            <ThemedText type="small" themeColor="textSecondary" style={styles.hint}>
+              Log your first visit from the Dining tab and this starts filling.
             </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              {overall.visited} of {overall.total} places ·{' '}
-              {resortCoverage.visited} of {resortCoverage.total} resorts ·{' '}
-              {earned} of {challenges.length} challenges
-            </ThemedText>
-          </View>
-
-          {/* ── Headline number ──────────────────────────────────── */}
-          <SkyCard style={styles.hero}>
-            <Stars />
-            <View style={styles.heroInner}>
-              <ThemedText style={styles.heroPct}>
-                {Math.round(overall.pct * 100)}
-                <ThemedText style={styles.heroSign}>%</ThemedText>
-              </ThemedText>
-              <ThemedText style={styles.heroCaption}>
-                of Walt Disney World dining eaten through
-              </ThemedText>
-              <View style={styles.heroStats}>
-                <HeroStat value={overall.visited} total={overall.total} label="Places" />
-                <HeroStat
-                  value={resortCoverage.visited}
-                  total={resortCoverage.total}
-                  label="Resorts"
-                />
-                <HeroStat value={earned} total={challenges.length} label="Earned" />
-              </View>
-              {overall.visited === 0 ? (
-                <ThemedText style={styles.heroHint}>
-                  Log your first visit from the Dining tab and this starts filling.
-                </ThemedText>
-              ) : null}
-            </View>
-          </SkyCard>
+          ) : null}
 
           {/* ── Areas at a glance, in their own colours ───────────── */}
           <Section title="Where you have eaten">
@@ -132,7 +135,7 @@ export default function PassportScreen() {
               ))}
           </Section>
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </ThemedView>
   );
 }
@@ -289,36 +292,25 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: {
     paddingHorizontal: Spacing.three,
+    paddingTop: Spacing.four,
     gap: Spacing.four,
   },
-  header: { paddingTop: Spacing.two, gap: 2 },
-  heading: { fontSize: 34, lineHeight: 40 },
-  hero: { minHeight: 190 },
-  heroInner: { padding: Spacing.four, alignItems: 'center', gap: Spacing.one },
+  hint: { textAlign: 'center', paddingHorizontal: Spacing.four },
+  /** The part of the header that does not give way. The three counts sit
+   *  beside the number rather than under it, so the strip is one row high
+   *  once the title has gone. */
+  summary: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   // Literals, because the sky gradient is the same dark in both schemes —
   // theme text tokens would invert and vanish on it.
-  heroPct: { color: '#E5B45F', fontSize: 64, lineHeight: 68, fontWeight: '700' },
-  heroSign: { color: '#E5B45F', fontSize: 30, fontWeight: '700' },
-  heroCaption: {
-    color: 'rgba(255,255,255,0.82)',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  heroHint: {
-    color: 'rgba(255,255,255,0.62)',
-    fontSize: 13,
-    textAlign: 'center',
-    marginTop: Spacing.two,
-  },
-  heroStats: {
+  pct: { color: '#E5B45F', fontSize: 44, lineHeight: 48, fontWeight: '700' },
+  pctSign: { color: '#E5B45F', fontSize: 22, fontWeight: '700' },
+  summaryStats: {
+    flex: 1,
     flexDirection: 'row',
-    gap: Spacing.four,
-    marginTop: Spacing.three,
-    paddingTop: Spacing.three,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255,255,255,0.18)',
-    alignSelf: 'stretch',
-    justifyContent: 'center',
+    justifyContent: 'space-around',
+    paddingLeft: Spacing.three,
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderLeftColor: 'rgba(255,255,255,0.18)',
   },
   heroStat: { alignItems: 'center', gap: 1 },
   heroStatValue: { color: '#ffffff', fontSize: 17, fontWeight: '700' },
