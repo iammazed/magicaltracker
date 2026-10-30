@@ -51,8 +51,6 @@
     "@types/react": "~19.2.2",
     "dotenv": "^18.0.1",
     "drizzle-kit": "^0.31.10",
-    "eslint": "^9.0.0",
-    "eslint-config-expo": "~57.0.2",
     "tsx": "^4.23.15",
     "typescript": "~6.0.3"
   },
@@ -74,7 +72,6 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint",
     "check:tokens": "node ./scripts/check-tokens.mjs",
     "check:catalog": "node ./scripts/check-catalog-schema.mjs",
     "check:iap": "node ./scripts/check-revenuecat.mjs"
