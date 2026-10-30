@@ -593,8 +593,12 @@ and the In-App Purchase Key being accepted.
 to serve the products**. It caught `premium_annual` vs `premium_yearly`, which was worth having,
 but a green run is not evidence that a purchase works. Only a device purchase is.
 
-**Still unverified on a device:** Restore Purchases (which App Store review does test),
-expiry re-locking the gates, and `linkUser` carrying a guest's purchase onto a new account.
+**Verified on a device since:** Restore Purchases, which App Store review does test, and a
+lapsed subscription re-locking the gates.
+
+**Still unverified:** `linkUser` carrying a guest's purchase onto a new account. It needs a
+sandbox purchase made as a guest and then a fresh sign-in, which is the one sequence no script
+can stand in for.
 
 **Nothing outside `src/lib/purchases.ts` imports `react-native-purchases`**, the same rule as
 `supabase` and `use-catalog`. `use-premium` asks whether someone is entitled, the paywall asks
@@ -968,7 +972,15 @@ Current state, which `eas env:list` should keep matching:
 | `EXPO_PUBLIC_SUPABASE_URL` | ✅ | ✅ | ✅ | sensitive |
 | `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | ✅ | ✅ | ✅ | sensitive |
 | `EXPO_PUBLIC_SENTRY_DSN` | ✅ | ✅ | ✅ | plaintext |
+| `EXPO_PUBLIC_REVENUECAT_KEY_APPLE` | — | ✅ | ✅ | sensitive |
 | `SENTRY_AUTH_TOKEN` | — | ✅ | ✅ | **secret** |
+
+`EXPO_PUBLIC_REVENUECAT_KEY_APPLE` is absent from `development` deliberately, and the mechanism
+is worth understanding because it is not obvious: a development build gets its NATIVE code from
+EAS but its JAVASCRIPT from Metro, and Metro inlines `EXPO_PUBLIC_*` from the local `.env`. So
+`EXPO_PUBLIC_REVENUECAT_KEY_TEST` in `.env` is what a dev build actually reads, and it never
+needs to exist in EAS at all. The table above is the EAS state; `.env` is a separate, local
+fourth column that only development uses.
 
 `SENTRY_AUTH_TOKEN` is absent from `development` on purpose: a dev build serves JS from Metro, so
 no source map is ever uploaded and the token has nothing to do. It is `secret` rather than
