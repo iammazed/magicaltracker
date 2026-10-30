@@ -1133,6 +1133,20 @@ A table with **RLS off** is readable by anyone holding the publishable key — w
 the app binary. A table with **RLS on and no policy** is unreachable. `npm run db:check` fails on
 either, so run it after every migration.
 
+**`npm run db:check` now enforces `withCheck`, and `npm run db:check:verify -- --yes` proves
+that it does.** The guard used to print "RLS on, 1 policy" for a correct table and for one whose
+write policy carried only `using`, which is to say it could not see the rule this section calls
+non-optional. It now fails when any table with a `user_id` column has an `ALL`/`INSERT`/`UPDATE`
+policy with no `with_check`, and prints a `writes` column so the state is visible rather than
+asserted. "User-owned" comes from the presence of that column, not a list, so the next table is
+covered the day it is added rather than the day somebody remembers.
+
+The verifier exists because a guard nobody has watched fail is a guard nobody should trust — the
+same lesson as the heartbeat workflow's `exit 0` and the catalog seed test. It creates one empty
+table with a deliberately broken policy, asserts `db:check` rejects it and says why, fixes the
+policy, asserts it passes, and drops the table in a `finally`. It **writes to the database it is
+pointed at**, so it refuses to run without `--yes` and is deliberately not part of `db:check`.
+
 For user-owned tables (`visits`, `trips`, `stays`), the policy needs **both** clauses:
 
 ```ts

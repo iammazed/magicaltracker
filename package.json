@@ -68,6 +68,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:check": "node ./scripts/db-check.mjs",
+    "db:check:verify": "node ./scripts/verify-db-check.mjs",
     "db:import": "node ./scripts/import-catalog.mjs",
     "android": "expo start --android",
     "ios": "expo start --ios",
