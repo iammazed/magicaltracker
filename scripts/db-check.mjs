@@ -5,6 +5,18 @@
  *
  * Exits non-zero if any public table has RLS disabled or has zero policies —
  * either of those means a table is wide open or unreachable, and both are bugs.
+ *
+ * It ALSO fails when a user-owned table has a write policy with no
+ * `with_check`, which is the failure the first two versions of this script
+ * could not see. `using` governs reads and `with_check` governs writes, so a
+ * policy with only `using` lets a user insert rows stamped with somebody
+ * else's id — and the table still reports "RLS on, 1 policy" and passes. A
+ * guard that cannot see the thing the docs call non-optional is the kind that
+ * costs attention and returns nothing.
+ *
+ * "User-owned" is derived from the presence of a `user_id` column rather than
+ * a hardcoded list, so a new table is covered the day it is added instead of
+ * the day somebody remembers to add it here.
  */
 
 import 'dotenv/config';
@@ -34,9 +46,31 @@ try {
     process.exit(1);
   }
 
+  /** Tables that carry a `user_id`, so their writes must be constrained. */
+  const owned = new Set(
+    (
+      await sql`
+        select table_name
+        from information_schema.columns
+        where table_schema = 'public' and column_name = 'user_id'`
+    ).map((r) => r.table_name),
+  );
+
+  /** Write-capable policies lacking `with_check`, by table. */
+  const unchecked = new Map();
+  for (const r of await sql`
+    select tablename, policyname, cmd
+    from pg_policies
+    where schemaname = 'public'
+      and cmd in ('ALL', 'INSERT', 'UPDATE')
+      and with_check is null`) {
+    if (!unchecked.has(r.tablename)) unchecked.set(r.tablename, []);
+    unchecked.get(r.tablename).push(r.policyname);
+  }
+
   console.log('');
-  console.log('  table                rows   rls    policies');
-  console.log('  ' + '─'.repeat(46));
+  console.log('  table                rows   rls    policies  writes');
+  console.log('  ' + '─'.repeat(56));
 
   const problems = [];
 
@@ -45,14 +79,33 @@ try {
     const rls = t.rls_enabled ? 'on' : 'OFF';
     const policies = Number(t.policy_count);
 
+    // Blank rather than "n/a" for a catalog table: it has no user_id, so
+    // constraining writes is not a question that applies to it.
+    const writes = owned.has(t.table_name)
+      ? unchecked.has(t.table_name)
+        ? 'UNCHECKED'
+        : 'checked'
+      : '';
+
     console.log(
-      `  ${t.table_name.padEnd(20)} ${String(count).padStart(4)}   ${rls.padEnd(6)} ${policies}`,
+      `  ${t.table_name.padEnd(20)} ${String(count).padStart(4)}   ${rls.padEnd(6)} ${String(
+        policies,
+      ).padEnd(9)} ${writes}`,
     );
 
     // drizzle's own bookkeeping table lives in a separate schema, so anything
     // here is ours and must be locked down.
     if (!t.rls_enabled) problems.push(`${t.table_name}: RLS is DISABLED — table is readable by anyone with the publishable key`);
     else if (policies === 0) problems.push(`${t.table_name}: RLS on but no policies — table is unreachable from the app`);
+
+    if (owned.has(t.table_name) && unchecked.has(t.table_name)) {
+      problems.push(
+        `${t.table_name}: policy ${unchecked
+          .get(t.table_name)
+          .map((n) => `"${n}"`)
+          .join(', ')} can write with no with_check — a user could insert rows owned by someone else`,
+      );
+    }
   }
 
   const enums = await sql`
@@ -76,7 +129,10 @@ try {
     console.log('');
     process.exitCode = 1;
   } else {
-    console.log('  Every table has RLS enabled with at least one policy.\n');
+    console.log(
+      '  Every table has RLS enabled with at least one policy, and every\n' +
+        '  user-owned table constrains writes with with_check.\n',
+    );
   }
 } finally {
   await sql.end();
