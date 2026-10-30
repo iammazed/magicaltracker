@@ -32,7 +32,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { authenticatedRole, authUid, authUsers } from 'drizzle-orm/supabase';
 
-import { destinations, resorts, venues } from './schema';
+import { areas, destinations, resorts, venues } from './schema';
 
 const timestamps = {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -200,6 +200,54 @@ export const tripPlans = pgTable(
   ],
 );
 
+/* -- trip_days -- */
+
+/**
+ * Which park you plan to be in on a given day of a trip.
+ *
+ * Structured rather than a free-text itinerary, and that is the whole point:
+ * a park-per-day can be read back. "You are at EPCOT tomorrow, here are
+ * twelve places you have not eaten at" is only possible if the day carries a
+ * park id. A notes blob cannot be queried, cannot drive a notification, and
+ * cannot feed the passport.
+ *
+ * Rows are written lazily, so a day with nothing decided simply has no row.
+ */
+export const tripDays = pgTable(
+  'trip_days',
+  {
+    id: uuid('id').primaryKey(),
+    ...owner,
+
+    /** Cascade, like `trip_plans`: deleting a trip takes its days with it. */
+    tripId: uuid('trip_id')
+      .notNull()
+      .references(() => trips.id, { onDelete: 'cascade' }),
+
+    day: date('day').notNull(),
+
+    /**
+     * Restrict, like every other reference into the catalog: retiring an area
+     * must not silently erase somebody's plan. Nullable, because "this day is
+     * part of the trip but we have not decided" is a real state, and the row
+     * may exist only to hold a note.
+     */
+    areaId: text('area_id').references(() => areas.id, { onDelete: 'restrict' }),
+
+    /** Premium, the same as a visit note. */
+    note: text('note'),
+
+    ...timestamps,
+  },
+  (t) => [
+    index('trip_days_user_idx').on(t.userId),
+    /** Mirrors the local `UNIQUE (trip_id, day)`. One row per day, which is
+     *  what makes the push a plain upsert. */
+    uniqueIndex('trip_days_trip_day_key').on(t.tripId, t.day),
+    ownRowsOnly('trip_days'),
+  ],
+);
+
 /* ── sync bookkeeping ─────────────────────────────────────────────────── */
 
 /**
@@ -230,4 +278,5 @@ export type Visit = typeof visits.$inferSelect;
 export type Stay = typeof stays.$inferSelect;
 export type Trip = typeof trips.$inferSelect;
 export type TripPlan = typeof tripPlans.$inferSelect;
+export type TripDay = typeof tripDays.$inferSelect;
 export type SyncState = typeof syncState.$inferSelect;

@@ -22,7 +22,7 @@ import { seedCatalogIfNeeded, syncCatalogSchema } from '@/lib/catalog-db';
 export const DATABASE_NAME = 'magicaltracker.db';
 
 /** Bump when the schema below changes, and add a matching step in migrate(). */
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 6;
 
 export async function migrate(db: SQLiteDatabase) {
   // WAL keeps reads fast while a write is in flight, which matters when the
@@ -144,6 +144,37 @@ export async function migrate(db: SQLiteDatabase) {
     version = 5;
   }
 
+  if (version < 6) {
+    await db.execAsync(`
+      -- One row per DAY of a trip, holding which park you plan to be in.
+      --
+      -- Rows are written lazily: a day with nothing decided has no row, so a
+      -- seven-night trip starts as zero rows rather than seven empty ones.
+      -- The UI generates the date list from the trip's own start and end and
+      -- left-joins whatever is stored, which also means moving a trip's dates
+      -- cannot orphan a day into a range it no longer covers.
+      --
+      -- \`area_id\` is deliberately NOT a foreign key here. The catalog tables
+      -- are a disposable replica that \`syncCatalogSchema\` drops and rebuilds
+      -- whenever the DDL changes, and a real FK from durable user data into
+      -- them would make that rebuild fail. The server-side schema does
+      -- constrain it, where the catalog is not disposable.
+      CREATE TABLE IF NOT EXISTS trip_days (
+        id         TEXT PRIMARY KEY NOT NULL,
+        trip_id    TEXT NOT NULL,
+        day        TEXT NOT NULL,          -- YYYY-MM-DD
+        area_id    TEXT,                   -- null until a park is chosen
+        note       TEXT,                   -- premium
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        synced_at  TEXT,
+        UNIQUE (trip_id, day)
+      );
+      CREATE INDEX IF NOT EXISTS trip_days_trip_idx ON trip_days (trip_id);
+    `);
+    version = 6;
+  }
+
   await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
 
   // The catalog tables are NOT governed by the ladder above, and must not be.
@@ -160,6 +191,18 @@ export async function migrate(db: SQLiteDatabase) {
   // catalog read can assume the tables are populated.
   await seedCatalogIfNeeded(db);
 }
+
+export type TripDay = {
+  id: string;
+  trip_id: string;
+  /** YYYY-MM-DD. */
+  day: string;
+  area_id: string | null;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+  synced_at: string | null;
+};
 
 export type Trip = {
   id: string;

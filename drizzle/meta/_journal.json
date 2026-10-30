@@ -43,6 +43,13 @@
       "when": 1792455225822,
       "tag": "0005_delete_own_account",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793394732958,
+      "tag": "0006_cheerful_centennial",
+      "breakpoints": true
     }
   ]
 }

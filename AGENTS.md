@@ -500,6 +500,29 @@ the server's copy of a row that already exists locally would discard an edit mad
 exactly the failure this feature exists to prevent. Real two-way reconciliation needs per-field
 timestamps and a conflict rule, and only earns that complexity once a second device can write.
 
+**The day planner is structured, and capped on purpose.** `trip_days` holds one park per day
+of a trip plus an optional note, and nothing else. A free-text itinerary was the obvious cheaper
+option — `trips.note` and `trip_plans.note` both already exist and neither is exposed in any
+screen — and it was rejected because prose cannot be read back. "You are at EPCOT tomorrow,
+here are twelve places you have not eaten at" needs a park id; it is the reason the feature
+exists, and a notes blob cannot drive it, cannot drive a notification, and cannot feed the
+passport.
+
+**Day rows are written lazily and the day LIST is derived**, never stored. An untouched trip
+holds zero rows rather than one per night, and moving a trip's dates cannot strand a row outside
+the range it now covers. `datesBetween` builds the list from the trip's own start and end with
+`Date.UTC`, like all date arithmetic here.
+
+**Choosing the park is free; the day note is premium.** The split follows the existing rule
+rather than inventing one: notes are already premium on a visit, so a free day note would be the
+inconsistency. And the park choice is data entry, which is never paywalled — it is also exactly
+the data that makes the recommendation layer possible later, so charging for it would starve the
+thing that eventually justifies the subscription.
+
+**The cap is the point, not a first pass.** A day planner is the feature most likely to grow
+into a full itinerary app — ride plans, reservation times, transport, travel party. One park and
+one note, until somebody actually uses it.
+
 **`activeTrip` is ONE trip, so something else has to list the rest.** It returns the current
 trip, else the earliest upcoming — and for a while nothing in the app listed trips at all, so
 planning a second one that started later than the first appeared to do nothing. The home screen's

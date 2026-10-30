@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { SkyCard, Stars } from '@/components/sky-card';
+import { TripDays } from '@/components/trip-days';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { AreaTone, Radius, Spacing, TierTone } from '@/constants/theme';
@@ -81,6 +82,13 @@ export default function TripScreen() {
         </SkyCard>
 
         {/* ── Resort ───────────────────────────────────────────── */}
+        {/* Before "Staying at", because the day-by-day shape of the trip
+            is what someone opens this screen to look at once the resort is
+            settled. */}
+        <Section title="Each day">
+          <TripDays trip={trip} />
+        </Section>
+
         <Section title="Staying at">
           {resort ? (
             <Pressable

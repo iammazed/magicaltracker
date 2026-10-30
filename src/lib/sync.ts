@@ -46,8 +46,8 @@ const EMPTY: SyncResult = {
  *  guest data, free to be adopted by whoever signs in first. */
 const OWNER_KEY = 'sync_owner_id';
 
-/** Child tables first: `trip_plans` references `trips`. */
-const USER_TABLES = ['trip_plans', 'visits', 'stays', 'trips'] as const;
+/** Child tables first: `trip_plans` and `trip_days` both reference `trips`. */
+const USER_TABLES = ['trip_plans', 'trip_days', 'visits', 'stays', 'trips'] as const;
 
 /* ── Row shapes ───────────────────────────────────────────────────────── */
 
@@ -95,6 +95,16 @@ type LocalPlan = {
   booked: number;
   note: string | null;
   created_at: string;
+};
+
+type LocalDay = {
+  id: string;
+  trip_id: string;
+  day: string;
+  area_id: string | null;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 /* ── Push ─────────────────────────────────────────────────────────────── */
@@ -147,6 +157,22 @@ async function push(db: SQLiteDatabase, userId: string): Promise<number> {
     note: t.note,
     created_at: t.created_at,
     updated_at: t.updated_at,
+  }), userId);
+
+  // After `trips` and before anything else that could fail: `trip_days`
+  // references `trips`, and the only thing enforcing that order is the order
+  // of these calls.
+  const days = await db.getAllAsync<LocalDay>(
+    'SELECT * FROM trip_days WHERE synced_at IS NULL',
+  );
+  total += await pushTable(db, 'trip_days', days, (d) => ({
+    id: d.id,
+    trip_id: d.trip_id,
+    day: d.day,
+    area_id: d.area_id,
+    note: d.note,
+    created_at: d.created_at,
+    updated_at: d.updated_at,
   }), userId);
 
   const plans = await db.getAllAsync<LocalPlan>(
@@ -215,6 +241,7 @@ async function pull(db: SQLiteDatabase, userId: string): Promise<number> {
 
   const tables = [
     { name: 'trips', columns: 'id, name, start_date, end_date, resort_id, note, created_at, updated_at' },
+    { name: 'trip_days', columns: 'id, trip_id, day, area_id, note, created_at, updated_at' },
     { name: 'trip_plans', columns: 'id, trip_id, venue_id, booked, note, created_at' },
     { name: 'visits', columns: 'id, venue_id, visited_on, date_exact, rating, would_return, party_size, note, dishes, created_at, updated_at' },
     { name: 'stays', columns: 'id, resort_id, check_in, check_out, rating, room_type, note, created_at, updated_at' },
@@ -223,7 +250,14 @@ async function pull(db: SQLiteDatabase, userId: string): Promise<number> {
   for (const { name, columns } of tables) {
     const { data, error } = await supabase
       .from(name)
-      .select(columns)
+      // `columns as string`, and it has to stay that way. supabase-js parses a
+      // LITERAL select string into a result type, and `as const` above makes
+      // this a union of every table's column list — five of them produced
+      // "union type that is too complex to represent" and failed the build.
+      // Nothing is lost: `data` is cast to Record<string, unknown>[] below, so
+      // the parsed type was being discarded regardless. `name` keeps its
+      // literal type, which is the one `.from()` actually needs.
+      .select(columns as string)
       .eq('user_id', userId);
     if (error) throw new Error(`${name}: ${error.message}`);
     if (!data?.length) continue;
@@ -263,6 +297,15 @@ async function insertPulled(
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       String(r.id), String(r.name), String(r.start_date), String(r.end_date),
       (r.resort_id as string) ?? null, (r.note as string) ?? null,
+      String(r.created_at), String(r.updated_at), now,
+    );
+  } else if (table === 'trip_days') {
+    await db.runAsync(
+      `INSERT OR IGNORE INTO trip_days
+         (id, trip_id, day, area_id, note, created_at, updated_at, synced_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      String(r.id), String(r.trip_id), String(r.day),
+      (r.area_id as string) ?? null, (r.note as string) ?? null,
       String(r.created_at), String(r.updated_at), now,
     );
   } else if (table === 'trip_plans') {

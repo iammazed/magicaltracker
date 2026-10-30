@@ -8,7 +8,7 @@ import {
   useState,
 } from 'react';
 
-import { todayISO, type Trip, type TripPlan } from '@/lib/local-db';
+import { todayISO, type Trip, type TripDay, type TripPlan } from '@/lib/local-db';
 
 /**
  * Trips and the planning list.
@@ -50,19 +50,49 @@ export function tripStatus(t: Trip): TripStatus {
   return 'current';
 }
 
+/**
+ * Every date from `start` to `end`, inclusive.
+ *
+ * `Date.UTC` throughout, like everything else that does date arithmetic here:
+ * `new Date('2027-04-03')` parses as midnight UTC and renders in local time,
+ * so west of Greenwich every day would come out as the one before.
+ */
+export function datesBetween(start: string, end: string): string[] {
+  const out: string[] = [];
+  const [ys, ms, ds] = start.split('-').map(Number);
+  const [ye, me, de] = end.split('-').map(Number);
+  let t = Date.UTC(ys, ms - 1, ds);
+  const last = Date.UTC(ye, me - 1, de);
+  // A guard, not an optimisation: a trip whose dates got swapped would
+  // otherwise spin until the tab crashed.
+  while (t <= last && out.length < 400) {
+    const d = new Date(t);
+    out.push(
+      `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(
+        d.getUTCDate(),
+      ).padStart(2, '0')}`,
+    );
+    t += 86_400_000;
+  }
+  return out;
+}
+
 function useTripsStore() {
   const db = useSQLiteContext();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [plans, setPlans] = useState<TripPlan[]>([]);
+  const [days, setDays] = useState<TripDay[]>([]);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    const [t, p] = await Promise.all([
+    const [t, p, d] = await Promise.all([
       db.getAllAsync<Trip>('SELECT * FROM trips ORDER BY start_date ASC'),
       db.getAllAsync<TripPlan>('SELECT * FROM trip_plans ORDER BY created_at ASC'),
+      db.getAllAsync<TripDay>('SELECT * FROM trip_days ORDER BY day ASC'),
     ]);
     setTrips(t);
     setPlans(p);
+    setDays(d);
     setLoading(false);
   }, [db]);
 
@@ -172,12 +202,73 @@ function useTripsStore() {
     [plans],
   );
 
+  /** Stored days for a trip, keyed by date for the screen to merge against
+   *  the full range. Days with nothing decided have no row. */
+  const daysFor = useCallback(
+    (tripId: string) => {
+      const map = new Map<string, TripDay>();
+      for (const d of days) if (d.trip_id === tripId) map.set(d.day, d);
+      return map;
+    },
+    [days],
+  );
+
+  /**
+   * Writes one field of one day, creating the row if this is the first thing
+   * decided about it.
+   *
+   * An upsert on `(trip_id, day)` rather than a read-then-insert-or-update:
+   * two taps in quick succession on the same day would otherwise race, both
+   * see no row, and both insert — which the unique index would reject and the
+   * user would see as a tap that did nothing.
+   *
+   * `COALESCE(excluded.x, trip_days.x)` is wrong here and worth saying why:
+   * clearing a park back to "not decided" is a real action, so a null has to
+   * overwrite. Only the field being set is passed; the other keeps its stored
+   * value through the explicit reference below.
+   */
+  const setDay = useCallback(
+    async (
+      tripId: string,
+      day: string,
+      patch: { areaId?: string | null; note?: string | null },
+    ) => {
+      const now = new Date().toISOString();
+      const hasArea = 'areaId' in patch;
+      const hasNote = 'note' in patch;
+      await db.runAsync(
+        `INSERT INTO trip_days
+           (id, trip_id, day, area_id, note, created_at, updated_at, synced_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, NULL)
+         ON CONFLICT (trip_id, day) DO UPDATE SET
+           area_id    = ${hasArea ? 'excluded.area_id' : 'trip_days.area_id'},
+           note       = ${hasNote ? 'excluded.note' : 'trip_days.note'},
+           updated_at = excluded.updated_at,
+           -- Back to unsynced, so the next push sends the change. Forgetting
+           -- this is the bug where an edit looks saved and never leaves.
+           synced_at  = NULL`,
+        uuid(),
+        tripId,
+        day,
+        hasArea ? patch.areaId ?? null : null,
+        hasNote ? patch.note ?? null : null,
+        now,
+        now,
+      );
+      await refresh();
+    },
+    [db, refresh],
+  );
+
   return {
     trips,
     plans,
+    days,
     loading,
     activeTrip,
     plansFor,
+    daysFor,
+    setDay,
     addTrip,
     deleteTrip,
     setResort,
