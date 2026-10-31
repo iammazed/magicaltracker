@@ -3,13 +3,13 @@ import { useMemo } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { SkyCard, Stars } from '@/components/sky-card';
-import { TripDays } from '@/components/trip-days';
+import { PlaceOnDay, TripDays } from '@/components/trip-days';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { AreaTone, Radius, Spacing, TierTone } from '@/constants/theme';
 import { TIER_LABEL, useResorts } from '@/hooks/use-resorts';
 import { useTheme } from '@/hooks/use-theme';
-import { daysUntil, tripStatus, useTrips } from '@/hooks/use-trips';
+import { datesBetween, daysUntil, tripStatus, useTrips } from '@/hooks/use-trips';
 import { useVenues } from '@/hooks/use-venues';
 import { useVisits } from '@/hooks/use-visits';
 import { formatRange } from '@/lib/calendar';
@@ -39,6 +39,19 @@ export default function TripScreen() {
   const plans = plansFor(trip.id);
   const status = tripStatus(trip);
   const booked = plans.filter((p) => p.booked).length;
+
+  /**
+   * Only the meals with no day, because the ones with a day are shown under
+   * it in "Each day". Listing all of them here too put every restaurant on
+   * the screen twice and left this section answering a question the day cards
+   * already answer better.
+   *
+   * A `planned_on` outside the trip's own dates counts as unplaced, which is
+   * what makes moving a trip's dates safe: the meal comes back here rather
+   * than staying attached to a day that no longer exists.
+   */
+  const inRange = new Set(datesBetween(trip.start_date, trip.end_date));
+  const unplaced = plans.filter((p) => !p.planned_on || !inRange.has(p.planned_on));
 
   const confirmDelete = () =>
     Alert.alert('Delete this trip?', 'The dining list goes with it. Logged visits are kept.', [
@@ -119,7 +132,7 @@ export default function TripScreen() {
 
         {/* ── Dining plan ──────────────────────────────────────── */}
         <Section
-          title={`Dining list  ·  ${booked}/${plans.length} booked`}
+          title={`Not on a day yet  ·  ${booked}/${plans.length} booked`}
           action="Add places"
           onAction={() => router.push({ pathname: '/dining', params: { addToTrip: trip.id } })}
         >
@@ -133,8 +146,17 @@ export default function TripScreen() {
                 + Add restaurants to this trip
               </ThemedText>
             </Pressable>
+          ) : unplaced.length === 0 ? (
+            /* Not an empty state so much as a finished one: every restaurant
+               on the trip has a day, and saying so is better than an empty
+               box that looks like something failed to load. */
+            <ThemedText type="small" themeColor="textFaint" style={styles.allPlaced}>
+              {plans.length === 1
+                ? 'The one restaurant on this trip is on a day.'
+                : `All ${plans.length} restaurants are on a day.`}
+            </ThemedText>
           ) : (
-            plans.map((p) => {
+            unplaced.map((p) => {
               const v = venueById.get(p.venue_id);
               const visited = byVenue.has(p.venue_id);
               return (
@@ -156,6 +178,7 @@ export default function TripScreen() {
                       {visited ? 'Already visited' : formatCuisine(v?.cuisine)}
                     </ThemedText>
                   </View>
+                  <PlaceOnDay trip={trip} plan={p} />
                   <Pressable
                     onPress={() => void toggleBooked(p.id, !p.booked)}
                     accessibilityRole="button"
@@ -284,6 +307,7 @@ const styles = StyleSheet.create({
   },
   // Outlined rather than filled: destructive, and not the thing anyone came
   // to this screen to do.
+  allPlaced: { paddingVertical: Spacing.two },
   delete: {
     marginTop: Spacing.four,
     alignItems: 'center',

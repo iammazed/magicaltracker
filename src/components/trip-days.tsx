@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { PremiumGate } from '@/components/premium-gate';
@@ -6,8 +7,8 @@ import { ThemedText } from '@/components/themed-text';
 import { AreaTone, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { datesBetween, useTrips } from '@/hooks/use-trips';
-import { useAreas } from '@/hooks/use-venues';
-import type { DayKind, Trip } from '@/lib/local-db';
+import { useAreas, useVenues } from '@/hooks/use-venues';
+import type { DayKind, Trip, TripPlan } from '@/lib/local-db';
 
 /**
  * What you plan to be doing on each day of a trip.
@@ -29,10 +30,18 @@ import type { DayKind, Trip } from '@/lib/local-db';
  * tomorrow, you have never been to Trader Sam's" — which is why it is a kind
  * and not simply the absence of one. Only `rest` means nothing to suggest.
  *
- * Deliberately capped at one choice per day plus a note. A day planner is the
- * single feature most likely to grow into a full itinerary app — ride plans,
- * reservation times, transport, travel party — and none of that is worth
- * building before anyone has used this.
+ * Each day also carries the meals planned for it. The dining list used to be
+ * one flat block at the bottom of the trip screen, which told you five
+ * restaurants were on the trip and nothing about when — the question the
+ * screen is open to answer. A meal with no day stays in that block, which is
+ * now explicitly the pool of things still to place.
+ *
+ * Deliberately capped at one choice per day, a note, and the meals. A day
+ * planner is the single feature most likely to grow into a full itinerary app
+ * — ride plans, reservation times, transport, travel party — and none of that
+ * is worth building before anyone has used this. In particular there is no
+ * TIME on a meal, so the day's list is in the order you added them: inventing
+ * a 7pm would be inventing data the user never gave.
  *
  * **The day list is derived from the trip's own dates, never stored.** Rows
  * exist only for days something has been decided about, so an untouched trip
@@ -81,15 +90,41 @@ const dayAreas = <T extends { kind: string }>(areas: T[]) =>
 
 export function TripDays({ trip }: { trip: Trip }) {
   const theme = useTheme();
-  const { daysFor, setDay } = useTrips();
+  const router = useRouter();
+  const { daysFor, plansFor, setDay, setPlanDay } = useTrips();
   const { data: areas } = useAreas();
+  const { data: venues } = useVenues();
   const [editing, setEditing] = useState<string | null>(null);
 
-  const dates = datesBetween(trip.start_date, trip.end_date).slice(0, MAX_ROWS);
+  // Memoised so it is one stable array: `mealsByDay` depends on it, and a
+  // fresh array every render would make that memo do nothing.
+  const dates = useMemo(
+    () => datesBetween(trip.start_date, trip.end_date).slice(0, MAX_ROWS),
+    [trip.start_date, trip.end_date],
+  );
   const stored = daysFor(trip.id);
   // Every area, not just the offerable ones: a day stored against a resort
   // area before they were withdrawn still has to render with its name.
   const areaName = new Map(areas.map((a) => [a.id, a.name]));
+  const venueName = useMemo(
+    () => new Map(venues.map((v) => [v.id, v.name])),
+    [venues],
+  );
+
+  /** Meals by day. Only the dates this trip actually covers, so moving a
+   *  trip's dates returns a stranded meal to the pool rather than keeping it
+   *  attached to a day nobody can reach. */
+  const mealsByDay = useMemo(() => {
+    const inRange = new Set(dates);
+    const map = new Map<string, TripPlan[]>();
+    for (const p of plansFor(trip.id)) {
+      if (!p.planned_on || !inRange.has(p.planned_on)) continue;
+      const list = map.get(p.planned_on);
+      if (list) list.push(p);
+      else map.set(p.planned_on, [p]);
+    }
+    return map;
+  }, [plansFor, trip.id, dates]);
 
   return (
     <View style={styles.list}>
@@ -105,40 +140,110 @@ export function TripDays({ trip }: { trip: Trip }) {
           ? areaName.get(row.area_id) ?? row.area_id
           : spec?.label ?? 'Not decided';
         const decided = !!(row?.area_id || spec);
+        const meals = mealsByDay.get(date) ?? [];
         return (
-          <Pressable
+          /* A card, not a single Pressable, since the day gained meals: the
+             header opens the editor and each meal is its own target. Nesting
+             those inside one outer Pressable would make every meal tap also
+             count as a tap on the day. */
+          <View
             key={date}
-            onPress={() => setEditing(date)}
-            accessibilityRole="button"
-            accessibilityLabel={`Day ${i + 1}, ${weekday(date)}. ${
-              decided ? label : 'Nothing chosen'
-            }. Tap to change.`}
-            style={({ pressed }) => [
-              styles.row,
-              {
-                backgroundColor: pressed ? theme.backgroundSelected : theme.backgroundElement,
-                borderColor: theme.border,
-              },
+            style={[
+              styles.card,
+              { backgroundColor: theme.backgroundElement, borderColor: theme.border },
             ]}
           >
             <View style={[styles.bar, { backgroundColor: tone ?? theme.borderSoft }]} />
-            <View style={styles.rowMain}>
-              <ThemedText type="small" themeColor="textFaint" style={styles.dayNum}>
-                DAY {i + 1} · {weekday(date)}
-              </ThemedText>
-              <ThemedText type="smallBold" numberOfLines={1}>
-                {label}
-              </ThemedText>
-              {row?.note ? (
-                <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                  {row.note}
+            <View style={styles.cardBody}>
+              <Pressable
+                onPress={() => setEditing(date)}
+                accessibilityRole="button"
+                accessibilityLabel={`Day ${i + 1}, ${weekday(date)}. ${
+                  decided ? label : 'Nothing chosen'
+                }. Tap to change.`}
+                style={({ pressed }) => [
+                  styles.head,
+                  pressed ? { backgroundColor: theme.backgroundSelected } : null,
+                ]}
+              >
+                <View style={styles.rowMain}>
+                  <ThemedText type="small" themeColor="textFaint" style={styles.dayNum}>
+                    DAY {i + 1} · {weekday(date)}
+                  </ThemedText>
+                  <ThemedText type="smallBold" numberOfLines={1}>
+                    {label}
+                  </ThemedText>
+                  {row?.note ? (
+                    <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                      {row.note}
+                    </ThemedText>
+                  ) : null}
+                </View>
+                <ThemedText type="small" style={{ color: theme.accent }}>
+                  {decided ? 'Change' : 'Choose'}
                 </ThemedText>
-              ) : null}
+              </Pressable>
+
+              <View style={[styles.meals, { borderTopColor: theme.borderSoft }]}>
+                {meals.map((p) => (
+                  <View key={p.id} style={styles.meal}>
+                    <Pressable
+                      onPress={() =>
+                        router.push({
+                          pathname: '/venue/[id]',
+                          params: { id: p.venue_id },
+                        })
+                      }
+                      accessibilityRole="button"
+                      style={styles.mealMain}
+                    >
+                      <ThemedText type="small" numberOfLines={1}>
+                        {venueName.get(p.venue_id) ?? p.venue_id}
+                      </ThemedText>
+                    </Pressable>
+                    {p.booked ? (
+                      <ThemedText
+                        type="small"
+                        style={[styles.booked, { color: theme.gold }]}
+                      >
+                        Booked
+                      </ThemedText>
+                    ) : null}
+                    {/* Takes the meal off the DAY, not off the trip — it goes
+                        back to the pool below, where removing it entirely is
+                        the ✕. One destructive action per scope, and the
+                        recoverable one is the one on the crowded row. */}
+                    <Pressable
+                      onPress={() => void setPlanDay(p.id, null)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Take ${
+                        venueName.get(p.venue_id) ?? 'this place'
+                      } off day ${i + 1}`}
+                      hitSlop={8}
+                    >
+                      <ThemedText type="small" themeColor="textFaint">
+                        ✕
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+                ))}
+                <Pressable
+                  onPress={() =>
+                    router.push({
+                      pathname: '/dining',
+                      params: { addToTrip: trip.id, planDay: date },
+                    })
+                  }
+                  accessibilityRole="button"
+                  style={styles.addMeal}
+                >
+                  <ThemedText type="small" style={{ color: theme.accent }}>
+                    {meals.length ? '+ Add another restaurant' : '+ Add a restaurant'}
+                  </ThemedText>
+                </Pressable>
+              </View>
             </View>
-            <ThemedText type="small" style={{ color: theme.accent }}>
-              {decided ? 'Change' : 'Choose'}
-            </ThemedText>
-          </Pressable>
+          </View>
         );
       })}
 
@@ -157,6 +262,97 @@ export function TripDays({ trip }: { trip: Trip }) {
         />
       ) : null}
     </View>
+  );
+}
+
+/**
+ * "Place" on a meal that has no day yet, with the picker behind it.
+ *
+ * Exported so the pool on the trip screen can use it. Without this the pool
+ * was a list you could only delete from: the day cards can pull a restaurant
+ * onto a day, but only by going out to the dining list and finding it again,
+ * which is a long way round for something already on the trip.
+ *
+ * It lives here rather than on the trip screen because it needs the derived
+ * date list and `weekday`, and a second copy of either is a second place for
+ * the UTC date handling to be got wrong.
+ */
+export function PlaceOnDay({ trip, plan }: { trip: Trip; plan: TripPlan }) {
+  const theme = useTheme();
+  const { daysFor, setPlanDay } = useTrips();
+  const { data: areas } = useAreas();
+  const [open, setOpen] = useState(false);
+
+  const dates = useMemo(
+    () => datesBetween(trip.start_date, trip.end_date).slice(0, MAX_ROWS),
+    [trip.start_date, trip.end_date],
+  );
+  const stored = daysFor(trip.id);
+  const areaName = new Map(areas.map((a) => [a.id, a.name]));
+
+  return (
+    <>
+      <Pressable
+        onPress={() => setOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel="Put this on a day"
+        hitSlop={6}
+      >
+        <ThemedText type="small" style={{ color: theme.accent, fontSize: 11 }}>
+          Place
+        </ThemedText>
+      </Pressable>
+
+      {open ? (
+        <Modal visible transparent animationType="slide" onRequestClose={() => setOpen(false)}>
+          <View style={styles.backdrop}>
+            <Pressable
+              style={styles.backdropFill}
+              onPress={() => setOpen(false)}
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+            />
+            <View style={[styles.sheet, { backgroundColor: theme.background }]}>
+              <View style={styles.sheetHead}>
+                <ThemedText type="smallBold">Which day?</ThemedText>
+                <Pressable onPress={() => setOpen(false)} hitSlop={12} accessibilityRole="button">
+                  <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                    Cancel
+                  </ThemedText>
+                </Pressable>
+              </View>
+              <ScrollView style={styles.areaScroll} contentContainerStyle={styles.areaList}>
+                {dates.map((date, i) => {
+                  const row = stored.get(date);
+                  const spec = row?.kind ? kindSpec(row.kind) : undefined;
+                  // What the day already is, so you are placing dinner against
+                  // "EPCOT" rather than against a bare date.
+                  const what = row?.area_id
+                    ? areaName.get(row.area_id) ?? row.area_id
+                    : spec?.label ?? 'Not decided';
+                  return (
+                    <AreaOption
+                      key={date}
+                      label={`Day ${i + 1} · ${weekday(date)}  —  ${what}`}
+                      tone={
+                        row?.area_id
+                          ? AreaTone[row.area_id] ?? 'brandTeal'
+                          : spec?.tone ?? undefined
+                      }
+                      selected={plan.planned_on === date}
+                      onPress={() => {
+                        void setPlanDay(plan.id, date);
+                        setOpen(false);
+                      }}
+                    />
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      ) : null}
+    </>
   );
 }
 
@@ -353,17 +549,38 @@ function weekday(iso: string): string {
 
 const styles = StyleSheet.create({
   list: { gap: Spacing.two },
-  row: {
+  card: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingRight: Spacing.three,
     borderRadius: Radius.large,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
   },
+  /** The colour bar is a sibling now, so the inset that used to be the row's
+   *  `gap` lives here and every child inherits it. */
+  cardBody: { flex: 1, paddingLeft: Spacing.three },
+  head: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    paddingRight: Spacing.three,
+  },
   bar: { width: 5, alignSelf: 'stretch' },
   rowMain: { flex: 1, paddingVertical: Spacing.three, gap: 1 },
+
+  meals: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingRight: Spacing.three,
+    paddingBottom: Spacing.one,
+  },
+  meal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    paddingVertical: Spacing.two,
+  },
+  mealMain: { flex: 1 },
+  booked: { fontSize: 11 },
+  addMeal: { paddingVertical: Spacing.two },
   dayNum: { fontSize: 10, fontWeight: '700', letterSpacing: 1 },
 
   backdrop: { flex: 1, justifyContent: 'flex-end' },

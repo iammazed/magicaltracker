@@ -22,7 +22,7 @@ import { seedCatalogIfNeeded, syncCatalogSchema } from '@/lib/catalog-db';
 export const DATABASE_NAME = 'magicaltracker.db';
 
 /** Bump when the schema below changes, and add a matching step in migrate(). */
-const SCHEMA_VERSION = 7;
+const SCHEMA_VERSION = 8;
 
 export async function migrate(db: SQLiteDatabase) {
   // WAL keeps reads fast while a write is in flight, which matters when the
@@ -196,6 +196,24 @@ export async function migrate(db: SQLiteDatabase) {
     version = 7;
   }
 
+  if (version < 8) {
+    await db.execAsync(`
+      -- Which day of the trip a planned meal is on, if decided. Null is the
+      -- pool: on the list, not yet placed.
+      --
+      -- A plain date, not a reference to \`trip_days\`. Day rows are written
+      -- lazily, so the day a meal sits on may well have no row -- and making
+      -- one just to hang a meal off it would undo the laziness that keeps a
+      -- trip's dates editable. Nothing constrains it to the trip's range
+      -- either, and the UI reads a date outside that range as unplaced, so
+      -- moving the dates returns a stranded meal to the pool rather than
+      -- hiding it somewhere unreachable.
+      ALTER TABLE trip_plans ADD COLUMN planned_on TEXT;
+      CREATE INDEX IF NOT EXISTS trip_plans_day_idx ON trip_plans (trip_id, planned_on);
+    `);
+    version = 8;
+  }
+
   await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
 
   // The catalog tables are NOT governed by the ladder above, and must not be.
@@ -257,6 +275,8 @@ export type TripPlan = {
   venue_id: string;
   booked: number;
   note: string | null;
+  /** YYYY-MM-DD, or null while the meal is still in the pool. */
+  planned_on: string | null;
   created_at: string;
   synced_at: string | null;
 };

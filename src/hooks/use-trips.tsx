@@ -156,16 +156,46 @@ function useTripsStore() {
   );
 
   /** Idempotent — tapping "add to trip" twice should not create two rows. */
+  /**
+   * Puts a venue on a trip's list, optionally on a given day.
+   *
+   * `day` is why this is an upsert rather than the `INSERT OR IGNORE` it was.
+   * Adding a restaurant from a specific day has to place one that is already
+   * on the list but unplaced — and OR IGNORE would silently do nothing,
+   * which reads as a tap that failed.
+   *
+   * Without a `day` it still does nothing on conflict: re-adding a venue
+   * must not clear the day somebody already gave it.
+   */
   const addPlan = useCallback(
-    async (tripId: string, venueId: string) => {
+    async (tripId: string, venueId: string, day?: string | null) => {
       await db.runAsync(
-        `INSERT OR IGNORE INTO trip_plans (id, trip_id, venue_id, booked, note,
-                                           created_at, synced_at)
-         VALUES (?, ?, ?, 0, NULL, ?, NULL)`,
+        `INSERT INTO trip_plans (id, trip_id, venue_id, booked, note,
+                                 planned_on, created_at, synced_at)
+         VALUES (?, ?, ?, 0, NULL, ?, ?, NULL)
+         ON CONFLICT (trip_id, venue_id) ${
+           day
+             ? 'DO UPDATE SET planned_on = excluded.planned_on, synced_at = NULL'
+             : 'DO NOTHING'
+         }`,
         uuid(),
         tripId,
         venueId,
+        day ?? null,
         new Date().toISOString(),
+      );
+      await refresh();
+    },
+    [db, refresh],
+  );
+
+  /** Moves a planned meal onto a day, or back to the pool with `null`. */
+  const setPlanDay = useCallback(
+    async (id: string, day: string | null) => {
+      await db.runAsync(
+        'UPDATE trip_plans SET planned_on = ?, synced_at = NULL WHERE id = ?',
+        day,
+        id,
       );
       await refresh();
     },
@@ -292,6 +322,7 @@ function useTripsStore() {
     deleteTrip,
     setResort,
     addPlan,
+    setPlanDay,
     removePlan,
     toggleBooked,
     refresh,

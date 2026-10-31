@@ -529,12 +529,61 @@ there is nothing to suggest, which is itself worth knowing before sending a noti
 push is invisible: the edit looks saved and silently never leaves the device. The guard belongs
 at the write, where it fails in front of the person who caused it.
 
+**Each day carries its meals, and `trip_plans.planned_on` is how.** The dining list was one
+flat block at the bottom of the trip screen: it told you five restaurants were on the trip and
+nothing about when, which is the question the screen is open to answer. A meal with a day shows
+under that day; a meal without one stays in the block, which is now explicitly the pool of things
+still to place and says so when it is empty rather than rendering a blank box.
+
+`planned_on` is a plain date, NOT a reference to `trip_days`. Day rows are written lazily, so the
+day a meal sits on may well have no row, and creating one to hang a meal off would undo the
+laziness that keeps a trip's dates editable. Nothing constrains it to the trip's range either —
+it cannot, from a single row — and both the day cards and the pool read a date outside the range
+as unplaced. So moving a trip's dates returns a stranded meal to the pool instead of leaving it
+attached to a day nobody can reach.
+
+**There is no TIME on a meal, so a day's meals are in the order you added them.** Inventing a 7pm
+would be inventing data the user never gave, and sorting alphabetically would be an order that
+means nothing. This is the same cap as the rest of the planner: reservation times are the next
+thing someone will ask for and the first thing that turns this into an itinerary app.
+
+**One destructive action per scope.** The ✕ on a meal under a day takes it off THAT DAY and back
+to the pool; the ✕ in the pool takes it off the trip. So deleting a scheduled meal is two steps,
+deliberately: the ✕ on the crowded row is the recoverable one. `PlaceOnDay` is the other
+direction, and it is exported from `trip-days.tsx` rather than written on the trip screen because
+it needs the derived date list and `weekday` — a second copy of either is a second place to get
+the UTC date handling wrong.
+
+**`addPlan` is an upsert, and `planDay` is why.** Adding a restaurant from a specific day has to
+place one that is already on the trip but unplaced, and the `INSERT OR IGNORE` it used to be
+would silently do nothing — which reads as a tap that failed. Without a `planDay` it still does
+nothing on conflict, because re-adding a venue must not clear a day somebody already gave it. On
+the Dining screen, `planDay` also changes what tapping an already-planned venue means: it MOVES
+it onto that day rather than removing it from the trip, since the day is the thing being edited
+and removing from there would be a trap.
+
 **Day rows are written lazily and the day LIST is derived**, never stored. An untouched trip
 holds zero rows rather than one per night, and moving a trip's dates cannot strand a row outside
 the range it now covers. `datesBetween` builds the list from the trip's own start and end with
 `Date.UTC`, like all date arithmetic here.
 
-**Choosing what the day is stays free; the day note is premium.** The split follows the existing rule
+**The day picker offers parks and districts, never the five `resort_area` areas.** They are a
+grouping for the dining list, not an answer to "what are we doing today", and offering them put
+five near-identical options next to a "Resort day" that means exactly that — with "EPCOT" two
+rows above "EPCOT Resort Area". The name lookup still covers every area, so a day stored against
+one before they were withdrawn renders with its name rather than its id.
+
+**The day sheet's dim is a Pressable, and it is a SIBLING painted behind the sheet.** It was a
+plain View, so the only way out of the sheet was Save — and the thing people reach for first is
+the back chevron, which sits under the backdrop, because a Modal renders above the navigation
+header. That tap landed on the backdrop and did nothing. Wrapping the sheet in the Pressable
+instead would put a press responder above the ScrollView and the note field and have them
+negotiate every touch.
+
+**Choosing what the day is stays free; the day note is premium — under `dayNotes`, not `notes`.**
+They share an implementation and nothing else: a visit note is written afterwards about a meal
+you ate, so "write down what the meal was actually like" on a day you have not had yet reads as a
+bug rather than an upgrade. The split follows the existing rule
 rather than inventing one: notes are already premium on a visit, so a free day note would be the
 inconsistency. And the day's choice is data entry, which is never paywalled — it is also exactly
 the data that makes the recommendation layer possible later, so charging for it would starve the

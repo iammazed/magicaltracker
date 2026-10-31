@@ -21,6 +21,7 @@ import {
 } from '@/components/sky-header';
 import { ThemedView } from '@/components/themed-view';
 import { CatalogMap, type MapPlace } from '@/components/catalog-map';
+import { formatDate } from '@/lib/calendar';
 import { venuePlaces } from '@/lib/map-places';
 import { VenueRow } from '@/components/venue-row';
 import { Radius, Spacing } from '@/constants/theme';
@@ -71,7 +72,12 @@ export default function CatalogScreen() {
   const { byVenue, visitedCount } = useVisits();
   // When arriving from a trip, tapping a row adds to that trip's dining list
   // instead of opening the venue.
-  const { addToTrip } = useLocalSearchParams<{ addToTrip?: string }>();
+  // `planDay` arrives from a day card on the trip screen: the venue you pick
+  // lands on that day rather than in the undated pool.
+  const { addToTrip, planDay } = useLocalSearchParams<{
+    addToTrip?: string;
+    planDay?: string;
+  }>();
   const { trips, plansFor, addPlan, removePlan } = useTrips();
   /**
    * The trip being added to, unless the user has walked away from the task.
@@ -201,8 +207,17 @@ export default function CatalogScreen() {
     <ThemedView style={styles.container}>
       <View style={styles.safe}>
         <SkyHeader
-          eyebrow={planning ? 'ADDING TO A TRIP' : 'WALT DISNEY WORLD'}
-          title={planning ? planning.name : 'Dining'}
+          eyebrow={
+            planning
+              ? planDay
+                ? `${planning.name.toUpperCase()}  ·  ADDING TO A DAY`
+                : 'ADDING TO A TRIP'
+              : 'WALT DISNEY WORLD'
+          }
+          // With a day in play the date IS the title: it is the one thing a
+          // picked restaurant is about to be attached to, and the trip's name
+          // moves up to the eyebrow rather than being dropped.
+          title={planning ? (planDay ? formatDate(planDay) : planning.name) : 'Dining'}
           progress={
             planning
               ? { done: plannedIds.size, total: venues.length, label: 'on this trip' }
@@ -341,7 +356,12 @@ export default function CatalogScreen() {
                 planned={planning ? plannedIds.has(item.id) : undefined}
                 onPress={() => {
                   if (planning) {
-                    if (plannedIds.has(item.id)) void removePlan(planning.id, item.id);
+                    // With a day in hand, tapping a venue already on the list
+                    // MOVES it onto that day instead of removing it — the day
+                    // you came from is the thing being edited, and taking a
+                    // restaurant off the trip from here would be a trap.
+                    if (planDay) void addPlan(planning.id, item.id, planDay);
+                    else if (plannedIds.has(item.id)) void removePlan(planning.id, item.id);
                     else void addPlan(planning.id, item.id);
                   } else {
                     router.push({ pathname: '/venue/[id]', params: { id: item.id } });

@@ -190,6 +190,23 @@ export const tripPlans = pgTable(
     booked: boolean('booked').notNull().default(false),
     note: text('note'),
 
+    /**
+     * Which day of the trip this meal is on, if decided. Null is the pool:
+     * on the list, not yet placed.
+     *
+     * A plain date rather than a reference to `trip_days`, because days are
+     * derived from the trip's own dates and a row exists only once something
+     * has been decided about one. Pointing at a row that may not exist is not
+     * a foreign key, and creating an empty day row just to hang a meal off
+     * would undo the laziness that stops a trip's dates being un-editable.
+     *
+     * Nothing constrains it to the trip's range — it cannot, from one row —
+     * and the UI treats a date outside the range as unplaced. So moving a
+     * trip's dates degrades a stranded meal back to the pool instead of
+     * hiding it somewhere unreachable.
+     */
+    plannedOn: date('planned_on'),
+
     createdAt: timestamps.createdAt,
   },
   (t) => [

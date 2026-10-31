@@ -1,0 +1,1 @@
+ALTER TABLE "trip_plans" ADD COLUMN "planned_on" date;
