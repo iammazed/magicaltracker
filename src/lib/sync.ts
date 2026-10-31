@@ -102,6 +102,7 @@ type LocalDay = {
   trip_id: string;
   day: string;
   area_id: string | null;
+  kind: string | null;
   note: string | null;
   created_at: string;
   updated_at: string;
@@ -170,6 +171,7 @@ async function push(db: SQLiteDatabase, userId: string): Promise<number> {
     trip_id: d.trip_id,
     day: d.day,
     area_id: d.area_id,
+    kind: d.kind,
     note: d.note,
     created_at: d.created_at,
     updated_at: d.updated_at,
@@ -241,7 +243,7 @@ async function pull(db: SQLiteDatabase, userId: string): Promise<number> {
 
   const tables = [
     { name: 'trips', columns: 'id, name, start_date, end_date, resort_id, note, created_at, updated_at' },
-    { name: 'trip_days', columns: 'id, trip_id, day, area_id, note, created_at, updated_at' },
+    { name: 'trip_days', columns: 'id, trip_id, day, area_id, kind, note, created_at, updated_at' },
     { name: 'trip_plans', columns: 'id, trip_id, venue_id, booked, note, created_at' },
     { name: 'visits', columns: 'id, venue_id, visited_on, date_exact, rating, would_return, party_size, note, dishes, created_at, updated_at' },
     { name: 'stays', columns: 'id, resort_id, check_in, check_out, rating, room_type, note, created_at, updated_at' },
@@ -302,10 +304,10 @@ async function insertPulled(
   } else if (table === 'trip_days') {
     await db.runAsync(
       `INSERT OR IGNORE INTO trip_days
-         (id, trip_id, day, area_id, note, created_at, updated_at, synced_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+         (id, trip_id, day, area_id, kind, note, created_at, updated_at, synced_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       String(r.id), String(r.trip_id), String(r.day),
-      (r.area_id as string) ?? null, (r.note as string) ?? null,
+      (r.area_id as string) ?? null, (r.kind as string) ?? null, (r.note as string) ?? null,
       String(r.created_at), String(r.updated_at), now,
     );
   } else if (table === 'trip_plans') {

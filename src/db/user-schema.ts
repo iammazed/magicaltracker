@@ -19,6 +19,7 @@
 import { sql } from 'drizzle-orm';
 import {
   boolean,
+  check,
   date,
   index,
   integer,
@@ -203,7 +204,7 @@ export const tripPlans = pgTable(
 /* -- trip_days -- */
 
 /**
- * Which park you plan to be in on a given day of a trip.
+ * What you plan to be doing on a given day of a trip.
  *
  * Structured rather than a free-text itinerary, and that is the whole point:
  * a park-per-day can be read back. "You are at EPCOT tomorrow, here are
@@ -234,6 +235,27 @@ export const tripDays = pgTable(
      */
     areaId: text('area_id').references(() => areas.id, { onDelete: 'restrict' }),
 
+    /**
+     * Set only when the day is deliberately NOT a park day: `rest` or
+     * `resort`. Null means the day is a park day (`area_id` says which) or
+     * nothing has been decided yet.
+     *
+     * A separate column rather than sentinel rows in `areas`, because
+     * `area_id` is a real foreign key into the catalog and "resting" is not a
+     * place. Faking it would put non-places in every area filter, every map
+     * and every venue count in the app.
+     *
+     * Nullable-plus-two-values rather than a four-value enum including
+     * `park`: every row that existed before this column was added is already
+     * correct, so there is no backfill and no window where a day means one
+     * thing on one device and another on the next.
+     *
+     * `resort` deliberately does not name WHICH resort. The trip's stays
+     * already cover the dates, so a reader can derive it; storing it here
+     * would be a second copy to keep in step with a changed booking.
+     */
+    kind: text('kind'),
+
     /** Premium, the same as a visit note. */
     note: text('note'),
 
@@ -244,6 +266,15 @@ export const tripDays = pgTable(
     /** Mirrors the local `UNIQUE (trip_id, day)`. One row per day, which is
      *  what makes the push a plain upsert. */
     uniqueIndex('trip_days_trip_day_key').on(t.tripId, t.day),
+    /** The device is the only writer today, but RLS lets an authenticated
+     *  user POST straight at the table. A column whose legal values live
+     *  only in TypeScript is a column the database will happily fill with
+     *  anything. */
+    check('trip_days_kind_known', sql`${t.kind} is null or ${t.kind} in ('rest', 'resort')`),
+    /** A rest day is not in a park, so the two cannot both be set. Without
+     *  this, a row could claim EPCOT and a rest day at once and every reader
+     *  would have to pick a winner. */
+    check('trip_days_kind_xor_area', sql`${t.kind} is null or ${t.areaId} is null`),
     ownRowsOnly('trip_days'),
   ],
 );

@@ -8,7 +8,13 @@ import {
   useState,
 } from 'react';
 
-import { todayISO, type Trip, type TripDay, type TripPlan } from '@/lib/local-db';
+import {
+  todayISO,
+  type DayKind,
+  type Trip,
+  type TripDay,
+  type TripPlan,
+} from '@/lib/local-db';
 
 /**
  * Trips and the planning list.
@@ -226,22 +232,34 @@ function useTripsStore() {
    * clearing a park back to "not decided" is a real action, so a null has to
    * overwrite. Only the field being set is passed; the other keeps its stored
    * value through the explicit reference below.
+   *
+   * `areaId` and `kind` are mutually exclusive and enforced here rather than
+   * trusted from the caller: a rest day is not in a park, and the server has
+   * a CHECK constraint that will reject a row claiming both. Catching it at
+   * the write means a bad combination fails now, in front of the person who
+   * caused it, instead of silently never syncing.
    */
   const setDay = useCallback(
     async (
       tripId: string,
       day: string,
-      patch: { areaId?: string | null; note?: string | null },
+      patch: { areaId?: string | null; kind?: DayKind | null; note?: string | null },
     ) => {
       const now = new Date().toISOString();
-      const hasArea = 'areaId' in patch;
+      // Setting one side clears the other, so either field alone is enough to
+      // change what a day is.
+      const area = patch.areaId ?? null;
+      const kind = area ? null : patch.kind ?? null;
+      const hasArea = 'areaId' in patch || !!kind;
+      const hasKind = 'kind' in patch || !!area;
       const hasNote = 'note' in patch;
       await db.runAsync(
         `INSERT INTO trip_days
-           (id, trip_id, day, area_id, note, created_at, updated_at, synced_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, NULL)
+           (id, trip_id, day, area_id, kind, note, created_at, updated_at, synced_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)
          ON CONFLICT (trip_id, day) DO UPDATE SET
            area_id    = ${hasArea ? 'excluded.area_id' : 'trip_days.area_id'},
+           kind       = ${hasKind ? 'excluded.kind' : 'trip_days.kind'},
            note       = ${hasNote ? 'excluded.note' : 'trip_days.note'},
            updated_at = excluded.updated_at,
            -- Back to unsynced, so the next push sends the change. Forgetting
@@ -250,7 +268,8 @@ function useTripsStore() {
         uuid(),
         tripId,
         day,
-        hasArea ? patch.areaId ?? null : null,
+        hasArea ? area : null,
+        hasKind ? kind : null,
         hasNote ? patch.note ?? null : null,
         now,
         now,

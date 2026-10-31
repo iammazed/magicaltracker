@@ -7,10 +7,10 @@ import { AreaTone, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { datesBetween, useTrips } from '@/hooks/use-trips';
 import { useAreas } from '@/hooks/use-venues';
-import type { Trip } from '@/lib/local-db';
+import type { DayKind, Trip } from '@/lib/local-db';
 
 /**
- * Which park you plan to be in on each day of a trip.
+ * What you plan to be doing on each day of a trip.
  *
  * **Structured, not a notes field, and that is the entire reason this exists
  * rather than exposing the `note` column the trip already has.** A park-per-
@@ -19,7 +19,17 @@ import type { Trip } from '@/lib/local-db';
  * not prose. Free text cannot be queried, cannot drive a notification, and
  * cannot feed the passport.
  *
- * Deliberately capped at one park per day plus a note. A day planner is the
+ * Most days are a park, but not all of them are, so a day is either an area
+ * or one of the `DAY_KINDS` — rest or resort. Those are a column of their
+ * own rather than entries in the area list, because `area_id` is a foreign
+ * key into the catalog and resting is not a place: a sentinel area would
+ * show up in every area filter, map and venue count in the app.
+ *
+ * A resort day reads back as well as a park day does — "you are at the resort
+ * tomorrow, you have never been to Trader Sam's" — which is why it is a kind
+ * and not simply the absence of one. Only `rest` means nothing to suggest.
+ *
+ * Deliberately capped at one choice per day plus a note. A day planner is the
  * single feature most likely to grow into a full itinerary app — ride plans,
  * reservation times, transport, travel party — and none of that is worth
  * building before anyone has used this.
@@ -32,6 +42,28 @@ import type { Trip } from '@/lib/local-db';
 
 /** A trip long enough to hit this is a data-entry mistake, not a holiday. */
 const MAX_ROWS = 60;
+
+type ThemeToken = keyof ReturnType<typeof useTheme>;
+
+/**
+ * The non-park days, in the order they are offered.
+ *
+ * Resort first: it is a plan, and a plan the app can act on. A rest day is
+ * the absence of one, and belongs last for the same reason "Not decided"
+ * belongs first — it is what you pick when there is nothing to pick.
+ */
+const KINDS: { kind: DayKind; label: string; tone: ThemeToken }[] = [
+  { kind: 'resort', label: 'Resort day', tone: 'gold' },
+  { kind: 'rest', label: 'Rest day', tone: 'textFaint' },
+];
+
+const kindSpec = (k: DayKind) => KINDS.find((s) => s.kind === k);
+
+/** What a day is: an area, a kind, or neither. Never both — `setDay`
+ *  enforces it on write and the server has a CHECK constraint for it. */
+type Choice = { area: string | null; kind: DayKind | null };
+
+const sameChoice = (a: Choice, b: Choice) => a.area === b.area && a.kind === b.kind;
 
 export function TripDays({ trip }: { trip: Trip }) {
   const theme = useTheme();
@@ -47,14 +79,23 @@ export function TripDays({ trip }: { trip: Trip }) {
     <View style={styles.list}>
       {dates.map((date, i) => {
         const row = stored.get(date);
-        const tone = row?.area_id ? theme[AreaTone[row.area_id] ?? 'brandTeal'] : null;
+        const spec = row?.kind ? kindSpec(row.kind) : undefined;
+        const tone = row?.area_id
+          ? theme[AreaTone[row.area_id] ?? 'brandTeal']
+          : spec
+            ? (theme[spec.tone] as string)
+            : null;
+        const label = row?.area_id
+          ? areaName.get(row.area_id) ?? row.area_id
+          : spec?.label ?? 'Not decided';
+        const decided = !!(row?.area_id || spec);
         return (
           <Pressable
             key={date}
             onPress={() => setEditing(date)}
             accessibilityRole="button"
             accessibilityLabel={`Day ${i + 1}, ${weekday(date)}. ${
-              row?.area_id ? areaName.get(row.area_id) ?? row.area_id : 'No park chosen'
+              decided ? label : 'Nothing chosen'
             }. Tap to change.`}
             style={({ pressed }) => [
               styles.row,
@@ -70,7 +111,7 @@ export function TripDays({ trip }: { trip: Trip }) {
                 DAY {i + 1} · {weekday(date)}
               </ThemedText>
               <ThemedText type="smallBold" numberOfLines={1}>
-                {row?.area_id ? areaName.get(row.area_id) ?? row.area_id : 'Not decided'}
+                {label}
               </ThemedText>
               {row?.note ? (
                 <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
@@ -79,7 +120,7 @@ export function TripDays({ trip }: { trip: Trip }) {
               ) : null}
             </View>
             <ThemedText type="small" style={{ color: theme.accent }}>
-              {row?.area_id ? 'Change' : 'Choose'}
+              {decided ? 'Change' : 'Choose'}
             </ThemedText>
           </Pressable>
         );
@@ -90,10 +131,11 @@ export function TripDays({ trip }: { trip: Trip }) {
           date={editing}
           index={dates.indexOf(editing)}
           areaId={stored.get(editing)?.area_id ?? null}
+          kind={stored.get(editing)?.kind ?? null}
           note={stored.get(editing)?.note ?? null}
           onClose={() => setEditing(null)}
-          onSave={(patch) => {
-            void setDay(trip.id, editing, patch);
+          onSave={({ area, kind, note }) => {
+            void setDay(trip.id, editing, { areaId: area, kind, note });
             setEditing(null);
           }}
         />
@@ -106,6 +148,7 @@ function DayEditor({
   date,
   index,
   areaId,
+  kind,
   note,
   onClose,
   onSave,
@@ -113,13 +156,16 @@ function DayEditor({
   date: string;
   index: number;
   areaId: string | null;
+  kind: DayKind | null;
   note: string | null;
   onClose: () => void;
-  onSave: (patch: { areaId: string | null; note: string | null }) => void;
+  onSave: (patch: Choice & { note: string | null }) => void;
 }) {
   const theme = useTheme();
   const { data: areas } = useAreas();
-  const [picked, setPicked] = useState<string | null>(areaId);
+  // One piece of state, not an area and a kind kept in step: picking either
+  // is picking the whole day, and two useStates is how they drift apart.
+  const [picked, setPicked] = useState<Choice>({ area: areaId, kind });
   const [text, setText] = useState(note ?? '');
 
   return (
@@ -142,16 +188,30 @@ function DayEditor({
                 option rather than something you reach by deselecting. */}
             <AreaOption
               label="Not decided"
-              selected={picked === null}
-              onPress={() => setPicked(null)}
+              selected={sameChoice(picked, { area: null, kind: null })}
+              onPress={() => setPicked({ area: null, kind: null })}
             />
+            {/* Above the parks, not buried under fifteen of them: plenty of
+                trips have more resort days than park days, and a list that
+                makes you scroll past every park to say "we are staying in"
+                reads as though not going is the unusual choice. */}
+            {KINDS.map((k) => (
+              <AreaOption
+                key={k.kind}
+                label={k.label}
+                tone={k.tone}
+                selected={sameChoice(picked, { area: null, kind: k.kind })}
+                onPress={() => setPicked({ area: null, kind: k.kind })}
+              />
+            ))}
+            <View style={[styles.rule, { backgroundColor: theme.border }]} />
             {areas.map((a) => (
               <AreaOption
                 key={a.id}
                 label={a.name}
                 tone={AreaTone[a.id] ?? 'brandTeal'}
-                selected={picked === a.id}
-                onPress={() => setPicked(a.id)}
+                selected={sameChoice(picked, { area: a.id, kind: null })}
+                onPress={() => setPicked({ area: a.id, kind: null })}
               />
             ))}
           </ScrollView>
@@ -185,7 +245,9 @@ function DayEditor({
           </View>
 
           <Pressable
-            onPress={() => onSave({ areaId: picked, note: text.trim() || null })}
+            onPress={() =>
+              onSave({ area: picked.area, kind: picked.kind, note: text.trim() || null })
+            }
             accessibilityRole="button"
             style={[styles.save, { backgroundColor: theme.accent }]}
           >
@@ -206,7 +268,7 @@ function AreaOption({
   onPress,
 }: {
   label: string;
-  tone?: keyof ReturnType<typeof useTheme>;
+  tone?: ThemeToken;
   selected: boolean;
   onPress: () => void;
 }) {
@@ -291,6 +353,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.medium,
     borderWidth: StyleSheet.hairlineWidth,
   },
+  rule: { height: StyleSheet.hairlineWidth, marginVertical: Spacing.one },
   dot: { width: 10, height: 10, borderRadius: 5 },
   areaLabel: { flex: 1 },
   noteBlock: { gap: Spacing.one },

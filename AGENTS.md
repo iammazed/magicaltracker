@@ -500,7 +500,7 @@ the server's copy of a row that already exists locally would discard an edit mad
 exactly the failure this feature exists to prevent. Real two-way reconciliation needs per-field
 timestamps and a conflict rule, and only earns that complexity once a second device can write.
 
-**The day planner is structured, and capped on purpose.** `trip_days` holds one park per day
+**The day planner is structured, and capped on purpose.** `trip_days` holds one choice per day
 of a trip plus an optional note, and nothing else. A free-text itinerary was the obvious cheaper
 option — `trips.note` and `trip_plans.note` both already exist and neither is exposed in any
 screen — and it was rejected because prose cannot be read back. "You are at EPCOT tomorrow,
@@ -508,20 +508,41 @@ here are twelve places you have not eaten at" needs a park id; it is the reason 
 exists, and a notes blob cannot drive it, cannot drive a notification, and cannot feed the
 passport.
 
+**A non-park day is a `kind` column, not a row in `areas`.** Not every day is a park day, so a
+day is either an `area_id` or one of `DAY_KINDS` — `rest` or `resort` — and two CHECK
+constraints enforce both the value and that the two are never set at once. A sentinel area
+(`area: 'rest-day'`) was the cheaper option and is the wrong one: `area_id` is a real foreign key
+into the catalog, and a non-place in that table would surface in every area filter, every map and
+every venue count in the app. The column is nullable with two values rather than an enum
+including `park`, which means every row written before it existed is already correct — no
+backfill, and no window where a day means one thing on one device and another on the next.
+
+**`resort` is a kind because it reads back; `rest` is one because nothing else can say it.** A
+resort day drives the same suggestion a park day does — "you are at the resort tomorrow, you
+have never been to Trader Sam's" — which is why it is a stored choice rather than the absence of
+one. It deliberately does not name WHICH resort: the trip's stays already cover the dates, and a
+second copy here would be one more thing to keep in step with a changed booking. `rest` means
+there is nothing to suggest, which is itself worth knowing before sending a notification.
+
+**`setDay` clears the other side rather than trusting the caller.** Setting `areaId` nulls
+`kind` and vice versa, because the server CHECK will reject a row claiming both — and a rejected
+push is invisible: the edit looks saved and silently never leaves the device. The guard belongs
+at the write, where it fails in front of the person who caused it.
+
 **Day rows are written lazily and the day LIST is derived**, never stored. An untouched trip
 holds zero rows rather than one per night, and moving a trip's dates cannot strand a row outside
 the range it now covers. `datesBetween` builds the list from the trip's own start and end with
 `Date.UTC`, like all date arithmetic here.
 
-**Choosing the park is free; the day note is premium.** The split follows the existing rule
+**Choosing what the day is stays free; the day note is premium.** The split follows the existing rule
 rather than inventing one: notes are already premium on a visit, so a free day note would be the
-inconsistency. And the park choice is data entry, which is never paywalled — it is also exactly
+inconsistency. And the day's choice is data entry, which is never paywalled — it is also exactly
 the data that makes the recommendation layer possible later, so charging for it would starve the
 thing that eventually justifies the subscription.
 
 **The cap is the point, not a first pass.** A day planner is the feature most likely to grow
-into a full itinerary app — ride plans, reservation times, transport, travel party. One park and
-one note, until somebody actually uses it.
+into a full itinerary app — ride plans, reservation times, transport, travel party. One choice
+and one note, until somebody actually uses it.
 
 **`activeTrip` is ONE trip, so something else has to list the rest.** It returns the current
 trip, else the earliest upcoming — and for a while nothing in the app listed trips at all, so

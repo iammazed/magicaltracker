@@ -22,7 +22,7 @@ import { seedCatalogIfNeeded, syncCatalogSchema } from '@/lib/catalog-db';
 export const DATABASE_NAME = 'magicaltracker.db';
 
 /** Bump when the schema below changes, and add a matching step in migrate(). */
-const SCHEMA_VERSION = 6;
+const SCHEMA_VERSION = 7;
 
 export async function migrate(db: SQLiteDatabase) {
   // WAL keeps reads fast while a write is in flight, which matters when the
@@ -175,6 +175,27 @@ export async function migrate(db: SQLiteDatabase) {
     version = 6;
   }
 
+  if (version < 7) {
+    await db.execAsync(`
+      -- Set only when the day is deliberately not a park day: 'rest' or
+      -- 'resort'. Null means a park day (\`area_id\` says which) or nothing
+      -- decided yet, so every row written before this column existed is
+      -- already correct and there is nothing to backfill.
+      --
+      -- Not a sentinel row in \`catalog_areas\`: \`area_id\` names a real
+      -- place, and a fake one would surface in every area filter and map.
+      --
+      -- The CHECK constraints live server-side only, for the same reason
+      -- \`area_id\` has no FK here: this table is written exclusively by the
+      -- app, whereas RLS lets an authenticated request POST at Postgres
+      -- directly. SQLite also cannot add a constraint by ALTER, and
+      -- rebuilding the table to gain one would risk real user rows to guard
+      -- against a writer that does not exist.
+      ALTER TABLE trip_days ADD COLUMN kind TEXT;
+    `);
+    version = 7;
+  }
+
   await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
 
   // The catalog tables are NOT governed by the ladder above, and must not be.
@@ -192,12 +213,26 @@ export async function migrate(db: SQLiteDatabase) {
   await seedCatalogIfNeeded(db);
 }
 
+/**
+ * The non-park day kinds.
+ *
+ * The authority is the `trip_days_kind_known` CHECK constraint in
+ * `src/db/user-schema.ts`; this is the app-side copy, because nothing under
+ * `src/` outside `src/db/` imports the Drizzle schema and that boundary is
+ * worth more than saving three lines. Add a value in both places or the
+ * server will reject a day the picker happily offered.
+ */
+export const DAY_KINDS = ['rest', 'resort'] as const;
+export type DayKind = (typeof DAY_KINDS)[number];
+
 export type TripDay = {
   id: string;
   trip_id: string;
   /** YYYY-MM-DD. */
   day: string;
   area_id: string | null;
+  /** `'rest'` or `'resort'`; null for a park day or an undecided one. */
+  kind: DayKind | null;
   note: string | null;
   created_at: string;
   updated_at: string;
