@@ -806,6 +806,14 @@ carry a wash of their own area/tier colour at 0.10, so coverage is legible while
 than only visible in the tick. Only the done rows get it — 366 tinted rows would be a wall, and
 the done ones are the minority for a long time.
 
+**A list row shows CHARACTERS as well as SIGNATURE.** The detail screen had said "Character
+dining" from the start and the row said nothing, so the only way to find a character meal while
+scrolling was to already know which ones they are. Both badges are gold, matching the detail
+screen: a row that marks a fact one colour and a screen that marks it another reads as two
+different facts. The data was never the problem — all 13 character venues agree across
+`venues.csv`, the bundle and Postgres, in both the `is_character_*` columns and the
+`character-dining` tag.
+
 **`CatalogMap` knows nothing about venues or resorts.** Callers map their own rows to `MapPlace`
 — id, name, coordinates, a `RampToken` tone, and two display lines — which is why Resorts got a
 map for about thirty lines instead of a second copy of the file. The only real differences were
@@ -963,6 +971,23 @@ routes. The map's own recognizer is the other and no JS can stop it, so `onMapPr
 tick and backs off if a marker claimed the same tap. Deferring rather than reading a flag
 synchronously is deliberate: the observed order on one device is not a contract, and a guard
 that depends on it is a guard that breaks on the next iOS release.
+
+**Pin names appear below `LABEL_MAX` individual pins on screen, and not above it.** Labelling
+all 366 is the version nobody can read: at the default framing the dots already touch, so a name
+on each would be a grey smear across the resort. Counted from the pins on screen rather than from
+`places`, so it follows the zoom rather than the size of the catalog. Clusters are never
+labelled — a cluster is several places and has no one name.
+
+**A labelled marker needs a DIFFERENT anchor, and that is the whole reason the label's box is
+fixed.** A marker is anchored as a fraction of its own view, so anything below the dot moves the
+dot off its coordinate unless the anchor moves too — `LABELLED_ANCHOR` is the dot's centre over
+the total height. Hence one line, a fixed `LABEL_H`, and `allowFontScaling={false}`: a label that
+grew with the system font size would silently drag every pin north of where it belongs. The dot
+keeps its own 34pt box either way, so the hit area never depends on the name under it.
+
+`showLabels` is also in `tracksViewChanges`, which is not optional. Markers with custom children
+keep the snapshot they were first drawn with, so without it a name appears only when something
+else happens to force a redraw.
 
 **The pin's hit area is a transparent 34pt box around an 18pt dot.** Apple asks for 44pt and an
 18pt marker is less than half of that, but 44 has neighbouring pins overlapping each other's hit

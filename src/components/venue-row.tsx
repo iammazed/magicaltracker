@@ -35,6 +35,8 @@ export function VenueRow({
   const theme = useTheme();
   const tone = theme[AreaTone[venue.area_id] ?? 'brandTeal'];
   const visited = visitCount > 0;
+  const character =
+    venue.is_character_breakfast_dining || venue.is_character_dinner_dining;
 
   const service = venue.service_type.map((s) => SERVICE_LABEL[s] ?? s).join(', ');
 
@@ -47,6 +49,7 @@ export function VenueRow({
       accessibilityRole="button"
       accessibilityLabel={
         `${venue.name}, ${areaName}` +
+        (character ? ', character dining' : '') +
         (visitCount ? `, visited ${visitCount} time${visitCount > 1 ? 's' : ''}` : '')
       }
       style={({ pressed }) => [
@@ -81,6 +84,18 @@ export function VenueRow({
             <View style={[styles.badge, { backgroundColor: theme.goldSurface }]}>
               <ThemedText type="small" style={[styles.badgeText, { color: theme.gold }]}>
                 SIGNATURE
+              </ThemedText>
+            </View>
+          ) : null}
+          {/* The detail screen has said "Character dining" all along; the list
+              said nothing, so the only way to find a character meal was to
+              know which ones they are and open each. Gold, matching the badge
+              on the detail screen, because a row that marks it one colour and
+              a screen that marks it another reads as two different facts. */}
+          {character ? (
+            <View style={[styles.badge, { backgroundColor: theme.goldSurface }]}>
+              <ThemedText type="small" style={[styles.badgeText, { color: theme.gold }]}>
+                CHARACTERS
               </ThemedText>
             </View>
           ) : null}

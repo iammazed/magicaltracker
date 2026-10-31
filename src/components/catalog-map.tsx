@@ -74,6 +74,40 @@ const SAME_TAP_MS = 100;
  *  overlapping each other's hit areas at the closest zoom. */
 const PIN_HIT = 34;
 
+/**
+ * Above this many individual pins on screen, names are hidden.
+ *
+ * Labelling all 366 is the version of this that nobody can read: at the
+ * default framing the dots already touch, and a name on each would be a grey
+ * smear across the whole resort. Fourteen is roughly what fits around one
+ * park's worth of pins without the labels colliding, and getting below it is
+ * one pinch away.
+ *
+ * Clusters are not counted, and are never labelled — a cluster is several
+ * places and has no one name.
+ */
+const LABEL_MAX = 14;
+
+/**
+ * The label's box, fixed, because the marker's ANCHOR is computed from it.
+ *
+ * A marker is anchored as a fraction of its own view, so adding anything
+ * below the dot moves the dot off the coordinate unless the anchor moves with
+ * it. Both numbers therefore have to be known up front, which is also why the
+ * text is one line with `allowFontScaling` off: a label that grew with the
+ * system font size would silently drag every pin north of where it belongs.
+ */
+const LABEL_H = 15;
+const LABEL_GAP = 1;
+const LABEL_W = 96;
+
+/** Centre of the dot, as a fraction of the whole marker view. */
+const LABELLED_ANCHOR = {
+  x: 0.5,
+  y: PIN_HIT / 2 / (PIN_HIT + LABEL_GAP + LABEL_H),
+};
+const PLAIN_ANCHOR = { x: 0.5, y: 0.5 };
+
 export function CatalogMap({
   places,
   doneIds,
@@ -156,6 +190,14 @@ export function CatalogMap({
     }, SAME_TAP_MS);
   }, []);
 
+  /** Names appear only once there are few enough to read. Counted from the
+   *  pins actually on screen rather than from `places`, so it follows the
+   *  zoom rather than the size of the catalog. */
+  const showLabels = useMemo(() => {
+    const n = pins.reduce((a, p) => a + (p.kind === 'pin' ? 1 : 0), 0);
+    return n > 0 && n <= LABEL_MAX;
+  }, [pins]);
+
   const selected = useMemo(
     () => places.find((p) => p.id === selectedId) ?? null,
     [places, selectedId],
@@ -218,14 +260,19 @@ export function CatalogMap({
               // a React bubble. Apple Maps only, which is the provider here;
               // Android never propagates marker presses.
               stopPropagation
-              // The selected pin grows, so it needs one more render pass.
-              tracksViewChanges={pin.item.id === selectedId}
-              anchor={{ x: 0.5, y: 0.5 }}
+              // The selected pin grows, so it needs one more render pass. A
+              // label appearing or disappearing changes the view too, which is
+              // why `showLabels` is in here as well — without it the marker
+              // keeps the snapshot it was first drawn with and the name never
+              // turns up until something else redraws it.
+              tracksViewChanges={pin.item.id === selectedId || showLabels}
+              anchor={showLabels ? LABELLED_ANCHOR : PLAIN_ANCHOR}
             >
               <PlacePin
                 place={pin.item}
                 done={doneIds.has(pin.item.id)}
                 selected={pin.item.id === selectedId}
+                labelled={showLabels}
               />
             </Marker>
           ),
@@ -287,10 +334,12 @@ function PlacePin({
   place,
   done,
   selected,
+  labelled,
 }: {
   place: MapPlace;
   done: boolean;
   selected: boolean;
+  labelled: boolean;
 }) {
   const theme = useTheme();
   const tone = theme[place.tone];
@@ -300,21 +349,44 @@ function PlacePin({
   // for anyone who cannot tell the two hues apart.
   // The dot sits inside a transparent box, so the tap target is a finger
   // rather than 18 points. The marker is anchored at its centre either way.
+  // The dot keeps its own fixed 34pt box whether or not there is a label, so
+  // the pin's size and hit area never depend on the name under it.
   return (
-    <View style={styles.pinHit}>
-      <View
-        style={[
-          styles.pin,
-          selected && styles.pinSelected,
-          done
-            ? { backgroundColor: tone, borderColor: theme.background }
-            : { backgroundColor: theme.background, borderColor: tone },
-        ]}
-      >
-        {done ? (
-          <ThemedText style={[styles.pinMark, { color: theme.onAccent }]}>✓</ThemedText>
-        ) : null}
+    <View style={labelled ? styles.pinWithLabel : undefined}>
+      <View style={styles.pinHit}>
+        <View
+          style={[
+            styles.pin,
+            selected && styles.pinSelected,
+            done
+              ? { backgroundColor: tone, borderColor: theme.background }
+              : { backgroundColor: theme.background, borderColor: tone },
+          ]}
+        >
+          {done ? (
+            <ThemedText style={[styles.pinMark, { color: theme.onAccent }]}>✓</ThemedText>
+          ) : null}
+        </View>
       </View>
+      {labelled ? (
+        <View
+          style={[
+            styles.label,
+            { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+          ]}
+        >
+          {/* A chip rather than bare text: a map's imagery is light in some
+              places and dark in others, and plain type over it is legible in
+              only one of them. */}
+          <ThemedText
+            allowFontScaling={false}
+            numberOfLines={1}
+            style={[styles.labelText, { color: theme.text }]}
+          >
+            {place.name}
+          </ThemedText>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -322,12 +394,23 @@ function PlacePin({
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
+  pinWithLabel: { width: LABEL_W, alignItems: 'center' },
   pinHit: {
     width: PIN_HIT,
     height: PIN_HIT,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  label: {
+    height: LABEL_H,
+    marginTop: LABEL_GAP,
+    maxWidth: LABEL_W,
+    paddingHorizontal: 5,
+    justifyContent: 'center',
+    borderRadius: Radius.small,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  labelText: { fontSize: 10, fontWeight: '600', lineHeight: 13 },
   pin: {
     width: 18,
     height: 18,
