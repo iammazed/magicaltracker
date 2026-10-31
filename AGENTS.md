@@ -1001,6 +1001,25 @@ view's aspect ratio and reports the adjusted one back, which can land above the 
 Filtering and search happen **in memory**. The catalog is ~400 rows and already loaded, so a
 round trip per keystroke would be slower and would break offline.
 
+**Getting a change to TestFlight is one command**, and the submit profile is why:
+
+    eas build --platform ios --profile production --auto-submit --what-to-test "..."
+
+`--auto-submit` submits the binary it just built, so there is no gap in which the wrong build can
+be picked. The TestFlight group lives in `eas.json` as `submit.production.ios.groups`, NOT on the
+command line, because `--auto-submit` reads the submit profile — the `-g` flag only exists on a
+standalone `eas submit`. Running `eas build` and `eas submit` as two separate commands at the
+same time is how this went wrong once: the submit had no finished store build to find, offered a
+menu of development builds, and App Store Connect rejects those.
+
+`--what-to-test` is a CLI flag only; there is no `whatToTest` field in `eas.json`.
+
+**Before any build that changes a synced column, the migration has to be live.** Production and
+local point at the same Supabase project, so `npm run db:migrate` covers both — but the ORDER
+matters: the push sends every column the local row has, so a build that knows about a column
+Postgres does not will fail to sync, silently, on a tester's phone. Migration first, build
+second.
+
 ## Export
 
 Every text field goes through the RFC 4180 quoting in `src/lib/export-csv.ts`, not just the ones
