@@ -37,6 +37,7 @@ export const FREE_TRIP_LIMIT = 1;
 
 export type PremiumFeature =
   | 'notes'
+  | 'dayNotes'
   | 'dishes'
   | 'photos'
   | 'trips'
@@ -48,6 +49,17 @@ export const FEATURE_COPY: Record<PremiumFeature, { title: string; blurb: string
   notes: {
     title: 'Visit notes',
     blurb: 'Write down what the meal was actually like, while you remember it.',
+  },
+  /**
+   * Separate from `notes`, which it shares an implementation with and nothing
+   * else. A visit note is written afterwards, about a meal you have eaten; a
+   * day note is written beforehand, about a day you are planning. Showing the
+   * same "write down what the meal was actually like" copy on a day you have
+   * not had yet reads as a bug in the app rather than an upgrade.
+   */
+  dayNotes: {
+    title: 'Day planning',
+    blurb: 'Add a note to each day of a trip — rope drop, dinner at 7, an early night.',
   },
   dishes: {
     title: 'Dishes ordered',

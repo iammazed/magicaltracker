@@ -65,6 +65,20 @@ type Choice = { area: string | null; kind: DayKind | null };
 
 const sameChoice = (a: Choice, b: Choice) => a.area === b.area && a.kind === b.kind;
 
+/**
+ * Where you can spend a day, which is NOT every area in the catalog.
+ *
+ * The five `resort_area` areas — "Magic Kingdom Resort Area" and the rest —
+ * are a grouping for the dining list, not an answer to "what are we doing
+ * today". Offering them put five near-identical options in a picker that
+ * already has a "Resort day" meaning exactly that, and reading "EPCOT" two
+ * rows above "EPCOT Resort Area" is a choice nobody should have to make.
+ *
+ * Districts stay: a Disney Springs day is a real plan.
+ */
+const dayAreas = <T extends { kind: string }>(areas: T[]) =>
+  areas.filter((a) => a.kind !== 'resort_area');
+
 export function TripDays({ trip }: { trip: Trip }) {
   const theme = useTheme();
   const { daysFor, setDay } = useTrips();
@@ -73,6 +87,8 @@ export function TripDays({ trip }: { trip: Trip }) {
 
   const dates = datesBetween(trip.start_date, trip.end_date).slice(0, MAX_ROWS);
   const stored = daysFor(trip.id);
+  // Every area, not just the offerable ones: a day stored against a resort
+  // area before they were withdrawn still has to render with its name.
   const areaName = new Map(areas.map((a) => [a.id, a.name]));
 
   return (
@@ -171,6 +187,23 @@ function DayEditor({
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.backdrop}>
+        {/* Tapping the dimmed area closes the sheet.
+            It was a plain View, so the only way out was Save — and the thing
+            people reach for first is the back chevron, which sits UNDER this
+            backdrop: a Modal renders above the navigation header, so that tap
+            landed here and did nothing at all. A sheet you cannot leave
+            without committing is a sheet that makes you commit.
+
+            A sibling behind the sheet rather than a Pressable wrapping it.
+            Wrapping would put a press responder above the ScrollView and the
+            note field and have them negotiate for every touch; this way the
+            sheet is simply painted on top and nothing competes. */}
+        <Pressable
+          style={styles.backdropFill}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+        />
         <View style={[styles.sheet, { backgroundColor: theme.background }]}>
           <View style={styles.sheetHead}>
             <ThemedText type="smallBold">
@@ -205,7 +238,7 @@ function DayEditor({
               />
             ))}
             <View style={[styles.rule, { backgroundColor: theme.border }]} />
-            {areas.map((a) => (
+            {dayAreas(areas).map((a) => (
               <AreaOption
                 key={a.id}
                 label={a.name}
@@ -224,8 +257,12 @@ function DayEditor({
                 is already premium, and a day note being free would be the
                 kind of inconsistency people notice and resent. Choosing the
                 park stays free — it is data entry, and it is what makes the
-                clever features possible later. */}
-            <PremiumGate feature="notes">
+                clever features possible later.
+
+                `dayNotes`, not `notes`: same implementation, different thing.
+                A visit note is written afterwards about a meal you ate, and
+                that copy on a day you have not had yet reads as a bug. */}
+            <PremiumGate feature="dayNotes">
               <TextInput
                 value={text}
                 onChangeText={setText}
@@ -329,7 +366,17 @@ const styles = StyleSheet.create({
   rowMain: { flex: 1, paddingVertical: Spacing.three, gap: 1 },
   dayNum: { fontSize: 10, fontWeight: '700', letterSpacing: 1 },
 
-  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
+  backdrop: { flex: 1, justifyContent: 'flex-end' },
+  /** The dim itself, behind the sheet. `StyleSheet.absoluteFillObject` is not
+   *  in the RN 0.86 types, hence the explicit offsets. */
+  backdropFill: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
   sheet: {
     maxHeight: '85%',
     padding: Spacing.three,

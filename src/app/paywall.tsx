@@ -87,7 +87,15 @@ const PLANS = [
   },
 ] as const;
 
-const ORDER: PremiumFeature[] = ['notes', 'dishes', 'photos', 'trips', 'nearby', 'export'];
+const ORDER: PremiumFeature[] = [
+  'notes',
+  'dayNotes',
+  'dishes',
+  'photos',
+  'trips',
+  'nearby',
+  'export',
+];
 
 export default function PaywallScreen() {
   const theme = useTheme();
