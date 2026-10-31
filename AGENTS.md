@@ -1001,6 +1001,41 @@ view's aspect ratio and reports the adjusted one back, which can land above the 
 Filtering and search happen **in memory**. The catalog is ~400 rows and already loaded, so a
 round trip per keystroke would be slower and would break offline.
 
+**A JS-only change goes out with `npm run update:prod`, not a build.** EAS Update is configured,
+so the loop for anything that is not native is seconds rather than a seven-minute build plus up
+to half an hour of Apple processing. What still needs a full build: a new native dependency, a
+change to `app.json`'s native surface (permissions, plugins, icons, bundle id), or a version bump.
+If in doubt, compare `npx expo-updates fingerprint:generate --platform ios` against the build's
+fingerprint — a difference means the update cannot reach that binary and a build is required.
+
+**The runtime version policy is `fingerprint`, and `appVersion` would be a bug waiting to
+happen.** `eas update:configure` writes `appVersion`, which makes the runtime version "1.0.0" —
+so an update would be offered to ANY 1.0.0 binary whether or not its native code matches. This
+project has already shipped that exact failure once, when `expo-image-manipulator`'s JS reached a
+binary without the native module and the app crashed on launch. `fingerprint` ties the runtime
+version to the real native fingerprint, so a mismatched update is never offered at all. Note that
+`eas.json` is itself a fingerprint source, so editing it changes the runtime version.
+
+**`eas update` needs `--environment`.** Required from SDK 55 on, and it is also what loads
+`SENTRY_AUTH_TOKEN` for `--upload-source-maps`. Without the source maps an OTA bundle's Sentry
+traces are unsymbolicated, which would have made the `ExpoImageManipulator` crash unreadable —
+and reading that trace is how it was found. Both flags are baked into the npm scripts; publish
+through those rather than by hand.
+
+**`eas update:configure` wrote back the RESOLVED app config, and that is destructive.** It baked
+plugin-added Android permissions into `app.json` as source, duplicating the two already there and
+adding `RECORD_AUDIO` to `permissions` while it was still in `blockedPermissions`. Check
+`git diff app.json` after running any Expo configure command and keep only the lines it was
+supposed to add — here, `updates.url`.
+
+**`UpdateBanner` prompts; it does not reload by itself.** The default is to download in the
+background and apply on the next launch, which means a tester sees a fix two cold starts after
+being told it is fixed — indistinguishable from the fix not working, and the whole point of
+shipping in seconds is lost to a silent handover. It is not automatic either: `reloadAsync` tears
+the JS context down and would take an unsaved visit note with it. It sits at the BOTTOM because
+`AchievementBanner` owns the top, and this one persists until acted on while that one is
+transient.
+
 **Getting a change to TestFlight is one command**, and the submit profile is why:
 
     eas build --platform ios --profile production --auto-submit --what-to-test "..."

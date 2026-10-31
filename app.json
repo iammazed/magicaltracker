@@ -83,6 +83,12 @@
         "projectId": "ab9d7af0-9559-4693-b868-d6afead77a97"
       }
     },
-    "owner": "mazed"
+    "owner": "mazed",
+    "updates": {
+      "url": "https://u.expo.dev/ab9d7af0-9559-4693-b868-d6afead77a97"
+    },
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    }
   }
 }

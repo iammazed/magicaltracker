@@ -16,6 +16,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { Pressable, ScrollView, StyleSheet, Text, View, useColorScheme } from 'react-native';
 
 import { AchievementBanner } from '@/components/achievement-banner';
+import { UpdateBanner } from '@/components/update-banner';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { AchievementsProvider } from '@/hooks/use-achievements';
 import { AuthProvider } from '@/hooks/use-auth';
@@ -189,6 +190,10 @@ function RootLayout() {
                 of those modals, and a celebration confined to the Passport
                 tab would fire where nobody is standing. */}
             <AchievementBanner />
+            {/* Bottom, so it cannot collide with the achievement banner, and
+                outside the Stack for the same reason that one is: an update
+                lands whenever it lands, including while a modal is open. */}
+            <UpdateBanner />
         </ThemeProvider>
             </AchievementsProvider>
             </SyncProvider>
