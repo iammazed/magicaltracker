@@ -27,6 +27,7 @@ export function CatalogMap({ places }: {
   doneIds: Set<string>;
   doneLabel: string;
   onOpen: (place: MapPlace) => void;
+  focusId?: string | null;
 }) {
   return (
     <View style={styles.center}>

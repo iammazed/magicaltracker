@@ -21,8 +21,9 @@ import {
 } from '@/components/sky-header';
 import { ThemedView } from '@/components/themed-view';
 import { CatalogMap, type MapPlace } from '@/components/catalog-map';
+import { venuePlaces } from '@/lib/map-places';
 import { VenueRow } from '@/components/venue-row';
-import { AreaTone, Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useBottomInset } from '@/hooks/use-bottom-inset';
 import { useCatalogFilters } from '@/hooks/use-catalog-filters';
 import { useNearby } from '@/hooks/use-nearby';
@@ -36,7 +37,6 @@ import {
 } from '@/hooks/use-venues';
 import { useVisits } from '@/hooks/use-visits';
 import { formatDistance, metresBetween, sortByDistance } from '@/lib/cluster';
-import { formatCuisine, formatSubArea } from '@/lib/labels';
 
 /**
  * Chip labels. The full area names ("ESPN Wide World of Sports Resort Area")
@@ -175,25 +175,10 @@ export default function CatalogScreen() {
 
   const visitedIds = useMemo(() => new Set(byVenue.keys()), [byVenue]);
 
-  /** The map knows nothing about venues, so the mapping happens here. */
+  /** The map knows nothing about venues, so something has to map them. Shared
+   *  with the focused map in `show-on-map`, so a venue reads the same on both. */
   const mapPlaces = useMemo<MapPlace[]>(
-    () =>
-      filtered.map((v) => ({
-        id: v.id,
-        name: v.name,
-        lat: v.lat,
-        lng: v.lng,
-        tone: AreaTone[v.area_id] ?? 'brandTeal',
-        line1:
-          (areaName[v.area_id] ?? v.area_id) +
-          (v.sub_area ? ` · ${formatSubArea(v.sub_area)}` : ''),
-        line2: [
-          formatCuisine(v.cuisine),
-          '$'.repeat(Math.max(1, Math.min(4, v.price_tier))),
-        ]
-          .filter(Boolean)
-          .join('  ·  '),
-      })),
+    () => venuePlaces(filtered, areaName),
     [filtered, areaName],
   );
 

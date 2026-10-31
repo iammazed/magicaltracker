@@ -60,7 +60,23 @@ export default function VenueDetailScreen() {
   const character =
     venue.is_character_breakfast_dining || venue.is_character_dinner_dining;
 
-  const openMap = () => {
+  /** The app's own map, where the pins know what you have already done and
+   *  what else is in walking distance. See `show-on-map`. */
+  const showOnMap = () =>
+    router.push({
+      pathname: '/show-on-map',
+      params: { id: venue.id, kind: 'venue' },
+    });
+
+  /**
+   * Apple or Google Maps, kept as the secondary action rather than dropped.
+   *
+   * The in-app map says where a place is among the places around it; this is
+   * the only one of the two that can route you there, which is worth having
+   * for a restaurant you are driving to. Our map cannot do turn-by-turn and
+   * should not pretend to.
+   */
+  const openDirections = () => {
     if (venue.lat == null || venue.lng == null) return;
     const label = encodeURIComponent(venue.name);
     const url =
@@ -221,15 +237,34 @@ export default function VenueDetailScreen() {
         ) : null}
 
         {venue.lat != null && venue.lng != null ? (
-          <Pressable
-            onPress={openMap}
-            accessibilityRole="button"
-            style={[styles.secondary, { borderColor: theme.border }]}
-          >
-            <ThemedText type="small" style={{ color: theme.accent }}>
-              Open in Maps
-            </ThemedText>
-          </Pressable>
+          <View style={styles.mapActions}>
+            <Pressable
+              onPress={showOnMap}
+              accessibilityRole="button"
+              style={[
+                styles.secondary,
+                styles.mapAction,
+                { borderColor: theme.border },
+              ]}
+            >
+              <ThemedText type="small" style={{ color: theme.accent }}>
+                Show on map
+              </ThemedText>
+            </Pressable>
+            <Pressable
+              onPress={openDirections}
+              accessibilityRole="button"
+              style={[
+                styles.secondary,
+                styles.mapAction,
+                { borderColor: theme.border },
+              ]}
+            >
+              <ThemedText type="small" style={{ color: theme.accent }}>
+                Directions ↗
+              </ThemedText>
+            </Pressable>
+          </View>
         ) : null}
       </ScrollView>
     </ThemedView>
@@ -316,6 +351,10 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
   },
+  mapActions: { flexDirection: 'row', gap: Spacing.two },
+  /** Equal halves. The arrow on "Directions" is what distinguishes them —
+   *  one stays in the app and one leaves it. */
+  mapAction: { flex: 1 },
   linkRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

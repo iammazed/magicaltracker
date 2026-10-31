@@ -78,9 +78,39 @@ function visible<T extends Positioned>(
   );
 }
 
+/**
+ * Frames one place, at the tightest zoom the map ever reaches.
+ *
+ * `MIN_CLUSTER_DELTA / 2` is deliberately the same floor `zoomInto` stops at,
+ * so arriving here from "show on map" looks identical to having tapped a
+ * cluster open — about 225 m across, which is "which building is it" scale.
+ *
+ * Below `MIN_CLUSTER_DELTA` nothing clusters, so the place is its own pin on
+ * the first frame. That is belt and braces rather than the guarantee: the map
+ * widens the region to fit the view's aspect ratio and reports the adjusted
+ * one back, which can land above the threshold. `clusterPins`' `keepId` is
+ * what actually holds.
+ */
+export function regionAround(lat: number, lng: number): Viewport {
+  return {
+    latitude: lat,
+    longitude: lng,
+    latitudeDelta: MIN_CLUSTER_DELTA / 2,
+    longitudeDelta: MIN_CLUSTER_DELTA / 2,
+  };
+}
+
+/**
+ * `keepId` is never folded into a cluster.
+ *
+ * Used by the focused map, where the whole point is to show one specific
+ * place: a screen you opened to see where Cinderella's Royal Table is, that
+ * answers with a circle reading "4", has failed at the one job it has.
+ */
 export function clusterPins<T extends Positioned>(
   items: T[],
   viewport: Viewport,
+  keepId?: string | null,
 ): MapPin<T>[] {
   const placed = visible(items, viewport);
 
@@ -98,14 +128,19 @@ export function clusterPins<T extends Positioned>(
   const cellLng = viewport.longitudeDelta / CELLS_ACROSS;
 
   const buckets = new Map<string, (T & { lat: number; lng: number })[]>();
+  const pins: MapPin<T>[] = [];
+
   for (const item of placed) {
+    if (item.id === keepId) {
+      pins.push({ kind: 'pin', key: item.id, lat: item.lat, lng: item.lng, item });
+      continue;
+    }
     const key = `${Math.floor(item.lat / cellLat)}:${Math.floor(item.lng / cellLng)}`;
     const bucket = buckets.get(key);
     if (bucket) bucket.push(item);
     else buckets.set(key, [item]);
   }
 
-  const pins: MapPin<T>[] = [];
   for (const [key, bucket] of buckets) {
     if (bucket.length === 1) {
       const item = bucket[0];

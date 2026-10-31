@@ -764,6 +764,12 @@ which colour map to index (`AreaTone` vs `TierTone`) and which strings go on the
 are the caller's business. `SkySegment` is shared for the same reason: one copy means the
 too-faint-to-read version of that control cannot come back on only one screen.
 
+**The row-to-`MapPlace` mapping lives in `src/lib/map-places.ts`, not in the callers.** It
+started in the two tabs, which was fine at two; the focused map made it three, and three copies
+of "which ramp and which two strings" is how a venue comes to read one way on the Dining map and
+another on the map you reach from the restaurant itself. Plain functions, not hooks — the callers
+already memoise, and a hook would force them to.
+
 **Shared styles carry no `flex`.** `skyInput` had `flex: 1`, which is correct inside Dining's row
 next to the Filters button and wrong as a direct child of the header's column, where it stretches
 to fill the height instead of staying 48pt. Sizing is the layout's business; add `flex` at the
@@ -912,6 +918,36 @@ that depends on it is a guard that breaks on the next iOS release.
 **The pin's hit area is a transparent 34pt box around an 18pt dot.** Apple asks for 44pt and an
 18pt marker is less than half of that, but 44 has neighbouring pins overlapping each other's hit
 areas at the closest zoom, which trades a missed tap for a wrong one.
+
+**A detail screen's "Show on map" opens OUR map; "Directions" is the one that leaves.** Handing
+the coordinates to Apple Maps used to be the only option, and it answers a different question:
+Apple Maps knows where the building is and nothing about whether you have eaten there, what else
+is within walking distance, or which of those you have not tried. Inside a park you cannot drive
+through, it is the worse answer. Directions stayed as the secondary action because routing is
+real and `CatalogMap` cannot do turn-by-turn — but it is secondary.
+
+**`show-on-map` plots the WHOLE catalog, focused on one place, and is a pushed route.** A single
+pin on an empty map is just a coordinate; the neighbours are the reason to look, and tapping one
+makes the screen double as "what else is near here". It is a route rather than a map embedded in
+the detail screen because mounting a `MapView` is not cheap and every restaurant you opened would
+pay for one whether or not you looked. It is also NOT the Dining tab with a pin pre-selected:
+that rewrites which tab the user was on, and the back gesture then lands on the tab's list rather
+than the restaurant they came from.
+
+**`focusId` seeds the viewport STATE, not just `initialRegion`, and is read exactly once.**
+`viewport` is what the clustering reads and `onRegionChangeComplete` fires after a change rather
+than on mount, so seeding only the map would cluster the first frame as though it still showed
+all four parks. It is read in a `useState` initialiser rather than a `useMemo` because the
+catalog loads asynchronously: re-framing whenever `places` changed would yank the camera back
+from wherever the user had panned. `show-on-map` therefore waits for the catalog before mounting
+the map at all — an empty first render is a map that opens on the whole resort and never corrects
+itself.
+
+**`clusterPins` takes a `keepId` that is never folded into a cluster.** The focused place has to
+be its own pin: a screen opened to see where Cinderella's Royal Table is, that answers with a
+circle reading "4", has failed at its only job. `regionAround` opens below `MIN_CLUSTER_DELTA`
+so nothing clusters anyway, but that is belt and braces — the map widens the region to fit the
+view's aspect ratio and reports the adjusted one back, which can land above the threshold.
 
 Filtering and search happen **in memory**. The catalog is ~400 rows and already loaded, so a
 round trip per keystroke would be slower and would break offline.

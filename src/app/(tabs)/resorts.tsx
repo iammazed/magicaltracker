@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { CatalogMap, type MapPlace } from '@/components/catalog-map';
+import { resortPlaces } from '@/lib/map-places';
 import {
   SKY_PLACEHOLDER,
   CollapsibleChips,
@@ -56,24 +57,9 @@ export default function ResortsScreen() {
 
   const stayedIds = useMemo(() => new Set(byResort.keys()), [byResort]);
 
-  /** The map knows nothing about resorts, so the mapping happens here. */
-  const mapPlaces = useMemo<MapPlace[]>(
-    () =>
-      filtered.map((r) => ({
-        id: r.id,
-        name: r.name,
-        lat: r.lat,
-        lng: r.lng,
-        // TierTone, not AreaTone — a resort's colour is its tier, which is
-        // how it is coloured on the list and on the trip screen too.
-        tone: TierTone[r.tier] ?? 'brandTeal',
-        line1:
-          (TIER_LABEL[r.tier] ?? r.tier) +
-          (r.ownership === 'partner' ? '  ·  Partner hotel' : ''),
-        line2: r.transport.map((t) => TRANSPORT_LABEL[t] ?? t).join(', '),
-      })),
-    [filtered],
-  );
+  /** The map knows nothing about resorts, so something has to map them. Shared
+   *  with the focused map in `show-on-map`. */
+  const mapPlaces = useMemo<MapPlace[]>(() => resortPlaces(filtered), [filtered]);
 
   return (
     <ThemedView style={styles.container}>

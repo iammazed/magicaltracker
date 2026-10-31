@@ -6,7 +6,13 @@ import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing, type RampToken } from '@/constants/theme';
 import { useBottomInset } from '@/hooks/use-bottom-inset';
 import { useTheme } from '@/hooks/use-theme';
-import { clusterPins, WDW_REGION, zoomInto, type Viewport } from '@/lib/cluster';
+import {
+  clusterPins,
+  regionAround,
+  WDW_REGION,
+  zoomInto,
+  type Viewport,
+} from '@/lib/cluster';
 
 /**
  * The map view of the catalog — venues or resorts.
@@ -26,6 +32,11 @@ import { clusterPins, WDW_REGION, zoomInto, type Viewport } from '@/lib/cluster'
  * Tapping a pin selects it and raises a card rather than pushing straight to
  * the detail screen. Pins are small and fingers are not, so a mis-tap that
  * navigates is a mis-tap you have to undo.
+ *
+ * `focusId` opens on one place instead of the whole resort. It is one prop
+ * rather than a second component because the behaviour the focused view wants
+ * is this behaviour: the same pins, the same colours, the same card, the same
+ * clustering as you pan away — only the opening camera differs.
  */
 
 export type MapPlace = {
@@ -68,6 +79,7 @@ export function CatalogMap({
   doneIds,
   doneLabel,
   onOpen,
+  focusId,
 }: {
   places: MapPlace[];
   /** Ids the user has logged — visited venues, or resorts stayed at. */
@@ -75,14 +87,40 @@ export function CatalogMap({
   /** "visited" / "stayed at", for the count badge and the card. */
   doneLabel: string;
   onOpen: (place: MapPlace) => void;
+  /** Open zoomed to this place with its card already up, rather than on the
+   *  whole of Walt Disney World. */
+  focusId?: string | null;
 }) {
   const theme = useTheme();
   const bottomInset = useBottomInset();
   const mapRef = useRef<MapView | null>(null);
-  const [viewport, setViewport] = useState<Viewport>(WDW_REGION);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const pins = useMemo(() => clusterPins(places, viewport), [places, viewport]);
+  /**
+   * Computed once, from the first render's props.
+   *
+   * It has to seed BOTH `initialRegion` and `viewport`, not just the map:
+   * `viewport` is what the clustering reads, and `onRegionChangeComplete`
+   * fires after a change rather than on mount. Seeding only the map would
+   * cluster the first frame as though it were still showing all four parks.
+   *
+   * `useState`'s initialiser rather than `useMemo` because this is the
+   * opening camera, not derived state. A `places` array that arrives late —
+   * which it does, the catalog is an async read — must not re-frame a map the
+   * user has already panned.
+   */
+  const [opening] = useState<Viewport>(() => {
+    const at = focusId ? places.find((p) => p.id === focusId) : null;
+    return at?.lat != null && at.lng != null
+      ? regionAround(at.lat, at.lng)
+      : WDW_REGION;
+  });
+  const [viewport, setViewport] = useState<Viewport>(opening);
+  const [selectedId, setSelectedId] = useState<string | null>(focusId ?? null);
+
+  const pins = useMemo(
+    () => clusterPins(places, viewport, focusId),
+    [places, viewport, focusId],
+  );
 
   /**
    * One tap on a pin fires TWO native handlers, and nothing orders them.
@@ -141,7 +179,7 @@ export function CatalogMap({
         ref={mapRef}
         provider={PROVIDER_DEFAULT}
         style={styles.map}
-        initialRegion={WDW_REGION}
+        initialRegion={opening}
         onRegionChangeComplete={setViewport}
         // Tapping bare map dismisses the card, the same way tapping outside
         // any other transient surface does. Via `onMapPress`, because a tap

@@ -130,6 +130,8 @@ function RootLayout() {
               <Stack.Screen name="venue/[id]" options={{ title: '' }} />
               <Stack.Screen name="resort/[id]" options={{ title: '' }} />
               <Stack.Screen name="trip/[id]" options={{ title: '' }} />
+              {/* Title comes from the screen, which knows the place's name. */}
+              <Stack.Screen name="show-on-map" />
               <Stack.Screen
                 name="new-trip"
                 // No title: TripPlanner carries its own heading inside the
