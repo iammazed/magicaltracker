@@ -1038,7 +1038,7 @@ transient.
 
 **Getting a change to TestFlight is one command**, and the submit profile is why:
 
-    eas build --platform ios --profile production --auto-submit --what-to-test "..."
+    eas build --platform ios --profile production --auto-submit
 
 `--auto-submit` submits the binary it just built, so there is no gap in which the wrong build can
 be picked. The TestFlight group lives in `eas.json` as `submit.production.ios.groups`, NOT on the
@@ -1047,7 +1047,11 @@ standalone `eas submit`. Running `eas build` and `eas submit` as two separate co
 same time is how this went wrong once: the submit had no finished store build to find, offered a
 menu of development builds, and App Store Connect rejects those.
 
-`--what-to-test` is a CLI flag only; there is no `whatToTest` field in `eas.json`.
+**Do NOT pass `--what-to-test`.** It maps to the submission's `changelog` parameter, which EAS
+gates behind the Enterprise plan, and the submission is rejected before it is even scheduled —
+`Failed to schedule iOS submission ... available for Enterprise plan only`. The build still
+runs, so the recovery is a plain `eas submit --platform ios --id <build id>` afterwards. Release
+notes for testers go in App Store Connect's TestFlight tab, by hand, for free.
 
 **Before any build that changes a synced column, the migration has to be live.** Production and
 local point at the same Supabase project, so `npm run db:migrate` covers both — but the ORDER
