@@ -1,5 +1,11 @@
-import { useLocalSearchParams, useNavigation, useRoute, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import {
+  useIsFocused,
+  useLocalSearchParams,
+  useNavigation,
+  useRoute,
+  useRouter,
+} from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -22,6 +28,7 @@ import {
 import { ThemedView } from '@/components/themed-view';
 import { CatalogMap, type MapPlace } from '@/components/catalog-map';
 import { formatDate } from '@/lib/calendar';
+import { tapPicked } from '@/lib/haptics';
 import { venuePlaces } from '@/lib/map-places';
 import { VenueRow } from '@/components/venue-row';
 import { Radius, Spacing } from '@/constants/theme';
@@ -97,6 +104,28 @@ export default function CatalogScreen() {
     () => new Set(planning ? plansFor(planning.id).map((p) => p.venue_id) : []),
     [planning, plansFor],
   );
+
+  /**
+   * Finishing the task returns you to the ITINERARY, not to wherever the
+   * stack happens to point.
+   *
+   * `router.back()` was dropping people on the tab they started from instead
+   * of the trip they were filling in, and a tester reported exactly that:
+   * "once you add one it takes you back to the main screen, I'd rather it
+   * take me back to my trip itinerary so I can keep adding restaurants."
+   * The cause is that this screen is reached by pushing a TAB route, which
+   * does not leave a clean entry behind to pop back to.
+   *
+   * `dismissTo` is the one call that lands there either way: it pops back to
+   * the trip when it is still in the stack, and replaces the current screen
+   * with it when it is not. The trip is also the only sane destination —
+   * the task was "add places to this trip", so its end is that trip.
+   */
+  const finish = useCallback(() => {
+    if (!planning) return;
+    router.dismissTo({ pathname: '/trip/[id]', params: { id: planning.id } });
+  }, [planning, router]);
+
   const { data: areas } = useAreas();
   const { filters, set, clear } = useCatalogFilters();
   const bottomInset = useBottomInset();
@@ -127,6 +156,32 @@ export default function CatalogScreen() {
   // navigator may mount a screen while a different tab is focused.
   const routeName = useRoute().name;
 
+  /**
+   * The task can only be walked away from once it has been arrived at.
+   *
+   * Pushing a tab route mounts a SECOND copy of the tab navigator (see
+   * AGENTS.md), and while that copy is settling its focused route can briefly
+   * be the group's default tab rather than Dining. The listener below reads
+   * any other focused tab as "walked away", so on an unlucky mount it
+   * cancelled the task before the screen had ever been seen — dropping the
+   * user on the main screen with no sign of the trip they had just asked to
+   * add places to. That is the shape of the bug a tester reported.
+   *
+   * Gating on having been focused once closes the window without touching
+   * the listener's logic: on the normal path this is true immediately, so
+   * nothing about the working case changes.
+   *
+   * Both conditions live in ONE effect deliberately. Split across two —
+   * "true when focused" and "false for a new task" — they race in
+   * declaration order, and on mount the reset would land second and leave
+   * the flag false on a screen that was already focused.
+   */
+  const screenFocused = useIsFocused();
+  const [arrived, setArrived] = useState(false);
+  useEffect(() => {
+    setArrived(screenFocused);
+  }, [screenFocused, addToTrip]);
+
   // A fresh entry into the flow re-arms it: a different trip id means a new
   // task, not the one that was walked away from.
   useEffect(() => {
@@ -134,7 +189,7 @@ export default function CatalogScreen() {
   }, [addToTrip]);
 
   useEffect(() => {
-    if (!planning) return;
+    if (!planning || !arrived) return;
     const tripId = planning.id;
     const unsubscribe = navigation.addListener('state', () => {
       const state = navigation.getState();
@@ -144,7 +199,7 @@ export default function CatalogScreen() {
       if (focused && focused !== routeName) setAbandoned(tripId);
     });
     return unsubscribe;
-  }, [planning, navigation, routeName]);
+  }, [planning, arrived, navigation, routeName]);
 
   // The map is a view of the same filtered set, not a separate screen, so
   // switching to it never loses the filters you just chose. It is also local
@@ -223,7 +278,7 @@ export default function CatalogScreen() {
               ? { done: plannedIds.size, total: venues.length, label: 'on this trip' }
               : { done: visitedCount, total: venues.length, label: 'eaten at' }
           }
-          action={planning ? { label: 'Done', onPress: () => router.back() } : undefined}
+          action={planning ? { label: 'Done', onPress: finish } : undefined}
           collapsed={collapsed}
         >
           <View style={styles.searchRow}>
@@ -356,6 +411,11 @@ export default function CatalogScreen() {
                 planned={planning ? plannedIds.has(item.id) : undefined}
                 onPress={() => {
                   if (planning) {
+                    // A tick appearing is the only feedback a tap down this
+                    // list gets, and it is easy to miss mid-scroll with a
+                    // thumb over the row. The light selection tick is what
+                    // tells you it landed.
+                    tapPicked();
                     // With a day in hand, tapping a venue already on the list
                     // MOVES it onto that day instead of removing it — the day
                     // you came from is the thing being edited, and taking a
@@ -385,15 +445,20 @@ export default function CatalogScreen() {
         )}
         {planning ? (
           <Pressable
-            onPress={() => router.back()}
+            onPress={finish}
             accessibilityRole="button"
             style={[
               styles.doneBar,
               { backgroundColor: theme.accent, marginBottom: bottomInset + Spacing.two },
             ]}
           >
+            {/* Says where it goes, not just that it ends. "Done" read as the
+                only way out of a screen people thought they had to leave
+                after each restaurant; naming the destination makes it
+                obvious that staying here and adding more is the normal
+                thing to do. */}
             <ThemedText type="smallBold" style={{ color: theme.onAccent }}>
-              Done
+              Back to the trip
             </ThemedText>
             {/* Spelled out because the button looked like a Save it would be
                 dangerous to miss. Each tap already wrote to the database, so

@@ -32,6 +32,9 @@ const MONTHS = [
 
 const DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+/** `Jan`…`Dec`, for the twelve-month grid in the date picker. */
+export const MONTH_SHORT = MONTHS.map((m) => m.slice(0, 3));
+
 /** Sunday-first, which is the US convention and Walt Disney World is in Florida. */
 export const WEEKDAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
@@ -72,6 +75,17 @@ export function daysInMonth(year: number, month: number): number {
 export function addMonths({ year, month }: YearMonth, delta: number): YearMonth {
   const total = year * 12 + month + delta;
   return { year: Math.floor(total / 12), month: ((total % 12) + 12) % 12 };
+}
+
+/**
+ * Negative when `a` is the earlier month, zero when they are the same month,
+ * positive when `a` is later.
+ *
+ * Months do not compare as numbers — `{2026, 0}` is after `{2025, 11}` despite
+ * the smaller month — so the picker asks here rather than comparing fields.
+ */
+export function compareMonths(a: YearMonth, b: YearMonth): number {
+  return a.year === b.year ? a.month - b.month : a.year - b.year;
 }
 
 export function monthOf(iso: string): YearMonth | null {

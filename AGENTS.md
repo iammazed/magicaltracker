@@ -250,6 +250,23 @@ different tab is focused.
 
 The real fix is for a task not to live in a tab at all. See the note in the add-to-trip flow.
 
+**Leaving the task navigates to an explicit destination, never `back()`.** A tester reported
+"once you add a restaurant it takes you back to the main screen — I'd rather it take me back to
+my trip itinerary, so I can keep adding restaurants." The end of this task is the trip it was
+adding to, and that has to be stated rather than inferred from a stack a tab push left untidy.
+`router.dismissTo({ pathname: '/trip/[id]', params: { id } })` pops back to the trip when it is
+still in the stack and replaces the current screen with it when it is not, so it lands there
+either way.
+
+**The abandonment listener must not arm before the screen has been focused once.** While that
+second tab navigator settles, its focused route can briefly be the group's default tab — which
+the listener reads as "walked away", cancelling the task before the screen has ever been seen
+and leaving the user on the main screen with no sign of the trip they just asked to add places
+to. Gate it on `useIsFocused` having been true at least once. Keep that flag in a SINGLE effect
+depending on both the focus and the trip id: split into "true when focused" and "false for a new
+task", the two race in declaration order, and on mount the reset lands second and leaves the
+flag false on a screen that is already focused.
+
 ### The back button needs `headerBackButtonDisplayMode: 'minimal'`
 
 iOS labels the back button with the PREVIOUS screen's title. The previous screen is always the
@@ -783,6 +800,25 @@ instant. The single exception is "today", which must be genuinely local — `tod
 The month grid is **always six rows**, never five, so the card does not resize under your thumb
 mid-tap as you page through months.
 
+**The picker has two levels, and the second one is what makes the 1971 floor mean anything.**
+The month arrows move one month per tap, which is right for a trip next spring and useless for a
+meal eaten on a trip in 2019 — eighty-four taps, so in practice the past was unreachable and the
+floor was a promise the picker did not keep. Tapping the month name opens a year stepper over a
+twelve-month grid, and picking a month drops back onto the day grid there. Deliberately only two
+levels deep: a decade grid above that is a third thing to learn, for the few people logging
+something from the nineties.
+
+The year stepper's ceiling bounds **navigation, not selection**. `log-visit` has no `maxISO` on
+purpose — logging a meal on a date the phone thinks is tomorrow is a real thing across time
+zones — so the stepper stops two years past the month it opened on only to stop the arrow
+walking to the year 9999. The day grid still enforces the real minimum and maximum, so nothing
+the stepper can reach becomes selectable that was not already.
+
+**Months do not compare as numbers**, which is why `compareMonths` exists: `{2026, 0}` is after
+`{2025, 11}` despite the smaller month field. The month grid asks it whether a whole month falls
+outside the range, rather than comparing an ISO date — October 1971 is open even though only the
+1st of it is.
+
 **The depart field's minimum is the arrive date**, so a trip that ends before it starts is simply
 not offerable rather than being validated after the fact. Picking an arrival later than an
 existing departure clears the departure instead of silently keeping a choice that would be
@@ -981,7 +1017,13 @@ of silently removing it for everybody.
 **All haptics live in `src/lib/haptics.ts`.** They used to be two inline calls in the banner,
 which meant the only thing in the entire app you could feel was an achievement unlock — rare
 enough that the first tester concluded haptics were broken, with nothing to compare against.
-Logging a visit and logging a stay now tap too. `tapFinished` is three beats rather than one,
+Logging a visit, logging a stay and adding a restaurant to a trip now tap too.
+
+**Match the pattern to the act.** `tapSaved` is the success notification and means something was
+filed away. `tapPicked` is `selectionAsync`, the light tick under a picker wheel, and is what
+toggling rows in a list gets — adding places to a trip is a run of taps down a long list, where
+a notification-weight buzz on each one would be both wrong and quickly unbearable.
+`tapFinished` is three beats rather than one,
 because a lone Success pattern is exactly what an arriving text message feels like, and it
 returns a cancel so an early dismissal stops the buzzing.
 
@@ -1154,6 +1196,13 @@ Check before publishing, not after:
 
     npx expo-updates fingerprint:generate --platform ios   # hash + the 130 sources
     npx eas build:list --platform ios --limit 1            # the shipped build's Fingerprint
+
+**Use `npx expo-updates`, never `npx @expo/fingerprint@latest`.** The standalone package at
+`@latest` is a different version with a different source list, and it prints a different hash for
+an unchanged tree — `0f59f0a3…` where the real runtime version was still `d41cd429…`. That looks
+exactly like the orphaning bug above and sends you hunting for a native change that was never
+made. The only hash that means anything is the one the project's own pinned `expo-updates`
+computes.
 
 If they differ, an `eas update` is wasted and the change needs a build. Do NOT reach for
 `.fingerprintignore` to exclude `eas.json`: build profiles there genuinely do affect the native

@@ -30,6 +30,19 @@ export function tapSaved() {
 }
 
 /**
+ * A thing was picked off a list: a restaurant added to a trip.
+ *
+ * `selectionAsync` rather than the success notification, and the distinction
+ * carries meaning here. Adding places to a trip is a run of taps down a long
+ * list, and a notification-weight buzz on every one would be both wrong —
+ * nothing was filed away, a selection changed — and quickly unbearable. This
+ * is the light tick iOS uses under a picker wheel.
+ */
+export function tapPicked() {
+  quiet(Haptics.selectionAsync());
+}
+
+/**
  * A rung on the way up a tiered challenge.
  *
  * One medium impact, not the fanfare. Spending the big pattern on Bronze
