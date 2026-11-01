@@ -1,18 +1,22 @@
-import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, PanResponder, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AchievementCelebration } from '@/components/achievement-celebration';
 import { Stars } from '@/components/sky-card';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAchievements, type Unlock } from '@/hooks/use-achievements';
 import { TIER_COLOR } from '@/hooks/use-passport';
+import { tapTier } from '@/lib/haptics';
 
 /**
- * The banner that drops in when an achievement is reached.
+ * The banner that drops in when a TIER is reached.
+ *
+ * Completing a challenge outright goes to `AchievementCelebration` instead —
+ * see `AchievementBanner` at the bottom of this block for the split.
  *
  * Mounted once, at the root, above the Stack — so it appears over whatever
  * screen the user is on. Logging the visit that completes a challenge happens
@@ -49,43 +53,32 @@ import { TIER_COLOR } from '@/hooks/use-passport';
 const DWELL_MS = 7000;
 const DWELL_QUEUED_MS = 4200;
 
-/**
- * A tap you feel, scaled to what was earned.
- *
- * Finishing something gets the Success notification pattern — three taps,
- * unmistakably a result. A rung on the way up gets a single medium impact,
- * because spending the big pattern on Bronze leaves nothing louder for
- * Platinum.
- *
- * **Statically imported, unlike the image manipulator, and the difference is
- * in the package rather than in the judgement.** `expo-haptics` resolves its
- * native module with `requireOptionalNativeModule`, which returns null rather
- * than throwing, so importing it on a binary that predates it is harmless;
- * the call then rejects with an `UnavailabilityError`, which is what the
- * catch is for. `expo-image-manipulator` uses `requireNativeModule`, which
- * throws while the module body evaluates — nothing downstream can catch
- * that, hence the lazy load over there.
- *
- * Failure is silent on purpose. A phone with haptics switched off, a
- * simulator, and an older binary all land here, and none of them is worth a
- * Sentry event for a missing buzz.
- */
-function celebrate(finished: boolean) {
-  const tap = finished
-    ? Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-    : Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-  void tap.catch(() => {});
-}
 /** Past this much upward drag, a release dismisses rather than springs back. */
 const SWIPE_CLOSE = 40;
 
+/**
+ * Announces whatever is at the front of the queue, in the register the news
+ * deserves.
+ *
+ * Finishing a challenge takes over the screen; a rung on the way up gets the
+ * banner. Those were the same card until a tester called the big moment
+ * underwhelming, which it was — Platinum and Bronze were announced
+ * identically.
+ */
 export function AchievementBanner() {
   const { queue, dismiss } = useAchievements();
   const top = queue[0];
   if (!top) return null;
+
   // Keyed, so a second unlock arriving behind the first remounts and replays
-  // the entrance rather than silently swapping the text of a banner that is
+  // the entrance rather than silently swapping the text of something that is
   // already sitting still.
+  //
+  // A null tier is an all-or-nothing challenge, which only ever reaches a
+  // milestone by being finished; Platinum is the tiered equivalent.
+  if (top.tier === null || top.tier === 'Platinum') {
+    return <AchievementCelebration key={top.key} unlock={top} onDone={dismiss} />;
+  }
   return <Banner key={top.key} unlock={top} queued={queue.length > 1} onDone={dismiss} />;
 }
 
@@ -136,7 +129,7 @@ function Banner({
     // With the animation, not before it: the buzz and the card arriving are
     // one event, and a haptic that lands early reads as a notification from
     // somewhere else.
-    celebrate(unlock.tier === 'Platinum' || unlock.tier === null);
+    tapTier();
 
     Animated.parallel([
       Animated.spring(enter, {

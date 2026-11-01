@@ -959,6 +959,37 @@ the count immediately and captures what was new into component state for the len
 visit. Without that capture, arriving from the banner would clear the badge and show nothing to
 explain why you came — `unseen` is empty by the time the list renders.
 
+**Completing a challenge and climbing a tier are announced differently, and they used to not
+be.** Platinum and Bronze arrived in the same slim card with the same single buzz, which a
+tester correctly called underwhelming: the biggest moment in the app was presented as a notice.
+Completion (`tier === null`, meaning an all-or-nothing challenge, or `tier === 'Platinum'`) now
+takes the screen with `AchievementCelebration`; every rung below that keeps the banner.
+
+**The confetti is twenty-six plain Views, not a library, and that is a shipping decision as much
+as a taste one.** A native animation dependency would change the fingerprint, which strands
+every installed build from over-the-air updates — the trap documented under EAS Update. Pure
+`Animated` transform and opacity ships OTA. One `Animated.Value` drives all the pieces, each
+reading it through its own clamped interpolation window, so the stagger costs one native
+animation rather than twenty-six.
+
+**Confetti is suppressed under reduce-motion; the card and medal are not.** Lots of independent
+peripheral movement is the pattern that actually makes people unwell, while a celebration with
+no motion at all is not a celebration. `calm` starts false and may flip a frame later, which is
+the right way round: the setting is usually off, and guessing late shows one extra burst instead
+of silently removing it for everybody.
+
+**All haptics live in `src/lib/haptics.ts`.** They used to be two inline calls in the banner,
+which meant the only thing in the entire app you could feel was an achievement unlock — rare
+enough that the first tester concluded haptics were broken, with nothing to compare against.
+Logging a visit and logging a stay now tap too. `tapFinished` is three beats rather than one,
+because a lone Success pattern is exactly what an arriving text message feels like, and it
+returns a cancel so an early dismissal stops the buzzing.
+
+**When haptics seem dead, suspect the phone first.** `expo-haptics` resolves its native module
+with `requireOptionalNativeModule`, so every failure is silent by design — a simulator, an older
+binary, and Settings → Sounds & Haptics → System Haptics being off are indistinguishable from
+no haptic having been requested.
+
 **The dwell is 7s, and the entrance eats the first 2s of it.** The medal pops at 120ms and the
 shine sweeps twice until roughly 2.1s, so the card is only still for `DWELL_MS` minus that. At
 the original 4.2s testers reported the banner flashing past — three lines to read and a decision

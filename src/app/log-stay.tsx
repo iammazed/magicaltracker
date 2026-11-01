@@ -8,6 +8,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useVisits } from '@/hooks/use-visits';
+import { tapSaved } from '@/lib/haptics';
 import { todayISO } from '@/lib/local-db';
 
 /** Only check-in is required — someone logging a stay they are currently on
@@ -43,6 +44,7 @@ export default function LogStayScreen() {
       rating,
       roomType: roomType.trim() || null,
     });
+    tapSaved();
     router.back();
   };
 

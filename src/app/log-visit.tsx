@@ -20,6 +20,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { usePremium } from '@/hooks/use-premium';
 import { useTheme } from '@/hooks/use-theme';
 import { useVisits } from '@/hooks/use-visits';
+import { tapSaved } from '@/lib/haptics';
 import { todayISO } from '@/lib/local-db';
 import { importPhoto } from '@/lib/photos';
 
@@ -120,6 +121,10 @@ export default function LogVisitScreen() {
       dishes: isPremium ? dishes : null,
       photos: isPremium ? photos : null,
     });
+    // After the write, before the dismissal: the tap confirms the thing that
+    // just happened. Haptics lived only on achievement unlocks, which are
+    // rare enough that the first tester assumed they were broken.
+    tapSaved();
     router.back();
   };
 
