@@ -52,7 +52,7 @@ invisible to `/theme`, so nobody catches it until a user does.
 | `background` / `backgroundElement` / `backgroundSelected` | Screen ground, cards, pressed rows | Text |
 | `border` / `borderSoft` | Container edges / internal rules | Anything filled |
 | `accent` / `accentPressed` / `onAccent` | Primary actions, links | Decoration, large fills |
-| `gold` / `goldSurface` / `onGold` | **Achievement unlocks, premium, and the wordmark** | General emphasis |
+| `gold` / `goldSurface` / `onGold` / `goldText` | **Achievement unlocks, premium, and the wordmark** | General emphasis |
 | `success` / `warning` / `danger` | State and outcomes | Branding |
 | `brandTeal` … `brandViolet` | Sequential/categorical things | Body text, semantic state |
 
@@ -61,6 +61,13 @@ Light-mode gold is dark (`#B07818`) and dark-mode gold is light (`#E5B45F`), so 
 invert with the scheme. Three places had `#23133A` hardcoded, which was correct on dark-mode gold
 and roughly 2.3:1 — unreadable — on light-mode gold. That is exactly the bug the no-literals rule
 exists to prevent, and it shipped anyway because nobody opened those screens in light mode.
+
+**`gold` is a fill, `goldText` is ink, and they are not interchangeable.**
+Light-mode `gold` (`#B07818`) is 3.79:1 on white — fine behind a 9px uppercase badge or under a
+button label, below the 4.5:1 that 14px body text needs. `goldText` is the darkened, saturated
+variant (`#9A6A0F`, 4.73:1) for gold *text on a background*; in dark mode both are `#E5B45F`,
+which is already 8.06:1, so the distinction only bites in light mode and is therefore easy to
+miss. Visited dining rows and stayed-at resort rows name themselves in `goldText`.
 
 **`gold` is load-bearing.** It marks reward. If it starts appearing as a general highlight, an
 unlocked achievement stops feeling like anything. Guard it.
@@ -930,6 +937,15 @@ unlock from Bronze and gets its own celebration. All-or-nothing challenges use `
 the count immediately and captures what was new into component state for the length of the
 visit. Without that capture, arriving from the banner would clear the badge and show nothing to
 explain why you came — `unseen` is empty by the time the list renders.
+
+**The dwell is 7s, and the entrance eats the first 2s of it.** The medal pops at 120ms and the
+shine sweeps twice until roughly 2.1s, so the card is only still for `DWELL_MS` minus that. At
+the original 4.2s testers reported the banner flashing past — three lines to read and a decision
+to tap, in about two seconds. When another unlock is already queued behind it the shorter
+`DWELL_QUEUED_MS` applies instead, because two full dwells back to back is fourteen seconds of
+banner for one tap. The chosen dwell is frozen at mount with a `useState` initialiser: reading
+`queued` live would put it in the entrance effect's dependencies and replay the spring and the
+haptic on a card that is already sitting still.
 
 **Every animation in the banner is `useNativeDriver: true`**, which is possible only because
 nothing animated is a layout property — transform and opacity, no height, no margin. It runs on

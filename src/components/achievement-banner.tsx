@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, PanResponder, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -33,9 +33,21 @@ import { TIER_COLOR } from '@/hooks/use-passport';
  * is dark in both schemes, so theme tokens would invert and vanish on it.
  */
 
-/** How long it sits there before leaving on its own. Long enough to read two
- *  short lines and decide to tap, short enough not to be in the way. */
-const DWELL_MS = 4200;
+/**
+ * How long it sits there before leaving on its own.
+ *
+ * The entrance is not free: the medal pops at 120ms and the shine sweeps twice
+ * until roughly 2.1s, so the card is only STILL for whatever is left. At the
+ * original 4.2s that was about two seconds to read three lines and decide to
+ * tap, which testers read as the banner flashing past.
+ *
+ * `DWELL_QUEUED_MS` is the shorter dwell used when another unlock is already
+ * waiting behind this one — a visit that completes a challenge and tips a tier
+ * at the same time queues two, and two full dwells back to back is fourteen
+ * seconds of banner for one tap.
+ */
+const DWELL_MS = 7000;
+const DWELL_QUEUED_MS = 4200;
 
 /**
  * A tap you feel, scaled to what was earned.
@@ -74,12 +86,28 @@ export function AchievementBanner() {
   // Keyed, so a second unlock arriving behind the first remounts and replays
   // the entrance rather than silently swapping the text of a banner that is
   // already sitting still.
-  return <Banner key={top.key} unlock={top} onDone={dismiss} />;
+  return <Banner key={top.key} unlock={top} queued={queue.length > 1} onDone={dismiss} />;
 }
 
-function Banner({ unlock, onDone }: { unlock: Unlock; onDone: () => void }) {
+function Banner({
+  unlock,
+  queued,
+  onDone,
+}: {
+  unlock: Unlock;
+  /** True when more unlocks are behind this one, which shortens the dwell. */
+  queued: boolean;
+  onDone: () => void;
+}) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  /**
+   * Fixed at mount, not recomputed. `queued` can flip true if a third unlock
+   * lands while this card is up, and reading it live would put it in the
+   * entrance effect's dependencies — which would replay the spring and fire
+   * the haptic a second time on a banner that is already sitting still.
+   */
+  const [dwell] = useState(() => (queued ? DWELL_QUEUED_MS : DWELL_MS));
   const accent = unlock.tier ? TIER_COLOR[unlock.tier] ?? '#E5B45F' : '#E5B45F';
 
   /** 0 before entry, 1 once in place. Drives slide and fade together. */
@@ -142,9 +170,9 @@ function Banner({ unlock, onDone }: { unlock: Unlock; onDone: () => void }) {
       ]),
     ]).start();
 
-    const timer = setTimeout(() => close.current(), DWELL_MS);
+    const timer = setTimeout(() => close.current(), dwell);
     return () => clearTimeout(timer);
-  }, [enter, pop, shine, unlock.tier]);
+  }, [dwell, enter, pop, shine, unlock.tier]);
 
   /**
    * Swipe up to dismiss. `onMoveShouldSet` only claims clearly upward drags,

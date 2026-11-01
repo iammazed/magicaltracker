@@ -77,7 +77,14 @@ export function VenueRow({
               </ThemedText>
             </View>
           ) : null}
-          <ThemedText type="smallBold" numberOfLines={1} style={styles.name}>
+          {/* Gold once you have eaten there. The lists are long walls of white
+              text, and the tick alone is a small target for the eye; the name
+              changing colour makes a visited row legible from the scroll. */}
+          <ThemedText
+            type="smallBold"
+            numberOfLines={1}
+            style={[styles.name, visited ? { color: theme.goldText } : null]}
+          >
             {venue.name}
           </ThemedText>
           {venue.is_signature ? (

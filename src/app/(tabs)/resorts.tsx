@@ -211,7 +211,12 @@ function ResortRow({
               </ThemedText>
             </View>
           ) : null}
-          <ThemedText type="smallBold" numberOfLines={1} style={styles.name}>
+          {/* Gold once you have stayed there, matching the dining rows. */}
+          <ThemedText
+            type="smallBold"
+            numberOfLines={1}
+            style={[styles.name, stayed ? { color: theme.goldText } : null]}
+          >
             {resort.name}
           </ThemedText>
         </View>

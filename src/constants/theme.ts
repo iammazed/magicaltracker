@@ -40,6 +40,12 @@ export const Colors = {
     gold: '#B07818',
     goldSurface: '#FBF3E0',
     onGold: '#FFFFFF',
+    // Gold as INK on a page, which is a different job from gold as a fill.
+    // `gold` itself is 3.79:1 on white — fine for a 9px uppercase badge or a
+    // button ground, below the 4.5:1 that 14px body text needs. Darkened and
+    // saturated to 4.73:1 so a visited row's name can be gold and still be
+    // read. In dark mode the fill gold is already 8.06:1, so the two match.
+    goldText: '#9A6A0F',
 
     // Semantic — deliberately outside the brand ramp so a destructive
     // confirm never reads as the same violet as a premium badge.
@@ -78,6 +84,7 @@ export const Colors = {
     // The terminal stop of SkyGradient, so a gold button reads as cut out of
     // the night sky behind it. 9.0:1 on #E5B45F.
     onGold: '#23133A',
+    goldText: '#E5B45F',
 
     success: '#55C28D',
     warning: '#E8834A',
