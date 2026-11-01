@@ -43,38 +43,34 @@ export function tapPicked() {
 }
 
 /**
- * A rung on the way up a tiered challenge.
+ * A celebration's haptic, graded by how big the news is.
  *
- * One medium impact, not the fanfare. Spending the big pattern on Bronze
- * leaves nothing louder for Platinum.
+ * Three beats rather than one for the big moment, because a single Success
+ * pattern is exactly what a text message feels like — indistinguishable from
+ * a notification arriving, which is how the one genuinely big moment in the
+ * app came to feel like nothing at all. The spacing is loose enough that the
+ * Taptic Engine has settled between beats; run them closer and they blur into
+ * one long buzz.
+ *
+ * `beats` is what keeps Bronze from feeling like Platinum now that both get
+ * the full celebration. Every rung is worth a buzz; they are not worth the
+ * SAME buzz, and spending the three-beat pattern on a quarter of the way
+ * through leaves nothing louder for finishing.
+ *
+ * Returns a cancel function, so dismissing early stops the phone buzzing at
+ * someone who has already moved on.
  */
-export function tapTier() {
-  quiet(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium));
-}
-
-/**
- * Finishing a challenge outright.
- *
- * Three beats rather than one, because a single Success pattern is exactly
- * what a text message feels like — indistinguishable from a notification
- * arriving, which is how the one genuinely big moment in the app came to feel
- * like nothing at all. The spacing is loose enough that the Taptic Engine has
- * settled between beats; run them closer and they blur into one long buzz.
- *
- * Returns a cancel function, so dismissing the celebration early stops the
- * phone buzzing at someone who has already moved on.
- */
-export function tapFinished(): () => void {
-  const beats: { at: number; fire: () => void }[] = [
+export function tapCelebrate(beats: 1 | 2 | 3): () => void {
+  const pattern = [
     { at: 0, fire: () => quiet(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)) },
     { at: 230, fire: () => quiet(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)) },
     { at: 400, fire: () => quiet(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)) },
-  ];
+  ].slice(0, beats);
 
-  const timers = beats
+  const timers = pattern
     .filter((b) => b.at > 0)
     .map((b) => setTimeout(b.fire, b.at));
-  beats[0].fire();
+  pattern[0].fire();
 
   return () => timers.forEach(clearTimeout);
 }

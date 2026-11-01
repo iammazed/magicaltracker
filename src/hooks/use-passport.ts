@@ -165,6 +165,12 @@ export function usePassport() {
     [areas],
   );
 
+  /** For naming a resort venue by its resort rather than its resort area. */
+  const resortNames = useMemo(
+    () => Object.fromEntries(resorts.map((r) => [r.id, r.name])),
+    [resorts],
+  );
+
   /** Only places you can actually eat at, and that still exist. */
   const eligible = useMemo(
     () => venues.filter((v) => v.venue_kind !== 'event' && v.status !== 'permanently-closed'),
@@ -224,6 +230,15 @@ export function usePassport() {
      * already scoped to one park names the LAND instead, since repeating "Magic
      * Kingdom" down forty rows says nothing while "Fantasyland" tells you
      * whether the walk is on your way.
+     *
+     * **A venue at a resort names the RESORT**, which is the fix for a list
+     * that was technically complete and practically useless. The Monorail Bar
+     * Crawl promises "Grand Floridian, Contemporary and Polynesian" and then
+     * labelled all ten of its bars "MK Resorts" — the one thing you need to
+     * know in order to plan the crawl was the thing it would not tell you,
+     * because every one of them shares an area and none of them has a
+     * `sub_area`. The same applies to signature dining, half of which is at
+     * the resorts.
      */
     const venueSteps = (
       rows: typeof venues,
@@ -239,7 +254,9 @@ export function usePassport() {
             ? r.sub_area
               ? formatSubArea(r.sub_area)
               : undefined
-            : areaNames[r.area_id] ?? r.area_id,
+            : r.resort_id
+              ? resortNames[r.resort_id] ?? areaNames[r.area_id] ?? r.area_id
+              : areaNames[r.area_id] ?? r.area_id,
       }));
 
     /** Pavilion challenges count PAVILIONS COVERED, not venues visited —
@@ -407,7 +424,7 @@ export function usePassport() {
         'signature',
       ),
     ];
-  }, [tagRows, byVenue, byArea, eligible, areaNames]);
+  }, [tagRows, byVenue, byArea, eligible, areaNames, resortNames]);
 
   return {
     loading: venuesLoading || resortsLoading,

@@ -974,6 +974,14 @@ disagreeing with the card that opened it, which is why `useChallenge` is `usePas
 does not navigate and `options` carries the candidates as separate taps. Picking one for the
 user would be guessing.
 
+**A step's second line names the resort when the venue is at one**, falling back to the area.
+This is the difference between a list that is complete and one that is useful: the Monorail Bar
+Crawl promises "Grand Floridian, Contemporary and Polynesian" and then labelled all ten of its
+bars "MK Resorts", because they share an area and not one of them carries a `sub_area`. The one
+fact needed to plan the crawl was the one fact the checklist withheld. Signature dining had the
+same problem for the half of it that is at resorts. Area-scoped challenges still name the LAND
+instead, since repeating "Magic Kingdom" down forty rows says nothing.
+
 **The tier ladder exists because percentages are not a plan.** `TIERS` stores fractions, which
 is right for scoring and useless for someone deciding where to eat — the detail screen runs them
 back through `tierTarget` so Silver reads as "31" rather than "50%".
@@ -995,11 +1003,28 @@ the count immediately and captures what was new into component state for the len
 visit. Without that capture, arriving from the banner would clear the badge and show nothing to
 explain why you came — `unseen` is empty by the time the list renders.
 
-**Completing a challenge and climbing a tier are announced differently, and they used to not
-be.** Platinum and Bronze arrived in the same slim card with the same single buzz, which a
-tester correctly called underwhelming: the biggest moment in the app was presented as a notice.
-Completion (`tier === null`, meaning an all-or-nothing challenge, or `tier === 'Platinum'`) now
-takes the screen with `AchievementCelebration`; every rung below that keeps the banner.
+**Every milestone takes over the screen, and what separates them is intensity rather than
+format.** This went through two wrong answers first. Platinum and Bronze originally arrived in
+the same slim card with the same single buzz, which a tester correctly called underwhelming —
+the biggest moment in the app presented as a notice. Splitting it so that only completions got
+`AchievementCelebration` fixed that end and broke the other: three out of every four medals
+still looked like a notification from another app, so earning one never registered as a reward.
+
+`GRADE` in `achievement-celebration.tsx` now scales confetti, dwell and haptic beats per tier —
+Bronze 14 pieces, 5.2s, one beat, up to Platinum at 30, 9s, three. Give every tier the same
+fanfare and finishing stops meaning anything; give the lower tiers a different FORM and they read
+as something other than a reward. `AchievementBanner` is a router over this and nothing else.
+
+**The card's wording is per-tier, and it was wrong when only completions reached it.** Every
+tier read `BRONZE — COMPLETE / All 30 of them`, which is wrong twice: Bronze completes nothing,
+and you have eight of the thirty rather than all of them. `headline()` gives a rung
+`BRONZE EARNED / 8 of 30 · 7 more for Silver`, computing the next target with `tierTarget` — the
+same function the scoring uses, rounding included — so the number it promises is the one actually
+measured against.
+
+**"See it" opens the challenge, not the Passport.** Landing on the tab left you to find the card
+that had just changed; the detail screen opens on the checklist, which for a rung is the question
+being asked — which ones have I done, and what is left.
 
 **The confetti is twenty-six plain Views, not a library, and that is a shipping decision as much
 as a taste one.** A native animation dependency would change the fingerprint, which strands
@@ -1023,25 +1048,29 @@ Logging a visit, logging a stay and adding a restaurant to a trip now tap too.
 filed away. `tapPicked` is `selectionAsync`, the light tick under a picker wheel, and is what
 toggling rows in a list gets — adding places to a trip is a run of taps down a long list, where
 a notification-weight buzz on each one would be both wrong and quickly unbearable.
-`tapFinished` is three beats rather than one,
-because a lone Success pattern is exactly what an arriving text message feels like, and it
-returns a cancel so an early dismissal stops the buzzing.
+`tapCelebrate(beats)` takes 1, 2 or 3 beats rather than being
+one fixed pattern, because a lone Success pattern is exactly what an arriving text message feels
+like — and because every tier gets a celebration now, so the haptic is one of the few things
+left to tell Bronze from Platinum. It returns a cancel, so an early dismissal stops the phone
+buzzing at someone who has already moved on.
 
 **When haptics seem dead, suspect the phone first.** `expo-haptics` resolves its native module
 with `requireOptionalNativeModule`, so every failure is silent by design — a simulator, an older
 binary, and Settings → Sounds & Haptics → System Haptics being off are indistinguishable from
 no haptic having been requested.
 
-**The dwell is 7s, and the entrance eats the first 2s of it.** The medal pops at 120ms and the
-shine sweeps twice until roughly 2.1s, so the card is only still for `DWELL_MS` minus that. At
-the original 4.2s testers reported the banner flashing past — three lines to read and a decision
-to tap, in about two seconds. When another unlock is already queued behind it the shorter
-`DWELL_QUEUED_MS` applies instead, because two full dwells back to back is fourteen seconds of
-banner for one tap. The chosen dwell is frozen at mount with a `useState` initialiser: reading
-`queued` live would put it in the entrance effect's dependencies and replay the spring and the
-haptic on a card that is already sitting still.
+**The dwell is per-tier, and the entrance eats the front of it.** The medal lands at 140ms and
+the confetti falls for 2.6s, so the card is only STILL for the remainder — which is why an
+earlier 4.2s read as the thing flashing past, being three lines and a decision in about two
+seconds. When another unlock is already queued behind this one, `DWELL_QUEUED_MS` applies
+instead of the tier's: one visit can tip two challenges at once, and two full takeovers back to
+back is eighteen seconds of scrim for a single tap.
 
-**Every animation in the banner is `useNativeDriver: true`**, which is possible only because
+**The dwell and the beat count are frozen at mount with `useState` initialisers.** `queued` can
+flip true while the card is up, and reading it live would put it in the entrance effect's
+dependencies — replaying the animation and re-firing the haptic on a card already sitting still.
+
+**Every animation here is `useNativeDriver: true`**, which is possible only because
 nothing animated is a layout property — transform and opacity, no height, no margin. It runs on
 the UI thread and cannot be stuttered by whatever JS is doing. The header collapse animates
 height and therefore cannot do this; the two are different for a reason, not by accident.

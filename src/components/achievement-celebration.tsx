@@ -15,21 +15,26 @@ import { Stars } from '@/components/sky-card';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { type Unlock } from '@/hooks/use-achievements';
-import { TIER_COLOR } from '@/hooks/use-passport';
-import { tapFinished } from '@/lib/haptics';
+import { TIERS, TIER_COLOR, tierTarget } from '@/hooks/use-passport';
+import { tapCelebrate } from '@/lib/haptics';
 
 /**
- * Finishing a challenge, as an event rather than a notice.
+ * Reaching a milestone, as an event rather than a notice.
  *
- * The slim banner is right for a rung on a ladder — Bronze in EPCOT is news
- * you want told and then out of your way. It is wrong for the end of a
- * challenge, which is the single biggest thing that happens in this app and
- * was being announced in the same 320-pixel card, with the same one buzz, as
- * every other step. A tester called it underwhelming, which was the correct
- * reading of what it was.
+ * Every rung gets this now — Bronze, Silver, Gold and finishing outright.
+ * It began as the completion-only treatment, with a slim banner underneath
+ * for the lower tiers, on the reasoning that Bronze is news you want told and
+ * then out of your way. Watching it, that was wrong: earning a medal at all
+ * is the moment worth marking, and the banner made three quarters of them
+ * feel like a notification from somewhere else.
  *
- * So completions get this instead: the screen dims, confetti falls, the medal
- * lands, and it waits to be acknowledged.
+ * **What separates them is intensity, not format.** `GRADE` scales the
+ * confetti, the dwell and the haptic beats, so Platinum still clearly
+ * outranks Bronze without Bronze being dismissed. Give every tier the same
+ * fanfare and finishing stops meaning anything.
+ *
+ * The screen dims, confetti falls, the medal lands, and it waits to be
+ * acknowledged.
  *
  * **Everything is transform and opacity on the native driver**, same rule as
  * the banner, and the confetti is twenty-six plain Views rather than a
@@ -45,10 +50,33 @@ import { tapFinished } from '@/lib/haptics';
  * the card are dark in both schemes, so theme tokens would invert and vanish.
  */
 
-/** Long enough to look at, short enough that it cannot trap anyone. */
-const DWELL_MS = 9000;
+/**
+ * How big each rung is allowed to feel.
+ *
+ * Dwell is long enough to look at and short enough that it cannot trap
+ * anyone. A tier reached on the way up is a shorter stop than the end of the
+ * challenge, which is both proportionate and practical: Bronze fires far more
+ * often than Platinum ever will.
+ */
+const GRADE = {
+  Bronze: { pieces: 14, dwell: 5200, beats: 1 },
+  Silver: { pieces: 18, dwell: 6000, beats: 2 },
+  Gold: { pieces: 22, dwell: 7000, beats: 2 },
+  Platinum: { pieces: 30, dwell: 9000, beats: 3 },
+} as const satisfies Record<string, { pieces: number; dwell: number; beats: 1 | 2 | 3 }>;
+
+/** An all-or-nothing challenge is only ever reached by finishing it. */
+const FINISHED = GRADE.Platinum;
+
+/**
+ * A shorter stop when another unlock is already waiting behind this one.
+ *
+ * One visit can tip two challenges at once, and two full takeovers back to
+ * back is eighteen seconds of scrim for a single tap.
+ */
+const DWELL_QUEUED_MS = 3600;
+
 const FALL_MS = 2600;
-const PIECES = 26;
 
 const CONFETTI = ['#E5B45F', '#8FD6D2', '#A272BE', '#4B94AF', '#FFFFFF', '#B08D57'];
 
@@ -66,8 +94,8 @@ type Piece = {
   round: boolean;
 };
 
-function makePieces(width: number): Piece[] {
-  return Array.from({ length: PIECES }, (): Piece => {
+function makePieces(width: number, count: number): Piece[] {
+  return Array.from({ length: count }, (): Piece => {
     const size = 6 + Math.random() * 7;
     return {
       left: Math.random(),
@@ -81,16 +109,69 @@ function makePieces(width: number): Piece[] {
   });
 }
 
+/**
+ * What the card says, which is not the same sentence for a rung as for the
+ * end of the challenge.
+ *
+ * This was written when only completions reached here, so every tier read
+ * "BRONZE — COMPLETE / All 30 of them" — wrong twice over, since Bronze
+ * completes nothing and the user has eight of the thirty, not all of them. A
+ * rung names what it took and what the next one costs, which is the thing
+ * someone actually wants on the way up.
+ */
+function headline(unlock: Unlock): { eyebrow: string; sub: string } {
+  // A null tier is an all-or-nothing challenge, which only ever reaches a
+  // milestone by being finished; Platinum is the tiered equivalent.
+  if (unlock.tier === null || unlock.tier === 'Platinum') {
+    return {
+      eyebrow: 'CHALLENGE COMPLETE',
+      sub: unlock.target > 0 ? `All ${unlock.target} of them.` : 'Earned.',
+    };
+  }
+
+  const index = TIERS.findIndex((t) => t.name === unlock.tier);
+  const next = index >= 0 ? (TIERS[index + 1] ?? null) : null;
+  // `tierTarget` rather than a percentage, because it is the function the
+  // scoring uses — rounding included — so this promises the number the next
+  // medal is actually measured against.
+  const toNext = next ? tierTarget(next, unlock.target) - unlock.earned : 0;
+
+  return {
+    eyebrow: `${unlock.tier.toUpperCase()} EARNED`,
+    sub:
+      next && toNext > 0
+        ? `${unlock.earned} of ${unlock.target}  ·  ${toNext} more for ${next.name}`
+        : `${unlock.earned} of ${unlock.target}`,
+  };
+}
+
 export function AchievementCelebration({
   unlock,
+  queued,
   onDone,
 }: {
   unlock: Unlock;
+  /** True when more unlocks are behind this one, which shortens the dwell. */
+  queued: boolean;
   onDone: () => void;
 }) {
   const router = useRouter();
   const { width, height } = useWindowDimensions();
   const accent = unlock.tier ? TIER_COLOR[unlock.tier] ?? '#E5B45F' : '#E5B45F';
+  const grade = (unlock.tier && GRADE[unlock.tier as keyof typeof GRADE]) || FINISHED;
+
+  /**
+   * Both fixed at mount, not recomputed.
+   *
+   * `queued` can flip true if another unlock lands while this one is up, and
+   * reading it live would put it in the entrance effect's dependencies —
+   * replaying the animation and re-firing the haptic on a card that is
+   * already sitting still. The same trap the banner had.
+   */
+  const [dwell] = useState(() => (queued ? DWELL_QUEUED_MS : grade.dwell));
+  const [beats] = useState(() => grade.beats);
+
+  const { eyebrow, sub } = headline(unlock);
 
   /** 0 before entry, 1 once in place. Scrim fade and card rise together. */
   const enter = useRef(new Animated.Value(0)).current;
@@ -103,7 +184,7 @@ export function AchievementCelebration({
    * Generated once. Recomputing on a re-render would teleport every piece
    * mid-fall, and `useMemo` is explicitly allowed to be dropped.
    */
-  const [pieces] = useState<Piece[]>(() => makePieces(width));
+  const [pieces] = useState<Piece[]>(() => makePieces(width, grade.pieces));
 
   /**
    * Confetti is the one thing here worth suppressing for reduce-motion: it is
@@ -142,7 +223,7 @@ export function AchievementCelebration({
   };
 
   useEffect(() => {
-    const stopHaptics = tapFinished();
+    const stopHaptics = tapCelebrate(beats);
 
     Animated.parallel([
       Animated.spring(enter, {
@@ -170,12 +251,12 @@ export function AchievementCelebration({
       }),
     ]).start();
 
-    const timer = setTimeout(() => close.current(), DWELL_MS);
+    const timer = setTimeout(() => close.current(), dwell);
     return () => {
       clearTimeout(timer);
       stopHaptics();
     };
-  }, [enter, pop, fall]);
+  }, [enter, pop, fall, dwell, beats]);
 
   const rise = enter.interpolate({ inputRange: [0, 1], outputRange: [40, 0] });
 
@@ -269,22 +350,32 @@ export function AchievementCelebration({
               },
             ]}
           >
-            <ThemedText style={styles.medalMark}>★</ThemedText>
+            {/* The tier's initial, matching the medals on the challenge
+                detail screen's ladder — that is what someone compares this
+                against afterwards. A star only for an all-or-nothing
+                challenge, which has no tier to name. */}
+            <ThemedText style={styles.medalMark}>
+              {unlock.tier ? unlock.tier.charAt(0) : '★'}
+            </ThemedText>
           </Animated.View>
 
-          <ThemedText style={[styles.eyebrow, { color: accent }]}>
-            {unlock.tier ? `${unlock.tier.toUpperCase()} — COMPLETE` : 'CHALLENGE COMPLETE'}
-          </ThemedText>
+          <ThemedText style={[styles.eyebrow, { color: accent }]}>{eyebrow}</ThemedText>
           <ThemedText style={styles.title}>{unlock.title}</ThemedText>
-          <ThemedText style={styles.sub}>
-            {unlock.target > 0 ? `All ${unlock.target} of them.` : 'Earned.'}
-          </ThemedText>
+          <ThemedText style={styles.sub}>{sub}</ThemedText>
 
           <View style={styles.actions}>
             <Pressable
               onPress={() => {
                 close.current();
-                router.push('/passport');
+                // The challenge itself, not the Passport. This used to land
+                // on the tab and leave you to find the card that had just
+                // changed; the detail screen opens on the checklist, which
+                // for a rung is exactly the question being asked — which
+                // ones have I done, and what is left.
+                router.push({
+                  pathname: '/challenge/[id]',
+                  params: { id: unlock.challengeId },
+                });
               }}
               accessibilityRole="button"
               style={({ pressed }) => [
