@@ -1102,12 +1102,33 @@ transient.
 
     eas build --platform ios --profile production --auto-submit
 
+`eas update` additionally needs `--message` in non-interactive mode, which the `update:prod`
+script does not hardcode — pass it through: `npm run update:prod -- --message "..."`.
+
 `--auto-submit` submits the binary it just built, so there is no gap in which the wrong build can
 be picked. The TestFlight group lives in `eas.json` as `submit.production.ios.groups`, NOT on the
 command line, because `--auto-submit` reads the submit profile — the `-g` flag only exists on a
 standalone `eas submit`. Running `eas build` and `eas submit` as two separate commands at the
 same time is how this went wrong once: the submit had no finished store build to find, offered a
 menu of development builds, and App Store Connect rejects those.
+
+**`eas.json` is one of the fingerprint's 130 sources, so editing it orphans every installed
+build from over-the-air updates.** This is the trap that cost a build: adding `ascAppId` — pure
+submission metadata, nothing the binary can observe — moved the iOS runtime version from
+`ed8385a7…` to `d41cd429…`, and the next `eas update` published to a runtime version that no
+shipped app had. The update succeeded, reported a healthy-looking update group, and reached
+nobody.
+
+Check before publishing, not after:
+
+    npx expo-updates fingerprint:generate --platform ios   # hash + the 130 sources
+    npx eas build:list --platform ios --limit 1            # the shipped build's Fingerprint
+
+If they differ, an `eas update` is wasted and the change needs a build. Do NOT reach for
+`.fingerprintignore` to exclude `eas.json`: build profiles there genuinely do affect the native
+binary, and silencing the whole file to buy back a metadata field trades a visible annoyance for
+the invisible kind — an OTA landing on a binary that cannot run it, which is the
+`expo-image-manipulator` crash this project already shipped once.
 
 **`submit.production.ios.ascAppId` is what makes the submission work unattended.** Without it,
 EAS has to ask which App Store Connect app it is submitting to, so `--auto-submit` paired with
