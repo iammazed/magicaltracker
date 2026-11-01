@@ -4,6 +4,7 @@ import { useCatalog } from '@/hooks/use-catalog';
 import { useResorts } from '@/hooks/use-resorts';
 import { useVenues } from '@/hooks/use-venues';
 import { useVisits } from '@/hooks/use-visits';
+import { formatSubArea, titleCase } from '@/lib/labels';
 
 /**
  * The passport.
@@ -67,6 +68,32 @@ export const TIER_COLOR: Record<string, string> = {
   Platinum: '#8FD6D2',
 };
 
+/**
+ * One line of a challenge's checklist.
+ *
+ * Challenges used to be a bar and a count, which said how far along you were
+ * but never what was actually being counted — a Bronze in Disney Springs with
+ * no way to find out which sixteen of the sixty-one you had been to. The cards
+ * are tappable now, and this is what the detail screen renders.
+ *
+ * Most steps are one place, so `venueId` is set and tapping opens it. A World
+ * Showcase pavilion is the exception: the step is the pavilion, several places
+ * inside it would satisfy it, and there is no single venue to open — so
+ * `venueId` is null and `options` carries them instead.
+ */
+export type ChallengeStep = {
+  /** A venue id, or a World Showcase pavilion slug. */
+  id: string;
+  label: string;
+  done: boolean;
+  /** Where a tap goes, or null when more than one place satisfies this step. */
+  venueId: string | null;
+  /** The area, to tell two similarly named places apart. */
+  where?: string;
+  /** Pavilion steps only: the places that would tick this off. */
+  options?: { id: string; name: string; done: boolean }[];
+};
+
 export type Challenge = {
   id: string;
   title: string;
@@ -82,7 +109,17 @@ export type Challenge = {
   nextTier: Tier | null;
   /** How many more visits to reach `nextTier`. */
   toNext: number;
-  /** For pavilion challenges: which ones are still missing. */
+  /**
+   * Everything the challenge counts, done and not. Present on all of them,
+   * because the detail screen is reachable from every card.
+   */
+  steps: ChallengeStep[];
+  /**
+   * The names still missing, but ONLY where the set is short enough to read
+   * inline on the card. Left undefined on the tiered challenges on purpose —
+   * "Still to go" listing forty-five restaurants is the wall of text the
+   * detail screen exists to replace.
+   */
   remaining?: string[];
 };
 
@@ -179,6 +216,32 @@ export function usePassport() {
   const challenges = useMemo<Challenge[]>(() => {
     const visitedIds = new Set(byVenue.keys());
 
+    /**
+     * One step per place, which is what all but the pavilion challenges want.
+     *
+     * `scope` decides the second line. A challenge spanning the property names
+     * the area, because "Space 220" means nothing without "EPCOT"; a challenge
+     * already scoped to one park names the LAND instead, since repeating "Magic
+     * Kingdom" down forty rows says nothing while "Fantasyland" tells you
+     * whether the walk is on your way.
+     */
+    const venueSteps = (
+      rows: typeof venues,
+      scope: 'property' | 'area' = 'property',
+    ): ChallengeStep[] =>
+      rows.map((r) => ({
+        id: r.id,
+        label: r.name,
+        done: visitedIds.has(r.id),
+        venueId: r.id,
+        where:
+          scope === 'area'
+            ? r.sub_area
+              ? formatSubArea(r.sub_area)
+              : undefined
+            : areaNames[r.area_id] ?? r.area_id,
+      }));
+
     /** Pavilion challenges count PAVILIONS COVERED, not venues visited —
      *  a drink at either Mexico bar completes Mexico. */
     const pavilionChallenge = (
@@ -187,24 +250,48 @@ export function usePassport() {
       blurb: string,
       tag: string,
     ): Challenge => {
-      const covered = new Set(
-        tagRows
-          .filter((r) => r.tags?.includes(tag) && visitedIds.has(r.id) && r.sub_area)
-          .map((r) => r.sub_area as string),
-      );
-      const remaining = WORLD_SHOWCASE.filter((p) => !covered.has(p));
+      const inPavilion = new Map<string, typeof tagRows>();
+      for (const r of tagRows) {
+        if (!r.tags?.includes(tag) || !r.sub_area) continue;
+        const list = inPavilion.get(r.sub_area) ?? [];
+        list.push(r);
+        inPavilion.set(r.sub_area, list);
+      }
+
+      // Mapped over WORLD_SHOWCASE rather than over what the catalog happens
+      // to hold, so a pavilion with no tagged venue yet still shows up as a
+      // step you cannot tick rather than silently shrinking the target.
+      const steps: ChallengeStep[] = WORLD_SHOWCASE.map((p) => {
+        const options = (inPavilion.get(p) ?? []).map((r) => ({
+          id: r.id,
+          name: r.name,
+          done: visitedIds.has(r.id),
+        }));
+        return {
+          id: p,
+          label: titleCase(p),
+          done: options.some((o) => o.done),
+          // One place in the pavilion is still a direct tap; several is a
+          // choice, and picking one for the user would be guessing.
+          venueId: options.length === 1 ? options[0].id : null,
+          options,
+        };
+      });
+      const missing = steps.filter((st) => !st.done);
+
       return {
         id,
         title,
         blurb,
-        earned: WORLD_SHOWCASE.length - remaining.length,
-        target: WORLD_SHOWCASE.length,
-        complete: remaining.length === 0,
+        earned: steps.length - missing.length,
+        target: steps.length,
+        complete: missing.length === 0,
         tiered: false,
         tier: null,
         nextTier: null,
         toNext: 0,
-        remaining,
+        steps,
+        remaining: missing.map((st) => st.label),
       };
     };
 
@@ -228,20 +315,21 @@ export function usePassport() {
     ): Challenge => {
       // `tags` is string[] here, not the pipe-joined CSV form — `catalog-db`
       // parses the JSON column on the way out — so this is exact membership.
-      const all = tagRows.filter((r) => r.tags?.includes(tag));
-      const done = all.filter((r) => visitedIds.has(r.id));
+      const steps = venueSteps(tagRows.filter((r) => r.tags?.includes(tag)));
+      const done = steps.filter((st) => st.done).length;
       return {
         id,
         title,
         blurb,
-        earned: done.length,
-        target: all.length,
-        complete: all.length > 0 && done.length === all.length,
+        earned: done,
+        target: steps.length,
+        complete: steps.length > 0 && done === steps.length,
         tiered: false,
         tier: null,
         nextTier: null,
         toNext: 0,
-        remaining: all.filter((r) => !visitedIds.has(r.id)).map((r) => r.name),
+        steps,
+        remaining: steps.filter((st) => !st.done).map((st) => st.label),
       };
     };
 
@@ -251,26 +339,38 @@ export function usePassport() {
       blurb: string,
       tag: string,
     ): Challenge => {
-      const all = tagRows.filter((r) => r.tags?.includes(tag));
-      const earned = all.filter((r) => visitedIds.has(r.id)).length;
+      const steps = venueSteps(tagRows.filter((r) => r.tags?.includes(tag)));
+      const earned = steps.filter((st) => st.done).length;
       return {
         id,
         title,
         blurb,
         earned,
-        target: all.length,
+        target: steps.length,
         tiered: true,
-        ...tierProgress(earned, all.length),
+        steps,
+        ...tierProgress(earned, steps.length),
       };
     };
+
+    // `byArea` carries the counts; the steps need the rows behind them, and
+    // they come from `eligible` so the checklist and the denominator cannot
+    // disagree about events and closed venues.
+    const areaVenues = new Map<string, typeof eligible>();
+    for (const v of eligible) {
+      const list = areaVenues.get(v.area_id) ?? [];
+      list.push(v);
+      areaVenues.set(v.area_id, list);
+    }
 
     const areaChallenges: Challenge[] = byArea.map((a) => ({
       id: `area-${a.id}`,
       title: a.label,
-      blurb: `Eat your way through ${a.label}.`,
+      blurb: `Every place to eat in ${a.label}.`,
       earned: a.visited,
       target: a.total,
       tiered: true,
+      steps: venueSteps(areaVenues.get(a.id) ?? [], 'area'),
       ...tierProgress(a.visited, a.total),
     }));
 
@@ -307,7 +407,7 @@ export function usePassport() {
         'signature',
       ),
     ];
-  }, [tagRows, byVenue, byArea]);
+  }, [tagRows, byVenue, byArea, eligible, areaNames]);
 
   return {
     loading: venuesLoading || resortsLoading,
@@ -316,4 +416,22 @@ export function usePassport() {
     resortCoverage,
     challenges,
   };
+}
+
+/**
+ * One challenge by id, for the detail screen.
+ *
+ * Deliberately the whole hook and a `find` rather than a narrower query. The
+ * rules that decide what counts — events excluded, closed venues excluded,
+ * pavilions counted by pavilion, tiers rounded up — are the thing that must
+ * not fork, and a second implementation that reads the same tables is exactly
+ * how a detail screen ends up disagreeing with the card that opened it.
+ */
+export function useChallenge(id: string | undefined) {
+  const { challenges, loading } = usePassport();
+  const challenge = useMemo(
+    () => (id ? challenges.find((c) => c.id === id) ?? null : null),
+    [challenges, id],
+  );
+  return { challenge, loading };
 }

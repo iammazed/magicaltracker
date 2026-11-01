@@ -131,6 +131,8 @@ function RootLayout() {
               <Stack.Screen name="venue/[id]" options={{ title: '' }} />
               <Stack.Screen name="resort/[id]" options={{ title: '' }} />
               <Stack.Screen name="trip/[id]" options={{ title: '' }} />
+              {/* Titled from the screen, which knows the challenge's name. */}
+              <Stack.Screen name="challenge/[id]" />
               {/* Title comes from the screen, which knows the place's name. */}
               <Stack.Screen name="show-on-map" />
               <Stack.Screen

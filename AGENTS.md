@@ -926,6 +926,27 @@ the app on a stack of banners for achievements the user did not just earn — an
 a synced account's history would celebrate meals eaten years ago. Seeding the baseline costs
 nothing and is the difference between a reward and a spam folder.
 
+**A challenge card opens its own screen, and `steps` is why that screen is trustworthy.** Every
+`Challenge` carries the full checklist — each place, done or not — so `challenge/[id]` renders
+what the card was counting instead of re-deriving it. The rules that decide what counts (events
+and closed venues excluded, pavilions counted by pavilion, tiers rounded up with `tierTarget`)
+are the thing that must not fork: a detail screen with its own query is how it ends up
+disagreeing with the card that opened it, which is why `useChallenge` is `usePassport` plus a
+`find` rather than something narrower.
+
+**A pavilion step has no `venueId`.** Several places inside Mexico satisfy Mexico, so the row
+does not navigate and `options` carries the candidates as separate taps. Picking one for the
+user would be guessing.
+
+**The tier ladder exists because percentages are not a plan.** `TIERS` stores fractions, which
+is right for scoring and useless for someone deciding where to eat — the detail screen runs them
+back through `tierTarget` so Silver reads as "31" rather than "50%".
+
+**`remaining` is only for sets short enough to read on a card**, and stays undefined on the
+tiered challenges. It is derived from `steps` rather than computed separately, and it arrives
+already formatted — the Passport used to run it through `titleCase`, which lowercases first and
+turned "D-Luxe Burger" into "D Luxe Burger".
+
 **One milestone per challenge, not one per tier crossed.** Somebody who logs a backlog and jumps
 from nothing to Gold is told they got Gold. Three banners climbing the ladder they skipped would
 bury the actual news.

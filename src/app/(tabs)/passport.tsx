@@ -1,5 +1,6 @@
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 
 import { ProgressBar } from '@/components/progress-bar';
@@ -15,7 +16,6 @@ import {
   type Coverage,
   usePassport,
 } from '@/hooks/use-passport';
-import { titleCase } from '@/lib/labels';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function PassportScreen() {
@@ -140,7 +140,7 @@ export default function PassportScreen() {
               ))}
           </Section>
 
-          <Section title="Eat through each area">
+          <Section title="Area by area">
             {challenges
               .filter((c) => c.id.startsWith('area-'))
               .map((c) => (
@@ -230,15 +230,29 @@ function ChallengeCard({
   fresh?: boolean;
 }) {
   const theme = useTheme();
+  const router = useRouter();
   const medalColor = c.tier ? TIER_COLOR[c.tier.name] : null;
   const stripe = tone ? theme[tone] : theme.brandIndigo;
 
   return (
-    <View
-      style={[
+    <Pressable
+      onPress={() =>
+        router.push({ pathname: '/challenge/[id]', params: { id: c.id } })
+      }
+      accessibilityRole="button"
+      accessibilityLabel={
+        `${c.title}, ${c.earned} of ${c.target}` +
+        (c.tier ? `, ${c.tier.name}` : '') +
+        '. Opens what is left to do.'
+      }
+      style={({ pressed }) => [
         styles.card,
         {
-          backgroundColor: c.complete ? theme.goldSurface : theme.backgroundElement,
+          backgroundColor: pressed
+            ? theme.backgroundSelected
+            : c.complete
+              ? theme.goldSurface
+              : theme.backgroundElement,
           borderColor: fresh ? theme.gold : c.complete ? theme.gold : medalColor ?? theme.border,
         },
         // A full-weight gold edge rather than a hairline, so the card the
@@ -299,7 +313,7 @@ function ChallengeCard({
 
       {!c.complete && c.remaining?.length ? (
         <ThemedText type="small" themeColor="textFaint">
-          Still to go: {c.remaining.map(titleCase).join(', ')}
+          Still to go: {c.remaining.join(', ')}
         </ThemedText>
       ) : null}
 
@@ -308,7 +322,7 @@ function ChallengeCard({
           {c.tiered ? 'Platinum — every one of them' : 'Earned'}
         </ThemedText>
       ) : null}
-    </View>
+    </Pressable>
   );
 }
 
