@@ -1088,6 +1088,15 @@ standalone `eas submit`. Running `eas build` and `eas submit` as two separate co
 same time is how this went wrong once: the submit had no finished store build to find, offered a
 menu of development builds, and App Store Connect rejects those.
 
+**`submit.production.ios.ascAppId` is what makes the submission work unattended.** Without it,
+EAS has to ask which App Store Connect app it is submitting to, so `--auto-submit` paired with
+`--non-interactive` fails the instant the upload finishes — `Set ascAppId in the submit profile
+(eas.json) or re-run this command in interactive mode` — while the build itself carries on and
+succeeds. The recovery is a standalone `eas submit --platform ios --id <build id>` once it is
+done. The value is the app's ten-digit Apple ID from App Store Connect's App Information page
+(`6824630095`), which is public — it is the number in every App Store URL — so it belongs in
+`eas.json` and not in the environment.
+
 **Do NOT pass `--what-to-test`.** It maps to the submission's `changelog` parameter, which EAS
 gates behind the Enterprise plan, and the submission is rejected before it is even scheduled —
 `Failed to schedule iOS submission ... available for Enterprise plan only`. The build still
