@@ -1239,6 +1239,25 @@ binary, and silencing the whole file to buy back a metadata field trades a visib
 the invisible kind — an OTA landing on a binary that cannot run it, which is the
 `expo-image-manipulator` crash this project already shipped once.
 
+**An orphaned build does not look orphaned — it looks like your code is broken.** This is the
+expensive half of the trap, and it cost three rounds of debugging. Build 4 (`ed8385a7…`) was in
+testers' hands while every update went out against build 5's `d41cd429…`. The testers reported,
+entirely accurately, that the gold medal names were still grey and that tapping a challenge
+showed no places. Both features were real, committed, verified present in the catalog and in the
+git objects, and already published. They simply could not arrive. Time went into re-reading
+correct code because the one fact that would have ended it in a sentence — which build is on the
+phone — was not visible to anyone, tester or developer.
+
+**No publish fixes this. Only installing the newer build from TestFlight does.** An update is
+offered to a binary only when the fingerprints match exactly, so republishing, bumping the
+message, or waiting changes nothing for an orphaned phone — it will run the JS it shipped with
+until it is replaced. When a fingerprint moves, assume every installed copy is frozen and get a
+new build to testers before publishing anything else.
+
+Therefore: **when a tester says a feature is missing, establish which build they are on BEFORE
+reading any code.** Settings → This build answers it, and `eas build:list --platform ios` maps a
+build number to its fingerprint.
+
 **`submit.production.ios.ascAppId` is what makes the submission work unattended.** Without it,
 EAS has to ask which App Store Connect app it is submitting to, so `--auto-submit` paired with
 `--non-interactive` fails the instant the upload finishes — `Set ascAppId in the submit profile
@@ -1267,6 +1286,40 @@ that look risky — a venue description with a comma is the normal case here. A 
 `+`, `-` or `@` is prefixed with an apostrophe, because a spreadsheet will otherwise evaluate a
 restaurant note as a formula. Exports are written to the cache directory, not documents: the file
 exists to be handed to another app, and iOS reclaims it on its own.
+
+---
+
+## Telling a tester which build they are on
+
+`src/lib/build-info.ts` plus the **This build** section of `src/app/settings.tsx`. It exists
+because of the orphaned-build episode above: for the first week the app named its version
+nowhere, so neither a tester nor I could answer the question that resolved three bug reports.
+
+Everything it shows is read from the **binary**, never the manifest, and the distinction is the
+whole point — an update can rewrite the manifest, so asking the manifest which update is running
+lets the suspect supply its own alibi:
+
+- `Constants.platform.ios.buildNumber` is the embedded `Info.plist` `CFBundleVersion`, fixed for
+  a given binary. `Constants.expoConfig.ios.buildNumber` is NOT the same value and travels with
+  updates.
+- `Updates.runtimeVersion` is the fingerprint this binary will accept. Two phones differing here
+  can never run the same update, which makes it the single most useful line on the screen.
+- `Updates.isEmbeddedLaunch` distinguishes "running the JS I shipped" from "running an update".
+
+**Do not add a native module to display this.** `expo-application` is the documented home for
+`nativeBuildVersion`, it is not a dependency here, and adding it would move the fingerprint and
+orphan build 5 — the diagnostic for the orphaning bug would have caused one. `expo-constants`
+and `expo-updates` are already in the binary and between them cover every field. Verified: the
+whole feature left the hash at `d41cd429…`/130 sources, so it shipped over the air.
+
+**"Check for an update" must not say "you are up to date" when `isAvailable` is false.** The
+server filters by runtime version before replying, so an orphaned build and a current one get the
+identical `noUpdateAvailableOnServer`. Reassuring a phone that can never be updated again is the
+one actively harmful answer, so the copy splits on `isEmbeddedLaunch` and points at TestFlight
+instead of making a claim it cannot support.
+
+`describeBuild` is kept pure and import-free so Node can check it headlessly — the 12am/12pm
+hour wrap is the part that silently breaks.
 
 ---
 

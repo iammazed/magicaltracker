@@ -1,7 +1,9 @@
 import * as Sentry from '@sentry/react-native';
+import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
+import * as Updates from 'expo-updates';
 import { useMemo, useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 
 import { PremiumBadge } from '@/components/premium-gate';
 import { ThemedText } from '@/components/themed-text';
@@ -15,6 +17,7 @@ import { usePremium } from '@/hooks/use-premium';
 import { useSync } from '@/hooks/use-sync';
 import { useTheme } from '@/hooks/use-theme';
 import { useVisits } from '@/hooks/use-visits';
+import { describeBuild } from '@/lib/build-info';
 import { exportFilename, shareCsv, staysCsv, visitsCsv } from '@/lib/export-csv';
 import { SENTRY_ENABLED } from '@/lib/sentry';
 
@@ -34,6 +37,61 @@ export default function SettingsScreen() {
   const { active: syncActive, devEnabled, setDevEnabled, pending } = useSync();
   const { reset } = useOnboarding();
   const [busy, setBusy] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [updateNote, setUpdateNote] = useState<string | null>(null);
+
+  // Both reads come from the binary rather than the manifest, deliberately:
+  // `platform.ios.buildNumber` is the embedded Info.plist value and
+  // `Updates.runtimeVersion` is what this binary will accept. Neither can be
+  // rewritten by the very update whose presence is the thing in question.
+  const buildLines = useMemo(
+    () =>
+      describeBuild({
+        version: Constants.expoConfig?.version ?? '1.0.0',
+        build: Constants.platform?.ios?.buildNumber ?? null,
+        runtime: Updates.runtimeVersion,
+        updateId: Updates.updateId,
+        publishedAt: Updates.createdAt,
+        embedded: Updates.isEmbeddedLaunch,
+      }),
+    [],
+  );
+
+  const checkForUpdate = async () => {
+    // Off in a dev build, where JS comes from Metro — calling through would
+    // throw rather than report anything a person could act on.
+    if (!Updates.isEnabled) {
+      setUpdateNote('Updates are off in this build.');
+      return;
+    }
+    setChecking(true);
+    setUpdateNote(null);
+    try {
+      const result = await Updates.checkForUpdateAsync();
+      if (!result.isAvailable) {
+        // The server filters by runtime version before it answers, so "no
+        // update" and "no update THIS binary can run" arrive as the same
+        // reply. Telling a phone that can never be updated again that it is
+        // up to date is the one genuinely harmful answer here, so say only
+        // what is certain and point at the thing that would fix it.
+        setUpdateNote(
+          Updates.isEmbeddedLaunch
+            ? 'Nothing for this build. If TestFlight offers a higher build than the one below, install it.'
+            : 'You have the newest changes.',
+        );
+        return;
+      }
+      await Updates.fetchUpdateAsync();
+      Alert.alert('Update ready', 'Restart MagicalTracker to use it?', [
+        { text: 'Later', style: 'cancel' },
+        { text: 'Restart', onPress: () => void Updates.reloadAsync() },
+      ]);
+    } catch (e) {
+      setUpdateNote(e instanceof Error ? e.message : String(e));
+    } finally {
+      setChecking(false);
+    }
+  };
 
   const areaName = useMemo(() => {
     const map = new Map(areas.map((a) => [a.id, a.name]));
@@ -245,6 +303,32 @@ export default function SettingsScreen() {
             {SENTRY_ENABLED
               ? 'Crash reports are sent anonymously to help fix problems.'
               : 'Crash reporting is not configured in this build.'}
+          </ThemedText>
+        </Section>
+
+        {/* ── This build ───────────────────────────────────────────────── */}
+        {/* Here because of what it cost not to have it: three "the feature is
+            missing" reports in a week, all of them a tester on an older
+            binary that the fingerprint runtime policy had cut off from every
+            update, with nothing on screen able to tell that apart from a bug.
+            See `build-info.ts`. */}
+        <Section title="This build">
+          <Row
+            label="Check for an update"
+            sub={updateNote ?? 'Fetch the newest changes now instead of waiting'}
+            action={checking ? 'Checking…' : 'Check'}
+            onPress={() => void checkForUpdate()}
+          />
+          <Row
+            label="Send these details"
+            sub="For when something looks wrong and I ask which build you are on"
+            action="Share"
+            onPress={() => void Share.share({ message: buildLines.join('\n') }).catch(() => {})}
+          />
+          {/* Selectable as well as shareable — the fastest answer to "which
+              build are you on" is a long-press and a paste. */}
+          <ThemedText type="small" themeColor="textFaint" selectable>
+            {buildLines.join('\n')}
           </ThemedText>
         </Section>
 
