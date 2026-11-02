@@ -219,6 +219,19 @@ function isFresh(c: Challenge, fresh: Set<string>): boolean {
   return key ? fresh.has(key) : false;
 }
 
+/**
+ * The first few names, then a count.
+ *
+ * Three is the most that fits two lines at this size without the long ones
+ * ("The Perch at Disneys Grand Floridian Resort and Spa") pushing the count
+ * off the end, and the count is the part that has to survive — it is what
+ * tells someone the card is a summary and not the whole set.
+ */
+function namePreview(names: string[], shown = 3): string {
+  if (names.length <= shown) return names.join(', ');
+  return `${names.slice(0, shown).join(', ')} + ${names.length - shown} more`;
+}
+
 function ChallengeCard({
   challenge: c,
   tone,
@@ -344,9 +357,19 @@ function ChallengeCard({
         </ThemedText>
       ) : null}
 
+      {/* A teaser, not the whole set.
+          This line used to join every remaining name with commas: 221
+          characters for the monorail crawl, in `textFaint`, the
+          lowest-contrast colour in the theme. All ten bars were on the card
+          and the report was still "I can't see which bars are part of this
+          challenge" — which is a fair description of a faint paragraph. The
+          detail screen's checklist is the readable version; this only has to
+          be enough to recognise, so it stops at three names and a count and
+          moves up to `textSecondary`, because this is content rather than
+          an aside. */}
       {!c.complete && c.remaining?.length ? (
-        <ThemedText type="small" themeColor="textFaint">
-          Still to go: {c.remaining.join(', ')}
+        <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
+          Still to go: {namePreview(c.remaining)}
         </ThemedText>
       ) : null}
 
@@ -355,6 +378,18 @@ function ChallengeCard({
           {c.tiered ? 'Platinum — every one of them' : 'Earned'}
         </ThemedText>
       ) : null}
+
+      {/* The tap target was invisible.
+          Every card has opened its own checklist since the detail screen
+          shipped, and nothing on the card said so — no chevron, no label,
+          nothing to separate it from the static progress readouts around it.
+          So the checklist went unfound and was reported as missing twice. */}
+      <View style={styles.cardMore}>
+        <ThemedText type="small" style={{ color: theme.accent }}>
+          {c.target > 0 ? `See all ${c.target}` : 'See the list'}
+        </ThemedText>
+        <ThemedText style={[styles.chevron, { color: theme.accent }]}>›</ThemedText>
+      </View>
     </Pressable>
   );
 }
@@ -447,6 +482,8 @@ const styles = StyleSheet.create({
   cardTitle: { flexShrink: 1 },
   tierTag: { fontSize: 9, fontWeight: '700', letterSpacing: 0.8 },
   cardLoud: { borderWidth: 2 },
+  cardMore: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  chevron: { fontSize: 16, lineHeight: 18, fontWeight: '700' },
   /** The filled 9px pill, shared by NEW and COMPLETE. */
   pillTag: {
     fontSize: 9,

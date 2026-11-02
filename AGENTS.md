@@ -113,6 +113,22 @@ Use `onGold` for ink on any gold fill, never the `#1B1205` the tier colours use.
 is itself dark (`#B07818`), so that ink lands around 2:1 and the mark all but disappears — the
 reason `onGold` exists as a token in the first place.
 
+**`textFaint` is for asides, not for content, and a tappable card must look tappable.** Both
+halves of this come from one report — "when you click on the monorail bar crawl it still does not
+show which bars" — about a screen that was already showing all ten of them.
+
+The `ChallengeCard` printed every remaining name joined with commas: 221 characters for that
+challenge, in `textFaint`. The information was complete and it read as a grey paragraph, so it
+was not read at all. It now stops at three names and a count (`namePreview`) at
+`textSecondary`, with the full checklist one tap away where there is room for it.
+
+And the tap had no affordance — no chevron, no label, nothing separating a card that opens a
+checklist from the static progress readouts stacked around it. Every card had been tappable since
+the detail screen shipped and nothing said so, so the feature was reported missing twice by
+people looking straight at the control that opens it. There is now a `See all 10 ›` row on the
+card. When a feature is reported missing and the code is demonstrably correct, suspect the
+affordance before suspecting delivery.
+
 ## Brand
 
 The wordmark is a three-part lockup:
@@ -1251,14 +1267,23 @@ binary, and silencing the whole file to buy back a metadata field trades a visib
 the invisible kind — an OTA landing on a binary that cannot run it, which is the
 `expo-image-manipulator` crash this project already shipped once.
 
-**An orphaned build does not look orphaned — it looks like your code is broken.** This is the
-expensive half of the trap, and it cost three rounds of debugging. Build 4 (`ed8385a7…`) was in
-testers' hands while every update went out against build 5's `d41cd429…`. The testers reported,
-entirely accurately, that the gold medal names were still grey and that tapping a challenge
-showed no places. Both features were real, committed, verified present in the catalog and in the
-git objects, and already published. They simply could not arrive. Time went into re-reading
-correct code because the one fact that would have ended it in a sentence — which build is on the
-phone — was not visible to anyone, tester or developer.
+**An orphaned build does not look orphaned — it looks like your code is broken**, which is what
+makes the trap expensive rather than merely annoying. A phone on a cut-off runtime reports
+missing features with complete accuracy, and the code it is talking about is fine.
+
+**But do not reach for this explanation first — it was wrong here, twice.** Two tester reports
+were diagnosed as build 4 being orphaned, from the update history, the runtime hashes, the commit
+each update was built from, and an in-app restart prompt. All of that reasoning was sound and the
+conclusion was false: App Store Connect showed build 4 with **six invites and zero installs**,
+and build 5 with five installs and fourteen sessions. Nobody was on build 4. The feature was in
+build 5's own embedded bundle the whole time, and the real cause was that the control which
+opened it had no affordance — see the discoverability note under Design tokens.
+
+The lesson is about evidence, not about fingerprints: **the install counts on App Store Connect's
+TestFlight tab settle in one glance what the update history can only suggest.** Delivery
+mechanics tell you what COULD have reached a phone; only the install count tells you what did.
+Read it before theorising, and treat "the tester is on a stale build" as a hypothesis to check
+rather than a conclusion to act on.
 
 **No publish fixes this. Only installing the newer build from TestFlight does.** An update is
 offered to a binary only when the fingerprints match exactly, so republishing, bumping the
@@ -1355,8 +1380,10 @@ and its note with no undo.
 ## Telling a tester which build they are on
 
 `src/lib/build-info.ts` plus the **This build** section of `src/app/settings.tsx`. It exists
-because of the orphaned-build episode above: for the first week the app named its version
-nowhere, so neither a tester nor I could answer the question that resolved three bug reports.
+because for the first week the app named its version nowhere, so neither a tester nor a developer
+could answer "which build is this" without going to App Store Connect — and two bug reports were
+misdiagnosed in the gap. It is the cheap version of the install-count check above: in the app,
+in one screenshot, from the person actually holding the phone.
 
 Everything it shows is read from the **binary**, never the manifest, and the distinction is the
 whole point — an update can rewrite the manifest, so asking the manifest which update is running
