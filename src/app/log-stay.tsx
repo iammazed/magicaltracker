@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
@@ -17,15 +17,27 @@ import { todayISO } from '@/lib/local-db';
 const PARK_OPENED = '1971-10-01';
 
 export default function LogStayScreen() {
-  const { resortId, name } = useLocalSearchParams<{ resortId: string; name?: string }>();
+  const { resortId, name, stayId } = useLocalSearchParams<{
+    resortId: string;
+    name?: string;
+    /** Set to correct a stay already logged, rather than add a new one. */
+    stayId?: string;
+  }>();
   const router = useRouter();
   const theme = useTheme();
-  const { addStay } = useVisits();
+  const { stays, addStay, updateStay } = useVisits();
 
-  const [checkIn, setCheckIn] = useState(todayISO());
-  const [checkOut, setCheckOut] = useState('');
-  const [rating, setRating] = useState<number | null>(null);
-  const [roomType, setRoomType] = useState('');
+  // Frozen at mount for the same reason as the visit form: a pull landing
+  // mid-edit must not rewrite the fields someone is working in.
+  const [existing] = useState(() =>
+    stayId ? stays.find((s) => s.id === stayId) ?? null : null,
+  );
+  const editing = !!stayId;
+
+  const [checkIn, setCheckIn] = useState(existing?.check_in ?? todayISO());
+  const [checkOut, setCheckOut] = useState(existing?.check_out ?? '');
+  const [rating, setRating] = useState<number | null>(existing?.rating ?? null);
+  const [roomType, setRoomType] = useState(existing?.room_type ?? '');
   const [saving, setSaving] = useState(false);
 
   const ISO = /^\d{4}-\d{2}-\d{2}$/;
@@ -35,21 +47,48 @@ export default function LogStayScreen() {
   const canSave = inValid && outValid && !backwards;
 
   const save = async () => {
-    if (!resortId || !canSave || saving) return;
+    if (!canSave || saving) return;
+    // Must not fall through to `addStay` and become a second stay.
+    if (editing && !existing) return;
+    if (!editing && !resortId) return;
     setSaving(true);
-    await addStay({
-      resortId,
+
+    const fields = {
       checkIn,
       checkOut: checkOut || null,
       rating,
       roomType: roomType.trim() || null,
-    });
+    };
+
+    if (existing) {
+      // `note` is carried across explicitly. This form has no note field, so
+      // letting it default would silently erase a note that arrived from
+      // another device every time someone fixed a check-out date.
+      await updateStay(existing.id, { ...fields, note: existing.note });
+    } else {
+      await addStay({ resortId, ...fields });
+    }
     tapSaved();
     router.back();
   };
 
+  // The row vanished between the tap and this mount. Showing the blank form
+  // would invite logging a duplicate of the stay being corrected.
+  if (editing && !existing) {
+    return (
+      <ThemedView style={styles.container}>
+        <Stack.Screen options={{ title: 'Edit stay' }} />
+        <ThemedText type="small" themeColor="textFaint" style={styles.footnote}>
+          This stay is no longer here — it may have been deleted on another
+          device.
+        </ThemedText>
+      </ThemedView>
+    );
+  }
+
   return (
     <ThemedView style={styles.container}>
+      <Stack.Screen options={{ title: editing ? 'Edit stay' : 'Log a stay' }} />
       <ScrollView
         contentContainerStyle={styles.scroll}
         keyboardDismissMode="on-drag"
@@ -142,7 +181,7 @@ export default function LogStayScreen() {
             type="smallBold"
             style={{ color: canSave ? theme.onAccent : theme.textFaint }}
           >
-            {saving ? 'Saving…' : 'Save stay'}
+            {saving ? 'Saving…' : editing ? 'Save changes' : 'Save stay'}
           </ThemedText>
         </Pressable>
 

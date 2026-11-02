@@ -45,8 +45,10 @@ type VisitsValue = {
     options?: { dateExact?: boolean },
   ) => Promise<number>;
   deleteVisit: (id: string) => Promise<void>;
+  updateVisit: (id: string, input: EditVisitInput) => Promise<void>;
   addStay: (input: AddStayInput) => Promise<void>;
   deleteStay: (id: string) => Promise<void>;
+  updateStay: (id: string, input: EditStayInput) => Promise<void>;
   refresh: () => Promise<void>;
 };
 
@@ -73,6 +75,19 @@ export type AddVisitInput = {
   dateExact?: boolean;
   note?: string | null;
 };
+
+/**
+ * An edit to something already logged — a wrong date, a rating you changed
+ * your mind about.
+ *
+ * The venue and resort are deliberately NOT editable. Moving a visit to a
+ * different restaurant is not a correction, it is two operations: it would
+ * silently rewrite passport progress and could un-earn a medal that had
+ * already been celebrated. Logging the right place and deleting the wrong one
+ * says the same thing and leaves a person able to see what happened.
+ */
+export type EditVisitInput = Omit<AddVisitInput, 'venueId'>;
+export type EditStayInput = Omit<AddStayInput, 'resortId'>;
 
 const VisitsContext = createContext<VisitsValue | null>(null);
 
@@ -222,6 +237,43 @@ export function VisitsProvider({ children }: { children: React.ReactNode }) {
     [db, refresh],
   );
 
+  /**
+   * Correct a visit in place.
+   *
+   * **`synced_at = NULL` is the whole of the sync story.** Push selects rows
+   * where it is null and upserts them on `id`, so clearing it is what makes
+   * an edit travel to the other devices — and forgetting it would leave a
+   * correction that looked saved, survived a restart, and silently reverted
+   * the next time the row was pulled.
+   *
+   * `date_exact` goes back to 1: the onboarding backfill writes a placeholder
+   * date with it set to 0, and someone editing that visit to the day they
+   * actually went is precisely how a placeholder stops being one.
+   */
+  const updateVisit = useCallback(
+    async (id: string, input: EditVisitInput) => {
+      await db.runAsync(
+        `UPDATE visits
+            SET visited_on = ?, rating = ?, would_return = ?, party_size = ?,
+                note = ?, dishes = ?, photos = ?, date_exact = ?,
+                updated_at = ?, synced_at = NULL
+          WHERE id = ?`,
+        input.visitedOn ?? todayISO(),
+        input.rating ?? null,
+        input.wouldReturn == null ? null : input.wouldReturn ? 1 : 0,
+        input.partySize ?? null,
+        input.note ?? null,
+        input.dishes?.length ? JSON.stringify(input.dishes) : null,
+        input.photos?.length ? JSON.stringify(input.photos) : null,
+        input.dateExact === false ? 0 : 1,
+        new Date().toISOString(),
+        id,
+      );
+      await refresh();
+    },
+    [db, refresh],
+  );
+
   const addStay = useCallback(
     async (input: AddStayInput) => {
       const now = new Date().toISOString();
@@ -248,6 +300,27 @@ export function VisitsProvider({ children }: { children: React.ReactNode }) {
   const deleteStay = useCallback(
     async (id: string) => {
       await db.runAsync('DELETE FROM stays WHERE id = ?', id);
+      await refresh();
+    },
+    [db, refresh],
+  );
+
+  /** Same contract as `updateVisit`, including why `synced_at` is cleared. */
+  const updateStay = useCallback(
+    async (id: string, input: EditStayInput) => {
+      await db.runAsync(
+        `UPDATE stays
+            SET check_in = ?, check_out = ?, rating = ?, room_type = ?,
+                note = ?, updated_at = ?, synced_at = NULL
+          WHERE id = ?`,
+        input.checkIn ?? todayISO(),
+        input.checkOut ?? null,
+        input.rating ?? null,
+        input.roomType ?? null,
+        input.note ?? null,
+        new Date().toISOString(),
+        id,
+      );
       await refresh();
     },
     [db, refresh],
@@ -288,12 +361,14 @@ export function VisitsProvider({ children }: { children: React.ReactNode }) {
       addVisit,
       addVisitsBulk,
       deleteVisit,
+      updateVisit,
       addStay,
       deleteStay,
+      updateStay,
       refresh,
     }),
     [visits, byVenue, stays, byResort, loading, addVisit, addVisitsBulk, deleteVisit,
-     addStay, deleteStay, refresh],
+     updateVisit, addStay, deleteStay, updateStay, refresh],
   );
 
   return <VisitsContext.Provider value={value}>{children}</VisitsContext.Provider>;
@@ -306,19 +381,19 @@ export function useVisits(): VisitsValue {
 }
 
 export function useResortStays(resortId: string) {
-  const { stays, addStay, deleteStay } = useVisits();
+  const { stays, addStay, deleteStay, updateStay } = useVisits();
   const forResort = useMemo(
     () => stays.filter((s) => s.resort_id === resortId),
     [stays, resortId],
   );
-  return { stays: forResort, latest: forResort[0] ?? null, addStay, deleteStay };
+  return { stays: forResort, latest: forResort[0] ?? null, addStay, deleteStay, updateStay };
 }
 
 export function useVenueVisits(venueId: string) {
-  const { visits, addVisit, deleteVisit } = useVisits();
+  const { visits, addVisit, deleteVisit, updateVisit } = useVisits();
   const forVenue = useMemo(
     () => visits.filter((v) => v.venue_id === venueId),
     [visits, venueId],
   );
-  return { visits: forVenue, latest: forVenue[0] ?? null, addVisit, deleteVisit };
+  return { visits: forVenue, latest: forVenue[0] ?? null, addVisit, deleteVisit, updateVisit };
 }

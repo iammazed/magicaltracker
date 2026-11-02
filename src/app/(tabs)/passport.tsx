@@ -231,8 +231,18 @@ function ChallengeCard({
 }) {
   const theme = useTheme();
   const router = useRouter();
-  const medalColor = c.tier ? TIER_COLOR[c.tier.name] : null;
-  const stripe = tone ? theme[tone] : theme.brandIndigo;
+  // A finished challenge is GOLD, whatever colour it was on the way there.
+  //
+  // This was reported as "on dark mode it just changes to a different shade
+  // of blue/teal and can be missed", and that is exactly what it did. The two
+  // loudest things on a card are the 5px spine and the medal, and neither
+  // moved on completion: the spine stayed the area's brand colour and the
+  // medal went to Platinum's own `#8FD6D2`, a PALE TEAL. All that actually
+  // changed was the fill, from `#18272E` to `#2A2313` — two near-blacks — and
+  // a hairline border. So the one moment the passport exists to celebrate was
+  // the most easily missed state on the screen.
+  const medalColor = c.complete ? theme.gold : c.tier ? TIER_COLOR[c.tier.name] : null;
+  const stripe = c.complete ? theme.gold : tone ? theme[tone] : theme.brandIndigo;
 
   return (
     <Pressable
@@ -253,11 +263,12 @@ function ChallengeCard({
             : c.complete
               ? theme.goldSurface
               : theme.backgroundElement,
-          borderColor: fresh ? theme.gold : c.complete ? theme.gold : medalColor ?? theme.border,
+          borderColor: fresh || c.complete ? theme.gold : medalColor ?? theme.border,
         },
         // A full-weight gold edge rather than a hairline, so the card the
-        // banner was talking about is findable in a long list at a glance.
-        fresh ? styles.cardFresh : null,
+        // banner was talking about is findable in a long list at a glance —
+        // and so is a finished one, which half a pixel never managed.
+        fresh || c.complete ? styles.cardLoud : null,
       ]}
     >
       {/* The same colour spine the dining rows use, so a challenge for a park
@@ -273,7 +284,19 @@ function ChallengeCard({
           ]}
         >
           <ThemedText
-            style={[styles.medalMark, { color: medalColor ? '#1B1205' : theme.textFaint }]}
+            // `onGold` rather than the dark ink the tier colours use: light
+            // mode's gold is itself dark (`#B07818`), so `#1B1205` on it is
+            // about 2:1 and the star would all but vanish. See `theme.ts`.
+            style={[
+              styles.medalMark,
+              {
+                color: c.complete
+                  ? theme.onGold
+                  : medalColor
+                    ? '#1B1205'
+                    : theme.textFaint,
+              },
+            ]}
           >
             {c.complete ? '\u2605' : c.tier ? c.tier.name.charAt(0) : String(c.earned)}
           </ThemedText>
@@ -283,14 +306,24 @@ function ChallengeCard({
             <ThemedText type="smallBold" style={styles.cardTitle}>
               {c.title}
             </ThemedText>
-            {c.tier ? (
+            {/* COMPLETE replaces the tier tag rather than joining it: a
+                finished tiered challenge is Platinum by definition, so
+                showing both says the same thing twice and spends the width
+                that makes the badge readable. */}
+            {c.complete ? (
+              <ThemedText
+                style={[styles.pillTag, { backgroundColor: theme.gold, color: theme.onGold }]}
+              >
+                COMPLETE
+              </ThemedText>
+            ) : c.tier ? (
               <ThemedText style={[styles.tierTag, { color: medalColor ?? theme.gold }]}>
                 {c.tier.name.toUpperCase()}
               </ThemedText>
             ) : null}
             {fresh ? (
               <ThemedText
-                style={[styles.newTag, { backgroundColor: theme.gold, color: theme.onGold }]}
+                style={[styles.pillTag, { backgroundColor: theme.gold, color: theme.onGold }]}
               >
                 NEW
               </ThemedText>
@@ -413,8 +446,9 @@ const styles = StyleSheet.create({
   titleLine: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   cardTitle: { flexShrink: 1 },
   tierTag: { fontSize: 9, fontWeight: '700', letterSpacing: 0.8 },
-  cardFresh: { borderWidth: 2 },
-  newTag: {
+  cardLoud: { borderWidth: 2 },
+  /** The filled 9px pill, shared by NEW and COMPLETE. */
+  pillTag: {
     fontSize: 9,
     fontWeight: '700',
     letterSpacing: 0.8,

@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import {
   ActivityIndicator,
+  Alert,
   Linking,
   Platform,
   Pressable,
@@ -166,16 +167,53 @@ export default function VenueDetailScreen() {
                     ) : null}
                     <PhotoStrip uris={jsonList(v.photos)} />
                   </View>
-                  <Pressable
-                    onPress={() => void deleteVisit(v.id)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Delete visit on ${formatDate(v.visited_on)}`}
-                    hitSlop={8}
-                  >
-                    <ThemedText type="small" style={{ color: theme.danger }}>
-                      Delete
-                    </ThemedText>
-                  </Pressable>
+                  <View style={styles.visitActions}>
+                    <Pressable
+                      onPress={() =>
+                        router.push({
+                          pathname: '/log-visit',
+                          params: { venueId: venue.id, name: venue.name, visitId: v.id },
+                        })
+                      }
+                      accessibilityRole="button"
+                      accessibilityLabel={`Edit visit on ${formatDate(v.visited_on)}`}
+                      hitSlop={8}
+                    >
+                      <ThemedText type="small" style={{ color: theme.accent }}>
+                        Edit
+                      </ThemedText>
+                    </Pressable>
+                    {/* Confirmed now that Edit sits next to it. Deleting was a
+                        single unguarded tap, which was survivable while it was
+                        the only control on the row; with a second target
+                        beside it, a mis-tap silently destroys a visit — and a
+                        rating and a note someone typed — with no undo. */}
+                    <Pressable
+                      onPress={() =>
+                        Alert.alert(
+                          'Delete this visit?',
+                          v.date_exact
+                            ? `Your visit on ${formatDate(v.visited_on)} will be removed. This cannot be undone.`
+                            : 'This visit will be removed. This cannot be undone.',
+                          [
+                            { text: 'Keep it', style: 'cancel' },
+                            {
+                              text: 'Delete',
+                              style: 'destructive',
+                              onPress: () => void deleteVisit(v.id),
+                            },
+                          ],
+                        )
+                      }
+                      accessibilityRole="button"
+                      accessibilityLabel={`Delete visit on ${formatDate(v.visited_on)}`}
+                      hitSlop={8}
+                    >
+                      <ThemedText type="small" style={{ color: theme.danger }}>
+                        Delete
+                      </ThemedText>
+                    </Pressable>
+                  </View>
                 </View>
               ))}
               {visits.length > 1 ? (
@@ -339,6 +377,7 @@ const styles = StyleSheet.create({
   },
   visitNote: { lineHeight: 18, fontStyle: 'italic' },
   visitMain: { flex: 1, gap: 2 },
+  visitActions: { alignItems: 'flex-end', gap: Spacing.two },
   primary: {
     marginTop: Spacing.two,
     paddingVertical: Spacing.three,

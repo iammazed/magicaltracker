@@ -101,6 +101,18 @@ literals are correct there and `onAccent` would invert and vanish.
 
 ---
 
+**Gold means finished, and it has to win the card it is on.** A completed challenge in the
+passport was reported as "on dark mode it just changes to a different shade of blue/teal and can
+be missed", which was accurate. The two loudest elements never moved on completion: the 5px spine
+kept the area's brand colour, and the medal went to Platinum's own `#8FD6D2` — a pale teal. The
+only things that did change were the fill, `#18272E` to `#2A2313` (two near-blacks), and a
+hairline border. So `ChallengeCard` now overrides the stripe and the medal to `gold`, takes the
+border to 2px, and swaps the tier tag for a filled COMPLETE pill.
+
+Use `onGold` for ink on any gold fill, never the `#1B1205` the tier colours use. Light-mode gold
+is itself dark (`#B07818`), so that ink lands around 2:1 and the mark all but disappears — the
+reason `onGold` exists as a token in the first place.
+
 ## Brand
 
 The wordmark is a three-part lockup:
@@ -1258,6 +1270,20 @@ Therefore: **when a tester says a feature is missing, establish which build they
 reading any code.** Settings → This build answers it, and `eas build:list --platform ios` maps a
 build number to its fingerprint.
 
+**The `scripts` block of `package.json` is a fingerprint source too.** Adding a one-line npm
+alias — `"update:legacy": "node scripts/update-legacy.mjs"`, no dependency, no native anything —
+moved the hash from `d41cd429…` to `510c7a7b…` and would have orphaned build 5 exactly as
+`ascAppId` orphaned build 4. A file under `scripts/` does NOT count, so the script is invoked as
+`node scripts/update-legacy.mjs` rather than through npm. Check the hash after touching
+`package.json` for any reason at all, including ones that look like pure convenience.
+
+**`scripts/update-legacy.mjs` reaches the orphaned builds when TestFlight cannot.** It removes
+`ascAppId`, which puts the runtime version back to `ed8385a7…`, publishes, and restores the file
+in a `finally`. This is only sound because nothing native has changed since that build — it
+verifies that itself and refuses otherwise — so the fingerprint difference is bookkeeping rather
+than an incompatibility. Run it in addition to `npm run update:prod`, never instead: one reaches
+builds 3 and 4, the other reaches build 5.
+
 **`submit.production.ios.ascAppId` is what makes the submission work unattended.** Without it,
 EAS has to ask which App Store Connect app it is submitting to, so `--auto-submit` paired with
 `--non-interactive` fails the instant the upload finishes — `Set ascAppId in the submit profile
@@ -1286,6 +1312,43 @@ that look risky — a venue description with a comma is the normal case here. A 
 `+`, `-` or `@` is prefixed with an apostrophe, because a spreadsheet will otherwise evaluate a
 restaurant note as a formula. Exports are written to the cache directory, not documents: the file
 exists to be handed to another app, and iOS reclaims it on its own.
+
+---
+
+## Editing something already logged
+
+`updateVisit` / `updateStay` in `src/hooks/use-visits.tsx`, reached by passing `visitId` or
+`stayId` to the existing `log-visit` / `log-stay` modal. The modal switches to edit mode on that
+param rather than being duplicated: same fields, same validation, same date picker, with
+`addVisit` swapped for `updateVisit` and the title and button relabelled.
+
+**`synced_at = NULL` is what makes an edit real.** Push selects rows where it is null and upserts
+them on `id`, so clearing it is the entire sync story. Omit it and the correction looks saved,
+survives a restart, and silently reverts the next time that row is pulled — the worst shape of
+bug available here, because the UI confirmed it.
+
+**The venue and the resort are deliberately not editable**, which is why the input types are
+`Omit<AddVisitInput, 'venueId'>` and `Omit<AddStayInput, 'resortId'>`. Moving a visit to a
+different restaurant is not a correction: it rewrites passport progress and can un-earn a medal
+that has already been celebrated. Logging the right place and deleting the wrong one says the
+same thing visibly.
+
+**Premium fields pass through UNGUARDED on an edit, and must.** The add path guards `note`,
+`dishes` and `photos` behind `isPremium` as defence in depth. Copying that to the edit path is a
+data-loss bug: all three sit behind `PremiumGate` and are seeded from the row, so the guard
+cannot prevent a write the UI already prevents — it just erases a lapsed subscriber's notes and
+photos the moment they fix a date. `log-stay` carries `note` across explicitly for the same
+reason: that form has no note field at all, so letting it default would wipe any note that
+arrived from another device.
+
+**`existing` is read once, in a `useState` initialiser.** Reading it from `visits` on every
+render means a pull landing mid-edit swaps the fields out from under whoever is typing. If the
+row is missing the form refuses rather than falling back to the blank one — otherwise an edit of
+a row deleted on another device becomes a duplicate visit.
+
+Deleting a visit or stay now **confirms**. It was a single unguarded tap, survivable while it was
+the only control on the row; Edit sits beside it now, and a mis-tap destroyed a visit, its rating
+and its note with no undo.
 
 ---
 

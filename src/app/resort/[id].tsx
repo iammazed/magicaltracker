@@ -2,6 +2,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import {
   ActivityIndicator,
+  Alert,
   Linking,
   Platform,
   Pressable,
@@ -111,16 +112,48 @@ export default function ResortDetailScreen() {
                       {s.room_type ? `  ·  ${s.room_type}` : ''}
                     </ThemedText>
                   </View>
-                  <Pressable
-                    onPress={() => void deleteStay(s.id)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Delete stay from ${formatDate(s.check_in)}`}
-                    hitSlop={8}
-                  >
-                    <ThemedText type="small" style={{ color: theme.danger }}>
-                      Delete
-                    </ThemedText>
-                  </Pressable>
+                  <View style={styles.listActions}>
+                    <Pressable
+                      onPress={() =>
+                        router.push({
+                          pathname: '/log-stay',
+                          params: { resortId: resort.id, name: resort.name, stayId: s.id },
+                        })
+                      }
+                      accessibilityRole="button"
+                      accessibilityLabel={`Edit stay from ${formatDate(s.check_in)}`}
+                      hitSlop={8}
+                    >
+                      <ThemedText type="small" style={{ color: theme.accent }}>
+                        Edit
+                      </ThemedText>
+                    </Pressable>
+                    {/* Confirmed for the same reason as a visit: Edit beside
+                        it turns a stray tap into lost data with no undo. */}
+                    <Pressable
+                      onPress={() =>
+                        Alert.alert(
+                          'Delete this stay?',
+                          `Your stay from ${formatDate(s.check_in)} will be removed. This cannot be undone.`,
+                          [
+                            { text: 'Keep it', style: 'cancel' },
+                            {
+                              text: 'Delete',
+                              style: 'destructive',
+                              onPress: () => void deleteStay(s.id),
+                            },
+                          ],
+                        )
+                      }
+                      accessibilityRole="button"
+                      accessibilityLabel={`Delete stay from ${formatDate(s.check_in)}`}
+                      hitSlop={8}
+                    >
+                      <ThemedText type="small" style={{ color: theme.danger }}>
+                        Delete
+                      </ThemedText>
+                    </Pressable>
+                  </View>
                 </View>
               ))}
             </View>
@@ -252,6 +285,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   listMain: { flex: 1, gap: 2 },
+  listActions: { alignItems: 'flex-end', gap: Spacing.two },
   primary: {
     marginTop: Spacing.two,
     paddingVertical: Spacing.three,

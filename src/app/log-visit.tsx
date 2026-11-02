@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -21,7 +21,7 @@ import { usePremium } from '@/hooks/use-premium';
 import { useTheme } from '@/hooks/use-theme';
 import { useVisits } from '@/hooks/use-visits';
 import { tapSaved } from '@/lib/haptics';
-import { todayISO } from '@/lib/local-db';
+import { jsonList, todayISO } from '@/lib/local-db';
 import { importPhoto } from '@/lib/photos';
 
 /**
@@ -33,20 +33,37 @@ import { importPhoto } from '@/lib/photos';
 const PARK_OPENED = '1971-10-01';
 
 export default function LogVisitScreen() {
-  const { venueId, name } = useLocalSearchParams<{ venueId: string; name?: string }>();
+  const { venueId, name, visitId } = useLocalSearchParams<{
+    venueId: string;
+    name?: string;
+    /** Set to correct a visit already logged, rather than add a new one. */
+    visitId?: string;
+  }>();
   const router = useRouter();
   const theme = useTheme();
-  const { addVisit } = useVisits();
+  const { visits, addVisit, updateVisit } = useVisits();
   const { isPremium } = usePremium();
 
-  const [visitedOn, setVisitedOn] = useState(todayISO());
-  const [rating, setRating] = useState<number | null>(null);
-  const [wouldReturn, setWouldReturn] = useState<boolean | null>(null);
-  const [partySize, setPartySize] = useState('');
-  const [note, setNote] = useState('');
-  const [dishes, setDishes] = useState<string[]>([]);
+  // Read ONCE, at mount, with the `useState` initialiser rather than from
+  // `visits` on every render: a pull landing mid-edit would otherwise swap the
+  // fields out from under whoever is typing in them.
+  const [existing] = useState(() =>
+    visitId ? visits.find((v) => v.id === visitId) ?? null : null,
+  );
+  const editing = !!visitId;
+
+  const [visitedOn, setVisitedOn] = useState(existing?.visited_on ?? todayISO());
+  const [rating, setRating] = useState<number | null>(existing?.rating ?? null);
+  const [wouldReturn, setWouldReturn] = useState<boolean | null>(
+    existing?.would_return == null ? null : existing.would_return === 1,
+  );
+  const [partySize, setPartySize] = useState(
+    existing?.party_size == null ? '' : String(existing.party_size),
+  );
+  const [note, setNote] = useState(existing?.note ?? '');
+  const [dishes, setDishes] = useState<string[]>(() => jsonList(existing?.dishes));
   const [dish, setDish] = useState('');
-  const [photos, setPhotos] = useState<string[]>([]);
+  const [photos, setPhotos] = useState<string[]>(() => jsonList(existing?.photos));
   /** Resizing six photos takes a visible moment; without this the Add
    *  button looks dead and gets tapped again. */
   const [importing, setImporting] = useState(false);
@@ -107,20 +124,49 @@ export default function LogVisitScreen() {
   const dateValid = /^\d{4}-\d{2}-\d{2}$/.test(visitedOn);
 
   const save = async () => {
-    if (!venueId || !dateValid || saving) return;
+    if (!dateValid || saving) return;
+    // An edit whose row has gone — deleted on another device between opening
+    // this screen and saving — must not fall through to `addVisit` and quietly
+    // become a second visit.
+    if (editing && !existing) return;
+    if (!editing && !venueId) return;
     setSaving(true);
-    await addVisit({
-      venueId,
+
+    const fields = {
       visitedOn,
       rating,
       wouldReturn,
       partySize: partySize ? Number(partySize) : null,
-      // Guarded as well as gated. If the gate ever regressed, a free user
-      // still could not write a premium field by reaching this call.
-      note: isPremium && note.trim() ? note.trim() : null,
-      dishes: isPremium ? dishes : null,
-      photos: isPremium ? photos : null,
-    });
+    };
+
+    if (existing) {
+      // The note, dishes and photos pass through UNGUARDED here, and the
+      // difference from the add path below is deliberate rather than an
+      // oversight. All three sit behind `PremiumGate` and all three were
+      // seeded from the row itself, so a premium check could not prevent a
+      // write that the UI already makes impossible — what it WOULD do is
+      // erase the notes, dishes and photos of anyone whose subscription had
+      // lapsed, the moment they corrected a date. The venue screen already
+      // renders this content for lapsed users on the principle that someone
+      // must still be able to read what they wrote; deleting it on an
+      // unrelated edit would break the same promise from the other side.
+      await updateVisit(existing.id, {
+        ...fields,
+        note: note.trim() || null,
+        dishes,
+        photos,
+      });
+    } else {
+      await addVisit({
+        venueId,
+        ...fields,
+        // Guarded as well as gated. If the gate ever regressed, a free user
+        // still could not write a premium field by reaching this call.
+        note: isPremium && note.trim() ? note.trim() : null,
+        dishes: isPremium ? dishes : null,
+        photos: isPremium ? photos : null,
+      });
+    }
     // After the write, before the dismissal: the tap confirms the thing that
     // just happened. Haptics lived only on achievement unlocks, which are
     // rare enough that the first tester assumed they were broken.
@@ -128,8 +174,24 @@ export default function LogVisitScreen() {
     router.back();
   };
 
+  // Only reachable if the row vanished between the tap and this mount.
+  // Falling through to the blank form would invite logging a duplicate of
+  // the visit someone was trying to fix.
+  if (editing && !existing) {
+    return (
+      <ThemedView style={styles.container}>
+        <Stack.Screen options={{ title: 'Edit visit' }} />
+        <ThemedText type="small" themeColor="textFaint" style={styles.footnote}>
+          This visit is no longer here — it may have been deleted on another
+          device.
+        </ThemedText>
+      </ThemedView>
+    );
+  }
+
   return (
     <ThemedView style={styles.container}>
+      <Stack.Screen options={{ title: editing ? 'Edit visit' : 'Log a visit' }} />
       <ScrollView
         contentContainerStyle={styles.scroll}
         keyboardDismissMode="on-drag"
@@ -344,7 +406,7 @@ export default function LogVisitScreen() {
             type="smallBold"
             style={{ color: dateValid ? theme.onAccent : theme.textFaint }}
           >
-            {saving ? 'Saving…' : 'Save visit'}
+            {saving ? 'Saving…' : editing ? 'Save changes' : 'Save visit'}
           </ThemedText>
         </Pressable>
 
