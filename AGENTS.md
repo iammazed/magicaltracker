@@ -1354,11 +1354,24 @@ content was never the problem, the second copy was.
 `src/components/stamp.tsx`. Three states, and the distance between them is the point — the
 complaint that started this was that completing something "can be missed":
 
-| state | ring | lean | ink |
-|---|---|---|---|
-| complete | 2.5px + `goldSurface` wash | crooked | `gold` |
-| in progress | 1.5px, no fill | square | tier colour, or `accent` when untiered |
-| untouched | 1px at 45% opacity | square | `textFaint` |
+| state | ring | disc | lean | ink |
+|---|---|---|---|---|
+| complete | 3px | yes | crooked | `gold` |
+| in progress | 1.5px | no | square | tier colour, or `accent` when untiered |
+| untouched | 1px at 40% opacity | no | square | `textFaint` |
+
+It is a **rubber** stamp, not a postage stamp — no serrated edge, no
+perforations, no rectangle with a picture in it. What makes an entry stamp
+recognisable is all of these together and no one of them alone: a thick outer
+ring with a thin second ring inside it, a rule across the middle splitting the
+face into mark and legend, short wide-tracked all-caps type, ink that is not
+quite opaque, and a lean. A single ring with an icon in it is an icon chip,
+which is what the first version was and what it was reported as.
+
+**The disc is a wash of the ink, not `goldSurface`.** The first version filled
+a finished stamp with `goldSurface` — which is the colour of the page it sits
+on, so there was nothing to see. That is why "I completed some and it doesn't
+look much like a stamp" was the report.
 
 **Only an earned stamp leans**, and the angle is hashed from the challenge id rather than random —
 a random angle re-rolls on every render and the page wobbles. Square to the page is what a printed
@@ -1382,6 +1395,52 @@ Adding one edits `package.json`, which is a fingerprint source, which orphans ev
 binary — so a ring cannot ship over the air. It waits for the native batch. Hand-rolling an arc
 out of rotated half-circles is possible and was rejected: it is fiddly geometry that cannot be
 verified from Windows, and there is already enough unverified layout in flight.
+
+---
+
+## Challenges
+
+Twenty-six of them, and **none needs a catalog import**. They are derived from
+columns the rows already carry — `venue_kind`, `dining_style`, `price_tier`,
+`cuisine`, `resort_id`, `area_id`, `sub_area` and `tags` — which is what makes
+a new challenge an over-the-air change rather than a new binary.
+
+Four builders, in `use-passport.ts`:
+
+| builder | shape | used by |
+|---|---|---|
+| `tagChallenge` | tiered, one step per tagged venue | Character, Signature |
+| `setChallenge` | all-or-nothing, one step per tagged venue | Monorail Bar Crawl |
+| `pickChallenge` | either, one step per venue matching a predicate | the crawls and collections |
+| `pavilionChallenge` / `cuisineChallenge` | all-or-nothing, one step per GROUP, ticked by any member | Drinking/Snacking Around the World, A Taste of Everywhere |
+
+The group shape is the one to reach for whenever several places satisfy one
+step. `venueId` is null there unless exactly one place would tick it, because
+picking one on the user's behalf is guessing.
+
+**Every challenge counts from `eligible`, never from the raw catalog.** This
+was a live bug: Signature Dining counted from all rows, and "The Magic of New
+Year's Eve at California Grill" carries the `signature` tag and is an `event`,
+so finishing the challenge required attending one specific New Year's Eve
+party. The rule at the top of `use-passport.ts` — events and permanently
+closed venues never appear in a denominator — was being applied to the area
+percentages and not to the challenges. Target went 25 to 24; Monorail (10) and
+Character (13) were unaffected.
+
+**Cuisines are lower-cased before grouping.** The catalog holds `american` and
+`American`, and `Norwegian` and `norwegian`. Without normalising, one cuisine
+becomes two steps and the second is one almost nobody would ever tick. Fixing
+the CSV would be better, but surviving it is required either way, because the
+import runs on data people type by hand.
+
+### Challenges still blocked on catalog data
+
+A Skyliner crawl and a Bay Lake crawl are both real, popular routes and both
+come out too thin to ship — two stops each — because the resort pool bars are
+missing from `venues.csv`: Petals Pool Bar (Pop Century), The Drop Off (Art of
+Animation), and on the BoardWalk side Jellyrolls, Atlantic Dance Hall and
+Boardwalk Joe's. Add those rows and both challenges become one `pickChallenge`
+call each.
 
 ---
 

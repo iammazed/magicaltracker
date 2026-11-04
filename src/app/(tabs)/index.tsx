@@ -346,7 +346,7 @@ export default function HomeScreen() {
                     style={styles.stripOuter}
                   >
                     {stampStrip.map((c) => (
-                      <Stamp key={c.id} challenge={c} width={78} size={56} />
+                      <Stamp key={c.id} challenge={c} width={84} />
                     ))}
                   </ScrollView>
                 </Section>

@@ -28,6 +28,23 @@ export const WORLD_SHOWCASE = [
   'japan', 'morocco', 'france', 'united-kingdom', 'canada',
 ];
 
+/**
+ * The resorts around Crescent Lake, which is a real walk rather than a
+ * marketing grouping: BoardWalk, Yacht and Beach Club, Swan, Dolphin and Swan
+ * Reserve all share one promenade, so a crawl between them needs no bus.
+ */
+export const CRESCENT_LAKE = [
+  'boardwalk-inn', 'yacht-club-resort', 'beach-club-resort',
+  'swan-hotel', 'dolphin-hotel', 'swan-reserve',
+];
+
+/**
+ * Catalog cuisine values that are not cuisines. `lounge` describes the room,
+ * and `international` and `european` describe nothing in particular — a step
+ * nobody can plan a meal around does not belong in a checklist.
+ */
+const NOT_A_CUISINE = new Set(['lounge', 'international', 'european']);
+
 export type Coverage = {
   id: string;
   label: string;
@@ -155,11 +172,6 @@ export function usePassport() {
   const { byVenue, byResort } = useVisits();
   const { areas } = useCatalog();
 
-  // The tag-driven challenges read `tags` and `sub_area`, which every catalog
-  // row now carries. This used to be a second query because the list select
-  // omitted those columns to save bandwidth.
-  const tagRows = venues;
-
   const areaNames = useMemo(
     () => Object.fromEntries(areas.map((a) => [a.id, a.name])),
     [areas],
@@ -171,7 +183,22 @@ export function usePassport() {
     [resorts],
   );
 
-  /** Only places you can actually eat at, and that still exist. */
+  /**
+   * Only places you can actually eat at, and that still exist.
+   *
+   * EVERY challenge counts from this list, tag-driven ones included. They
+   * used to count from the raw catalog, and the Signature Dining challenge
+   * was the proof that it mattered: "The Magic of New Year's Eve at
+   * California Grill" carries the `signature` tag and is an EVENT, so
+   * finishing the challenge required attending a specific New Year's Eve
+   * party. That is precisely the case the rule at the top of this file
+   * exists to prevent, and the rule was being applied to the area
+   * percentages but not to the challenges.
+   *
+   * `tags` and `sub_area` are read off these rows directly — every catalog
+   * row carries them now, which it did not when the list query trimmed
+   * columns to save bandwidth.
+   */
   const eligible = useMemo(
     () => venues.filter((v) => v.venue_kind !== 'event' && v.status !== 'permanently-closed'),
     [venues],
@@ -267,8 +294,8 @@ export function usePassport() {
       blurb: string,
       tag: string,
     ): Challenge => {
-      const inPavilion = new Map<string, typeof tagRows>();
-      for (const r of tagRows) {
+      const inPavilion = new Map<string, typeof eligible>();
+      for (const r of eligible) {
         if (!r.tags?.includes(tag) || !r.sub_area) continue;
         const list = inPavilion.get(r.sub_area) ?? [];
         list.push(r);
@@ -332,7 +359,7 @@ export function usePassport() {
     ): Challenge => {
       // `tags` is string[] here, not the pipe-joined CSV form — `catalog-db`
       // parses the JSON column on the way out — so this is exact membership.
-      const steps = venueSteps(tagRows.filter((r) => r.tags?.includes(tag)));
+      const steps = venueSteps(eligible.filter((r) => r.tags?.includes(tag)));
       const done = steps.filter((st) => st.done).length;
       return {
         id,
@@ -356,7 +383,7 @@ export function usePassport() {
       blurb: string,
       tag: string,
     ): Challenge => {
-      const steps = venueSteps(tagRows.filter((r) => r.tags?.includes(tag)));
+      const steps = venueSteps(eligible.filter((r) => r.tags?.includes(tag)));
       const earned = steps.filter((st) => st.done).length;
       return {
         id,
@@ -367,6 +394,93 @@ export function usePassport() {
         tiered: true,
         steps,
         ...tierProgress(earned, steps.length),
+      };
+    };
+
+    /**
+     * Any slice of the catalog the existing columns can already describe.
+     *
+     * Everything built with this comes from `venue_kind`, `dining_style`,
+     * `price_tier`, `resort_id` and `area_id` — no new tags, so these ship
+     * over the air instead of waiting on a catalog import and a new binary.
+     */
+    const pickChallenge = (
+      id: string,
+      title: string,
+      blurb: string,
+      pick: (r: (typeof eligible)[number]) => boolean,
+      tiered = false,
+    ): Challenge => {
+      const steps = venueSteps(eligible.filter(pick));
+      const earned = steps.filter((st) => st.done).length;
+      if (tiered) {
+        return {
+          id, title, blurb, earned,
+          target: steps.length,
+          tiered: true,
+          steps,
+          ...tierProgress(earned, steps.length),
+        };
+      }
+      return {
+        id, title, blurb, earned,
+        target: steps.length,
+        complete: steps.length > 0 && earned === steps.length,
+        tiered: false,
+        tier: null,
+        nextTier: null,
+        toNext: 0,
+        steps,
+        remaining: steps.filter((st) => !st.done).map((st) => st.label),
+      };
+    };
+
+    /**
+     * One step per cuisine, ticked by any one place that serves it.
+     *
+     * The same shape as the pavilions — the step is the cuisine, several
+     * places satisfy it, so `venueId` is null unless exactly one does.
+     *
+     * **Lower-cased before grouping.** The catalog holds both `american` and
+     * `American`, and both `Norwegian` and `norwegian`, so without this one
+     * cuisine becomes two steps and the second is one almost nobody would
+     * ever tick. Fixing the CSV would be better; surviving it is required
+     * either way, because the import runs on data people type.
+     */
+    const cuisineChallenge = (): Challenge => {
+      const byCuisine = new Map<string, { id: string; name: string; done: boolean }[]>();
+      for (const r of eligible) {
+        for (const raw of (r.cuisine ?? '').split('|')) {
+          const key = raw.trim().toLowerCase();
+          if (!key || NOT_A_CUISINE.has(key)) continue;
+          const list = byCuisine.get(key) ?? [];
+          list.push({ id: r.id, name: r.name, done: visitedIds.has(r.id) });
+          byCuisine.set(key, list);
+        }
+      }
+      const steps: ChallengeStep[] = [...byCuisine.entries()]
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([key, options]) => ({
+          id: key,
+          label: titleCase(key),
+          done: options.some((o) => o.done),
+          venueId: options.length === 1 ? options[0].id : null,
+          options,
+        }));
+      const missing = steps.filter((st) => !st.done);
+      return {
+        id: 'cuisines',
+        title: 'A Taste of Everywhere',
+        blurb: 'Something from every kind of kitchen on property.',
+        earned: steps.length - missing.length,
+        target: steps.length,
+        complete: missing.length === 0,
+        tiered: false,
+        tier: null,
+        nextTier: null,
+        toNext: 0,
+        steps,
+        remaining: missing.map((st) => st.label),
       };
     };
 
@@ -423,8 +537,58 @@ export function usePassport() {
         'Every signature restaurant at Walt Disney World.',
         'signature',
       ),
+
+      // ── Crawls ────────────────────────────────────────────────────────
+      pickChallenge(
+        'crescent-lake-crawl',
+        'The Crescent Lake Crawl',
+        'Every lounge around Crescent Lake — BoardWalk, Yacht and Beach Club, Swan and Dolphin.',
+        (r) => r.venue_kind === 'lounge' && !!r.resort_id && CRESCENT_LAKE.includes(r.resort_id),
+      ),
+      pickChallenge(
+        'springs-bar-hop',
+        'The Disney Springs Bar Hop',
+        'Every bar and lounge at Disney Springs, in whatever order the evening takes.',
+        (r) => r.venue_kind === 'lounge' && r.area_id === 'disney-springs',
+      ),
+
+      // ── Collections ───────────────────────────────────────────────────
+      pickChallenge(
+        'buffets',
+        'The Buffet Line',
+        'Every all-you-care-to-eat buffet on property.',
+        (r) => r.dining_style.includes('buffet'),
+      ),
+      pickChallenge(
+        'street-eats',
+        'Street Eats',
+        'Every cart, wagon and food truck — the places with no front door.',
+        (r) => r.venue_kind === 'food-truck' || r.venue_kind === 'cart',
+      ),
+      pickChallenge(
+        'set-menu',
+        'Set Menu',
+        'Prix-fixe and family-style dining, where the kitchen decides.',
+        (r) => r.dining_style.some((d) => d === 'prix-fixe' || d === 'family-style'),
+        true,
+      ),
+      pickChallenge(
+        'top-dollar',
+        'Top Dollar',
+        'Every four-dollar-sign restaurant at Walt Disney World.',
+        (r) => r.price_tier === 4,
+        true,
+      ),
+      pickChallenge(
+        'lounges',
+        'Lounge Lizard',
+        'Every lounge and bar on property, all seventy-odd of them.',
+        (r) => r.venue_kind === 'lounge',
+        true,
+      ),
+      cuisineChallenge(),
     ];
-  }, [tagRows, byVenue, byArea, eligible, areaNames, resortNames]);
+  }, [byVenue, byArea, eligible, areaNames, resortNames]);
 
   return {
     loading: venuesLoading || resortsLoading,
