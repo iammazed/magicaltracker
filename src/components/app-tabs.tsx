@@ -5,7 +5,7 @@ import { Colors } from '@/constants/theme';
 import { useAchievements } from '@/hooks/use-achievements';
 
 /**
- * Four tabs. SF Symbols rather than bundled PNGs — they are vector, respect
+ * Five tabs. SF Symbols rather than bundled PNGs — they are vector, respect
  * the system tint, and give a filled variant for the selected state for free.
  *
  * Two things here exist to stop the bar changing size as you move between
@@ -90,6 +90,19 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Icon
           sf={{ default: 'bed.double', selected: 'bed.double.fill' }}
           md={{ default: 'hotel', selected: 'hotel' }}
+        />
+      </NativeTabs.Trigger>
+
+      {/* Split out of Passport, which was carrying both the numbers and the
+          keepsake and was reported as overwhelming with good reason. Five is
+          iOS's maximum before the rest collapse into a "More" tab, so there
+          is no room for a sixth — if Trips ever earns one, Dining and Resorts
+          merge into a single "Places" tab with a segmented control. */}
+      <NativeTabs.Trigger name="stats" disableAutomaticContentInsets>
+        <NativeTabs.Trigger.Label>Stats</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          sf={{ default: 'chart.bar', selected: 'chart.bar.fill' }}
+          md={{ default: 'bar_chart', selected: 'bar_chart' }}
         />
       </NativeTabs.Trigger>
 

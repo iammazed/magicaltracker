@@ -1,26 +1,34 @@
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 
-import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 
-import { ProgressBar } from '@/components/progress-bar';
+import { PassportPage, Stamp } from '@/components/stamp';
 import { SkyHeader, useHeaderCollapse } from '@/components/sky-header';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { AreaTone, Radius, Spacing, type RampToken } from '@/constants/theme';
-import { useAchievements, currentMilestone } from '@/hooks/use-achievements';
+import { Spacing } from '@/constants/theme';
+import { currentMilestone, useAchievements } from '@/hooks/use-achievements';
 import { useBottomInset } from '@/hooks/use-bottom-inset';
-import {
-  TIER_COLOR,
-  type Challenge,
-  type Coverage,
-  usePassport,
-} from '@/hooks/use-passport';
+import { type Challenge, usePassport } from '@/hooks/use-passport';
 import { useTheme } from '@/hooks/use-theme';
 
+/**
+ * The passport, as an actual passport.
+ *
+ * This screen used to be eighteen challenge cards stacked in a column, each
+ * with a stripe, a medal, a title, a blurb, a progress bar and up to three
+ * lines of text — plus an area grid at the top that the bottom half of the
+ * screen then repeated as cards. It was reported as overwhelming, which was
+ * generous.
+ *
+ * The numbers moved to Stats. What is left is the keepsake: pages of stamps,
+ * earned ones inked and pressed crooked, unearned ones faint outlines waiting
+ * to be filled. A tap on any stamp opens that challenge's checklist, which is
+ * where the detail belongs and where it has always been.
+ */
 export default function PassportScreen() {
   const theme = useTheme();
-  const { loading, overall, byArea, resortCoverage, challenges } = usePassport();
+  const { loading, challenges } = usePassport();
   const bottomInset = useBottomInset();
   const { collapsed, onScroll } = useHeaderCollapse();
   const { unseen, markAllSeen } = useAchievements();
@@ -52,39 +60,27 @@ export default function PassportScreen() {
   }
 
   const earned = challenges.filter((c) => c.complete).length;
+  const named = challenges.filter((c) => !c.id.startsWith('area-'));
+  const areas = challenges.filter((c) => c.id.startsWith('area-'));
 
   return (
     <ThemedView style={styles.container}>
       <View style={styles.safe}>
-        {/**
-         * The same twilight band as Dining and Resorts.
-         *
-         * This was a plain title over a separate gradient hero card, and that
-         * card scrolled away whole — so the one number the tab exists to show
-         * was gone the moment you went looking at your areas.
-         *
-         * What gives way is the eyebrow and the title, exactly as on the other
-         * two tabs. The percentage and the three counts are the content rather
-         * than the chrome, so they are what stays.
-         *
-         * That also retires the "12 of 394 places · 3 of 35 resorts · 2 of 18
-         * challenges" line that used to sit under the title. It was the stats
-         * row again in sentence form, directly above the stats row.
-         */}
         <SkyHeader eyebrow="WALT DISNEY WORLD" title="Passport" collapsed={collapsed}>
           <View style={styles.summary}>
-            <ThemedText style={styles.pct}>
-              {Math.round(overall.pct * 100)}
-              <ThemedText style={styles.pctSign}>%</ThemedText>
+            <ThemedText style={styles.count}>
+              {earned}
+              <ThemedText style={styles.countTotal}> / {challenges.length}</ThemedText>
             </ThemedText>
-            <View style={styles.summaryStats}>
-              <HeroStat value={overall.visited} total={overall.total} label="Places" />
-              <HeroStat
-                value={resortCoverage.visited}
-                total={resortCoverage.total}
-                label="Resorts"
-              />
-              <HeroStat value={earned} total={challenges.length} label="Earned" />
+            <View style={styles.summaryNote}>
+              <ThemedText style={styles.summaryLabel}>STAMPS EARNED</ThemedText>
+              <ThemedText style={styles.summaryText}>
+                {earned === 0
+                  ? 'Finish a challenge and it gets stamped here.'
+                  : earned === challenges.length
+                    ? 'Every stamp collected. Nothing left to earn.'
+                    : 'Tap any stamp to see what it still needs.'}
+              </ThemedText>
             </View>
           </View>
         </SkyHeader>
@@ -97,312 +93,37 @@ export default function PassportScreen() {
             { paddingBottom: bottomInset + Spacing.five },
           ]}
         >
-          {/* Below the gradient, so this one reads theme tokens. */}
-          {overall.visited === 0 ? (
-            <ThemedText type="small" themeColor="textSecondary" style={styles.hint}>
-              Log your first visit from the Dining tab and this starts filling.
-            </ThemedText>
-          ) : null}
+          <PassportPage
+            title="Challenges"
+            caption="Set pieces — finish the whole list to earn the stamp."
+          >
+            {named.map((c) => (
+              <Stamp key={c.id} challenge={c} fresh={isFresh(c, fresh)} />
+            ))}
+          </PassportPage>
 
-          {/* ── Areas at a glance, in their own colours ───────────── */}
-          <Section title="Where you have eaten">
-            <View style={styles.areaGrid}>
-              {byArea.map((a) => (
-                <AreaTile key={a.id} area={a} />
-              ))}
-            </View>
-          </Section>
+          <PassportPage
+            title="Parks and areas"
+            caption="One stamp per area, earned by eating at every place in it."
+          >
+            {areas.map((c) => (
+              <Stamp key={c.id} challenge={c} fresh={isFresh(c, fresh)} />
+            ))}
+          </PassportPage>
 
-          <Section title="Resorts">
-            <ProgressBar
-              label="Disney-owned resorts stayed at"
-              visited={resortCoverage.visited}
-              total={resortCoverage.total}
-              tone="brandViolet"
-            />
-            <ThemedText type="small" themeColor="textFaint">
-              Partner hotels like the Swan and Dolphin are tracked but do not
-              count toward this.
-            </ThemedText>
-          </Section>
-
-          {/* All-or-nothing first — those are the ones people chase. */}
-          <Section title="Challenges">
-            {challenges
-              .filter((c) => !c.tiered)
-              .map((c) => (
-                <ChallengeCard key={c.id} challenge={c} fresh={isFresh(c, fresh)} />
-              ))}
-            {challenges
-              .filter((c) => c.tiered && !c.id.startsWith('area-'))
-              .map((c) => (
-                <ChallengeCard key={c.id} challenge={c} fresh={isFresh(c, fresh)} />
-              ))}
-          </Section>
-
-          <Section title="Area by area">
-            {challenges
-              .filter((c) => c.id.startsWith('area-'))
-              .map((c) => (
-                <ChallengeCard
-                  key={c.id}
-                  challenge={c}
-                  fresh={isFresh(c, fresh)}
-                  tone={AreaTone[c.id.replace('area-', '')] ?? 'brandTeal'}
-                />
-              ))}
-          </Section>
+          <ThemedText type="small" themeColor="textFaint" style={styles.footnote}>
+            Coverage percentages and resort progress live on the Stats tab.
+          </ThemedText>
         </ScrollView>
       </View>
     </ThemedView>
   );
 }
 
-function HeroStat({
-  value,
-  total,
-  label,
-}: {
-  value: number;
-  total: number;
-  label: string;
-}) {
-  return (
-    <View style={styles.heroStat}>
-      <ThemedText style={styles.heroStatValue}>
-        {value}
-        <ThemedText style={styles.heroStatTotal}> / {total}</ThemedText>
-      </ThemedText>
-      <ThemedText style={styles.heroStatLabel}>{label.toUpperCase()}</ThemedText>
-    </View>
-  );
-}
-
-/**
- * One area, in that area's own colour.
- *
- * The passport read as one long column of identical grey cards, which made
- * fourteen different places look like one undifferentiated list. These use the
- * same `AreaTone` mapping as the dining rows and the map pins, so a park is the
- * same colour everywhere in the app.
- */
-function AreaTile({ area }: { area: Coverage }) {
-  const theme = useTheme();
-  const tone = theme[AreaTone[area.id] ?? 'brandTeal'];
-  const pct = Math.round(area.pct * 100);
-
-  return (
-    <View style={[styles.areaTile, { borderColor: tone, backgroundColor: theme.backgroundElement }]}>
-      {/* A filled bar behind the text, sized to the percentage — the tile is
-          its own progress indicator rather than needing a separate one. */}
-      <View
-        style={[styles.areaFill, { backgroundColor: tone, width: `${Math.max(pct, 2)}%` }]}
-      />
-      <View style={styles.areaTileInner}>
-        <ThemedText type="small" numberOfLines={2} style={styles.areaName}>
-          {area.label}
-        </ThemedText>
-        <View style={styles.areaNumbers}>
-          <ThemedText style={[styles.areaPct, { color: tone }]}>{pct}%</ThemedText>
-          <ThemedText type="small" themeColor="textFaint" style={styles.areaCount}>
-            {area.visited}/{area.total}
-          </ThemedText>
-        </View>
-      </View>
-    </View>
-  );
-}
-
-/** Does this card correspond to a milestone the user has not yet looked at? */
+/** Does this stamp correspond to a milestone the user has not yet looked at? */
 function isFresh(c: Challenge, fresh: Set<string>): boolean {
   const key = currentMilestone(c)?.key;
   return key ? fresh.has(key) : false;
-}
-
-/**
- * The first few names, then a count.
- *
- * Three is the most that fits two lines at this size without the long ones
- * ("The Perch at Disneys Grand Floridian Resort and Spa") pushing the count
- * off the end, and the count is the part that has to survive — it is what
- * tells someone the card is a summary and not the whole set.
- */
-function namePreview(names: string[], shown = 3): string {
-  if (names.length <= shown) return names.join(', ');
-  return `${names.slice(0, shown).join(', ')} + ${names.length - shown} more`;
-}
-
-function ChallengeCard({
-  challenge: c,
-  tone,
-  fresh = false,
-}: {
-  challenge: Challenge;
-  tone?: RampToken;
-  /** Reached since the user last opened this screen. */
-  fresh?: boolean;
-}) {
-  const theme = useTheme();
-  const router = useRouter();
-  // A finished challenge is GOLD, whatever colour it was on the way there.
-  //
-  // This was reported as "on dark mode it just changes to a different shade
-  // of blue/teal and can be missed", and that is exactly what it did. The two
-  // loudest things on a card are the 5px spine and the medal, and neither
-  // moved on completion: the spine stayed the area's brand colour and the
-  // medal went to Platinum's own `#8FD6D2`, a PALE TEAL. All that actually
-  // changed was the fill, from `#18272E` to `#2A2313` — two near-blacks — and
-  // a hairline border. So the one moment the passport exists to celebrate was
-  // the most easily missed state on the screen.
-  const medalColor = c.complete ? theme.gold : c.tier ? TIER_COLOR[c.tier.name] : null;
-  const stripe = c.complete ? theme.gold : tone ? theme[tone] : theme.brandIndigo;
-
-  return (
-    <Pressable
-      onPress={() =>
-        router.push({ pathname: '/challenge/[id]', params: { id: c.id } })
-      }
-      accessibilityRole="button"
-      accessibilityLabel={
-        `${c.title}, ${c.earned} of ${c.target}` +
-        (c.tier ? `, ${c.tier.name}` : '') +
-        '. Opens what is left to do.'
-      }
-      style={({ pressed }) => [
-        styles.card,
-        {
-          backgroundColor: pressed
-            ? theme.backgroundSelected
-            : c.complete
-              ? theme.goldSurface
-              : theme.backgroundElement,
-          borderColor: fresh || c.complete ? theme.gold : medalColor ?? theme.border,
-        },
-        // A full-weight gold edge rather than a hairline, so the card the
-        // banner was talking about is findable in a long list at a glance —
-        // and so is a finished one, which half a pixel never managed.
-        fresh || c.complete ? styles.cardLoud : null,
-      ]}
-    >
-      {/* The same colour spine the dining rows use, so a challenge for a park
-          is visibly the same park. */}
-      <View style={[styles.cardStripe, { backgroundColor: stripe }]} />
-      <View style={styles.cardHead}>
-        <View
-          style={[
-            styles.medal,
-            medalColor
-              ? { backgroundColor: medalColor }
-              : { borderColor: theme.border, borderWidth: StyleSheet.hairlineWidth },
-          ]}
-        >
-          <ThemedText
-            // `onGold` rather than the dark ink the tier colours use: light
-            // mode's gold is itself dark (`#B07818`), so `#1B1205` on it is
-            // about 2:1 and the star would all but vanish. See `theme.ts`.
-            style={[
-              styles.medalMark,
-              {
-                color: c.complete
-                  ? theme.onGold
-                  : medalColor
-                    ? '#1B1205'
-                    : theme.textFaint,
-              },
-            ]}
-          >
-            {c.complete ? '\u2605' : c.tier ? c.tier.name.charAt(0) : String(c.earned)}
-          </ThemedText>
-        </View>
-        <View style={styles.cardMain}>
-          <View style={styles.titleLine}>
-            <ThemedText type="smallBold" style={styles.cardTitle}>
-              {c.title}
-            </ThemedText>
-            {/* COMPLETE replaces the tier tag rather than joining it: a
-                finished tiered challenge is Platinum by definition, so
-                showing both says the same thing twice and spends the width
-                that makes the badge readable. */}
-            {c.complete ? (
-              <ThemedText
-                style={[styles.pillTag, { backgroundColor: theme.gold, color: theme.onGold }]}
-              >
-                COMPLETE
-              </ThemedText>
-            ) : c.tier ? (
-              <ThemedText style={[styles.tierTag, { color: medalColor ?? theme.gold }]}>
-                {c.tier.name.toUpperCase()}
-              </ThemedText>
-            ) : null}
-            {fresh ? (
-              <ThemedText
-                style={[styles.pillTag, { backgroundColor: theme.gold, color: theme.onGold }]}
-              >
-                NEW
-              </ThemedText>
-            ) : null}
-          </View>
-          <ThemedText type="small" themeColor="textSecondary">
-            {c.blurb}
-          </ThemedText>
-        </View>
-      </View>
-
-      <ProgressBar label="" visited={c.earned} total={c.target} tone={tone ?? 'brandIndigo'} />
-
-      {/* Show the next step, not the distant finish line. */}
-      {c.tiered && !c.complete && c.nextTier ? (
-        <ThemedText type="small" themeColor="textFaint">
-          {c.toNext} more for {c.nextTier.name} · {c.earned} of {c.target} so far
-        </ThemedText>
-      ) : null}
-
-      {/* A teaser, not the whole set.
-          This line used to join every remaining name with commas: 221
-          characters for the monorail crawl, in `textFaint`, the
-          lowest-contrast colour in the theme. All ten bars were on the card
-          and the report was still "I can't see which bars are part of this
-          challenge" — which is a fair description of a faint paragraph. The
-          detail screen's checklist is the readable version; this only has to
-          be enough to recognise, so it stops at three names and a count and
-          moves up to `textSecondary`, because this is content rather than
-          an aside. */}
-      {!c.complete && c.remaining?.length ? (
-        <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
-          Still to go: {namePreview(c.remaining)}
-        </ThemedText>
-      ) : null}
-
-      {c.complete ? (
-        <ThemedText type="small" style={{ color: theme.gold }}>
-          {c.tiered ? 'Platinum — every one of them' : 'Earned'}
-        </ThemedText>
-      ) : null}
-
-      {/* The tap target was invisible.
-          Every card has opened its own checklist since the detail screen
-          shipped, and nothing on the card said so — no chevron, no label,
-          nothing to separate it from the static progress readouts around it.
-          So the checklist went unfound and was reported as missing twice. */}
-      <View style={styles.cardMore}>
-        <ThemedText type="small" style={{ color: theme.accent }}>
-          {c.target > 0 ? `See all ${c.target}` : 'See the list'}
-        </ThemedText>
-        <ThemedText style={[styles.chevron, { color: theme.accent }]}>›</ThemedText>
-      </View>
-    </Pressable>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.section}>
-      <ThemedText type="small" themeColor="textFaint" style={styles.sectionTitle}>
-        {title.toUpperCase()}
-      </ThemedText>
-      <View style={styles.sectionBody}>{children}</View>
-    </View>
-  );
 }
 
 const styles = StyleSheet.create({
@@ -414,84 +135,24 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.four,
     gap: Spacing.four,
   },
-  hint: { textAlign: 'center', paddingHorizontal: Spacing.four },
-  /** The part of the header that does not give way. The three counts sit
-   *  beside the number rather than under it, so the strip is one row high
-   *  once the title has gone. */
   summary: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   // Literals, because the sky gradient is the same dark in both schemes —
   // theme text tokens would invert and vanish on it.
-  pct: { color: '#E5B45F', fontSize: 44, lineHeight: 48, fontWeight: '700' },
-  pctSign: { color: '#E5B45F', fontSize: 22, fontWeight: '700' },
-  summaryStats: {
+  count: { color: '#E5B45F', fontSize: 44, lineHeight: 48, fontWeight: '700' },
+  countTotal: { color: 'rgba(255,255,255,0.6)', fontSize: 20, fontWeight: '700' },
+  summaryNote: {
     flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+    gap: 2,
     paddingLeft: Spacing.three,
     borderLeftWidth: StyleSheet.hairlineWidth,
     borderLeftColor: 'rgba(255,255,255,0.18)',
   },
-  heroStat: { alignItems: 'center', gap: 1 },
-  heroStatValue: { color: '#ffffff', fontSize: 17, fontWeight: '700' },
-  heroStatTotal: { color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: '400' },
-  heroStatLabel: {
+  summaryLabel: {
     color: 'rgba(255,255,255,0.6)',
     fontSize: 9,
     fontWeight: '700',
     letterSpacing: 1,
   },
-  areaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
-  areaTile: {
-    width: '48.5%',
-    borderRadius: Radius.medium,
-    borderWidth: StyleSheet.hairlineWidth,
-    overflow: 'hidden',
-    justifyContent: 'flex-end',
-    minHeight: 74,
-  },
-  // Sits behind the text at low opacity, so the tile itself is the bar.
-  areaFill: { position: 'absolute', left: 0, top: 0, bottom: 0, opacity: 0.22 },
-  areaTileInner: { padding: Spacing.two + 2, gap: 2 },
-  areaName: { fontSize: 12, lineHeight: 15 },
-  areaNumbers: { flexDirection: 'row', alignItems: 'baseline', gap: Spacing.two },
-  areaPct: { fontSize: 20, lineHeight: 24, fontWeight: '700' },
-  areaCount: { fontSize: 11 },
-  section: { gap: Spacing.two },
-  sectionTitle: { letterSpacing: 1, fontSize: 11, fontWeight: '700' },
-  sectionBody: { gap: Spacing.three },
-  card: {
-    padding: Spacing.three,
-    paddingLeft: Spacing.three + 5,
-    borderRadius: Radius.large,
-    borderWidth: StyleSheet.hairlineWidth,
-    gap: Spacing.two,
-    overflow: 'hidden',
-  },
-  cardStripe: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 5 },
-  cardHead: { flexDirection: 'row', gap: Spacing.three, alignItems: 'flex-start' },
-  cardMain: { flex: 1, gap: 2 },
-  medal: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  medalMark: { fontSize: 14, fontWeight: '700', lineHeight: 18 },
-  titleLine: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  cardTitle: { flexShrink: 1 },
-  tierTag: { fontSize: 9, fontWeight: '700', letterSpacing: 0.8 },
-  cardLoud: { borderWidth: 2 },
-  cardMore: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  chevron: { fontSize: 16, lineHeight: 18, fontWeight: '700' },
-  /** The filled 9px pill, shared by NEW and COMPLETE. */
-  pillTag: {
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    overflow: 'hidden',
-    borderRadius: Radius.pill,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
+  summaryText: { color: 'rgba(255,255,255,0.8)', fontSize: 13, lineHeight: 18 },
+  footnote: { textAlign: 'center', paddingHorizontal: Spacing.four, lineHeight: 18 },
 });

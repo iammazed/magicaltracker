@@ -256,7 +256,7 @@ tabs does not switch the existing tab. Traced through `getNavigationAction.js`:
 pushed screen, so divergence is detected at the root; `navigationState.type === 'stack'` leaves
 the action as `PUSH`; and `singular` comes from `options.dangerouslySingular`, which `push` never
 sets. So the root stack becomes `[(tabs), trip/[id], (tabs)]` — a whole second tab navigator,
-with all four screens remounted.
+with all five screens remounted.
 
 It is contained rather than harmful: the original tab keeps its own params and `back()` destroys
 the copy. But a route param outlives a tab change, so inside that copy you can leave Dining, come
@@ -300,7 +300,7 @@ flag false on a screen that is already focused.
 iOS labels the back button with the PREVIOUS screen's title. The previous screen is always the
 tab group, which has no title, so navigation fell back to the route name and every detail screen
 showed **"‹ (tabs)"**. Giving `(tabs)` a title does not fix it either: one title has to serve
-four tabs, so opening a restaurant from Dining would read "‹ Home". A bare chevron is correct and
+five tabs, so opening a restaurant from Dining would read "‹ Home". A bare chevron is correct and
 is what Apple itself falls back to when a label will not fit. It is set once in the root Stack's
 `screenOptions`.
 
@@ -1329,6 +1329,61 @@ local point at the same Supabase project, so `npm run db:migrate` covers both �
 matters: the push sends every column the local row has, so a build that knows about a column
 Postgres does not will fail to sync, silently, on a tester's phone. Migration first, build
 second.
+
+## The passport and the stats tab
+
+**They were one screen and it did not work.** Passport rendered an area grid of thirteen tiles,
+then five challenge cards, then the SAME thirteen areas again as full cards — eighteen cards,
+each with a stripe, a medal, a title, a badge, a blurb, a progress bar and up to three further
+lines. Over a hundred text elements in one scroll, and the bottom half was a second rendering of
+the top. It was reported as overwhelming by the person it was built for.
+
+The split follows what the two halves actually are:
+
+| Tab | Holds | Shape |
+|---|---|---|
+| **Stats** | coverage percentages, the area grid, resort progress | numbers |
+| **Passport** | the stamps | a keepsake |
+
+Each area tile on Stats opens `challenge/area-<id>`, which is what the duplicate card list used to
+do. Deleting a list and making the thing above it tappable is usually the better trade: the
+content was never the problem, the second copy was.
+
+### Stamps
+
+`src/components/stamp.tsx`. Three states, and the distance between them is the point — the
+complaint that started this was that completing something "can be missed":
+
+| state | ring | lean | ink |
+|---|---|---|---|
+| complete | 2.5px + `goldSurface` wash | crooked | `gold` |
+| in progress | 1.5px, no fill | square | tier colour, or `accent` when untiered |
+| untouched | 1px at 45% opacity | square | `textFaint` |
+
+**Only an earned stamp leans**, and the angle is hashed from the challenge id rather than random —
+a random angle re-rolls on every render and the page wobbles. Square to the page is what a printed
+form looks like; the lean is the whole illusion.
+
+Glyphs are SF Symbols that shipped in **SF Symbols 4 or earlier**. A name iOS does not recognise
+renders as empty space with no error, and an empty stamp is indistinguishable from a layout bug,
+so this is not the place for a new glyph.
+
+Cells are **30% wide with an 8pt column gap**. At 31% with a 16pt gap the third cell overflows a
+393pt screen by 9pt and silently wraps to two per row. If you change either number, check it
+against a 320pt screen.
+
+`borderStyle: 'dashed'` is deliberately not used for the unearned ring: combined with a corner
+radius it renders solid on iOS, so the dashes would appear on web and Android only.
+
+### Rings need a build, so there are none yet
+
+A circular progress ring is the obvious next step and `react-native-svg` is **not a dependency**.
+Adding one edits `package.json`, which is a fingerprint source, which orphans every existing
+binary — so a ring cannot ship over the air. It waits for the native batch. Hand-rolling an arc
+out of rotated half-circles is possible and was rejected: it is fiddly geometry that cannot be
+verified from Windows, and there is already enough unverified layout in flight.
+
+---
 
 ## Export
 

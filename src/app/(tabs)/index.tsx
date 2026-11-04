@@ -1,10 +1,12 @@
 import { useRouter } from 'expo-router';
+import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ProgressBar } from '@/components/progress-bar';
 import { SkyCard, Stars } from '@/components/sky-card';
+import { Stamp } from '@/components/stamp';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { TripPlanner } from '@/components/trip-planner';
@@ -92,9 +94,22 @@ export default function HomeScreen() {
     return items.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 4);
   }, [visits, stays, venueName, resortName]);
 
-  const nextChallenge = challenges
-    .filter((c) => !c.complete && c.earned > 0)
-    .sort((a, b) => b.earned / b.target - a.earned / a.target)[0];
+  /**
+   * The trophy case first, then the near misses.
+   *
+   * This replaced a single "closest challenge" card, which named one thing
+   * and showed nothing you had already done. A row of stamps is the one place
+   * on Home that is pictures rather than text, and it is the same stamp the
+   * passport is made of — so the home screen previews the keepsake instead of
+   * describing it.
+   */
+  const stampStrip = useMemo(() => {
+    const done = challenges.filter((c) => c.complete);
+    const close = challenges
+      .filter((c) => !c.complete && c.earned > 0)
+      .sort((a, b) => b.earned / b.target - a.earned / a.target);
+    return [...done, ...close].slice(0, 10);
+  }, [challenges]);
 
   if (loading || tripsLoading || onboardingLoading) {
     return (
@@ -279,12 +294,14 @@ export default function HomeScreen() {
               label="Places to eat"
               sub={String(venues.length)}
               tone={theme.brandTeal}
+              glyph={{ ios: 'fork.knife', android: 'restaurant', web: 'restaurant' }}
               onPress={() => router.push('/dining')}
             />
             <Action
               label="Resorts to stay"
               sub={String(resorts.length)}
               tone={theme.brandViolet}
+              glyph={{ ios: 'bed.double.fill', android: 'hotel', web: 'hotel' }}
               onPress={() => router.push('/resorts')}
             />
           </View>
@@ -292,7 +309,7 @@ export default function HomeScreen() {
           {/* ── Progress ─────────────────────────────────────────── */}
           {visits.length > 0 || stays.length > 0 ? (
             <>
-              <Section title="Your progress" action="Passport" onAction={() => router.push('/passport')}>
+              <Section title="Your progress" action="Stats" onAction={() => router.push('/stats')}>
                 <View style={styles.statRow}>
                   <Stat value={overall.visited} total={overall.total} label="Eaten" tone={theme.brandTeal} />
                   <Stat value={resortCoverage.visited} total={resortCoverage.total} label="Stayed" tone={theme.brandViolet} />
@@ -314,18 +331,25 @@ export default function HomeScreen() {
                 ))}
               </Section>
 
-              {nextChallenge ? (
-                <Pressable
-                  onPress={() => router.push('/passport')}
-                  accessibilityRole="button"
-                  style={[styles.card, { backgroundColor: theme.goldSurface, borderColor: theme.gold }]}
+              {stampStrip.length ? (
+                <Section
+                  title="Your passport"
+                  action="See all"
+                  onAction={() => router.push('/passport')}
                 >
-                  <ThemedText type="small" style={{ color: theme.gold, fontWeight: '700', fontSize: 11, letterSpacing: 1 }}>
-                    CLOSEST CHALLENGE
-                  </ThemedText>
-                  <ThemedText type="smallBold">{nextChallenge.title}</ThemedText>
-                  <ProgressBar label="" visited={nextChallenge.earned} total={nextChallenge.target} tone="brandViolet" />
-                </Pressable>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.strip}
+                    // A horizontal list inside a vertical one has no intrinsic
+                    // height and will fight the sections below it for space.
+                    style={styles.stripOuter}
+                  >
+                    {stampStrip.map((c) => (
+                      <Stamp key={c.id} challenge={c} width={78} size={56} />
+                    ))}
+                  </ScrollView>
+                </Section>
               ) : null}
 
               <Section title="Recently logged">
@@ -404,8 +428,16 @@ function TripRow({
 }
 
 function Action({
-  label, sub, tone, onPress,
-}: { label: string; sub: string; tone: string; onPress: () => void }) {
+  label, sub, tone, glyph, onPress,
+}: {
+  label: string;
+  sub: string;
+  tone: string;
+  /** The tiles were two numbers over two labels and read as a table. A glyph
+   *  is what makes each one recognisable before it is read. */
+  glyph: SymbolViewProps['name'];
+  onPress: () => void;
+}) {
   const theme = useTheme();
   return (
     <Pressable
@@ -422,6 +454,7 @@ function Action({
           passport's area tiles. */}
       <View style={[styles.actionWash, { backgroundColor: tone, opacity: 0.14 }]} />
       <View style={[styles.actionBar, { backgroundColor: tone }]} />
+      <SymbolView name={glyph} size={22} weight="semibold" tintColor={tone} />
       <View style={styles.actionText}>
         <ThemedText style={[styles.actionCount, { color: tone }]}>{sub}</ThemedText>
         <ThemedText type="smallBold">{label}</ThemedText>
@@ -518,6 +551,8 @@ const styles = StyleSheet.create({
   actionWash: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
   actionText: { paddingVertical: Spacing.three, gap: 1, flexShrink: 1 },
   actionCount: { fontSize: 26, lineHeight: 30, fontWeight: '700' },
+  strip: { gap: Spacing.three, paddingVertical: Spacing.one, paddingRight: Spacing.three },
+  stripOuter: { flexGrow: 0, flexShrink: 0 },
   statRow: { flexDirection: 'row', gap: Spacing.two },
   stat: {
     flex: 1, alignItems: 'center', paddingVertical: Spacing.three,

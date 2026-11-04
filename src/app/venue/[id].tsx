@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import * as WebBrowser from 'expo-web-browser';
 import {
   ActivityIndicator,
@@ -21,6 +22,10 @@ import { useVenueVisits } from '@/hooks/use-visits';
 import { formatDate } from '@/lib/calendar';
 import { jsonList } from '@/lib/local-db';
 import { formatArray, formatCuisine, formatSubArea, titleCase } from '@/lib/labels';
+
+/** SF Symbol on iOS, Material name elsewhere. */
+const g = (ios: string, md: string): SymbolViewProps['name'] =>
+  ({ ios, android: md, web: md }) as SymbolViewProps['name'];
 
 const SERVICE_LABEL: Record<string, string> = {
   quick: 'Quick service',
@@ -241,15 +246,31 @@ export default function VenueDetailScreen() {
         </Section>
 
         {/* ── Facts ───────────────────────────────────────────────── */}
+        {/* Two columns rather than five label-over-value rows.
+            A stack of "label        value" lines is a table, and a table is
+            read top to bottom even when nobody wants all of it. Paired cells
+            with a glyph apiece are scanned — you find the price without
+            reading the cuisine. */}
         <Section title="Details">
-          <Fact label="Cuisine" value={formatCuisine(venue.cuisine)} />
-          <Fact label="Service" value={service} />
-          <Fact
-            label="Style"
-            value={formatArray(venue.dining_style)}
-          />
-          <Fact label="Price" value={price} />
-          <Fact label="Type" value={titleCase(venue.venue_kind)} />
+          <View style={styles.factGrid}>
+            <Fact
+              label="Cuisine"
+              glyph={g('globe', 'public')}
+              value={formatCuisine(venue.cuisine)}
+            />
+            <Fact label="Service" glyph={g('fork.knife', 'restaurant')} value={service} />
+            <Fact
+              label="Style"
+              glyph={g('sparkles', 'auto_awesome')}
+              value={formatArray(venue.dining_style)}
+            />
+            <Fact label="Price" glyph={g('dollarsign.circle', 'paid')} value={price} />
+            <Fact
+              label="Type"
+              glyph={g('mappin.and.ellipse', 'place')}
+              value={titleCase(venue.venue_kind)}
+            />
+          </View>
         </Section>
 
         {/* ── Menus ───────────────────────────────────────────────── */}
@@ -320,14 +341,26 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Fact({ label, value }: { label: string; value: string | null }) {
+function Fact({
+  label,
+  value,
+  glyph,
+}: {
+  label: string;
+  value: string | null;
+  glyph: SymbolViewProps['name'];
+}) {
+  const theme = useTheme();
   if (!value) return null;
   return (
     <View style={styles.fact}>
-      <ThemedText type="small" themeColor="textSecondary" style={styles.factLabel}>
-        {label}
-      </ThemedText>
-      <ThemedText type="small" style={styles.factValue}>
+      <View style={styles.factHead}>
+        <SymbolView name={glyph} size={13} weight="semibold" tintColor={theme.accent} />
+        <ThemedText type="small" themeColor="textSecondary" style={styles.factLabel}>
+          {label}
+        </ThemedText>
+      </View>
+      <ThemedText type="smallBold" style={styles.factValue}>
         {value}
       </ThemedText>
     </View>
@@ -364,9 +397,13 @@ const styles = StyleSheet.create({
   description: { lineHeight: 23 },
   sectionTitle: { letterSpacing: 1, fontSize: 11, fontWeight: '700' },
   sectionBody: { gap: Spacing.two },
-  fact: { flexDirection: 'row', gap: Spacing.three },
-  factLabel: { width: 80 },
-  factValue: { flex: 1, textTransform: 'capitalize' },
+  factGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: Spacing.three },
+  /** Two per row. `flexBasis` rather than `width` so a lone fifth cell on the
+   *  last row stays column-width instead of stretching across. */
+  fact: { flexBasis: '50%', flexGrow: 0, paddingRight: Spacing.three, gap: 2 },
+  factHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one + 2 },
+  factLabel: { flexShrink: 1 },
+  factValue: { textTransform: 'capitalize' },
   visitList: { gap: Spacing.two },
   visitRow: {
     flexDirection: 'row',
