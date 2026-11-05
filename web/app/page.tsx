@@ -15,7 +15,7 @@ const FEATURES = [
   },
   {
     title: "A passport worth filling",
-    body: "Drinking Around the World. Four Parks in One Day. The Transportation Challenge. Festivals, after-hours parties, and coverage badges for every park.",
+    body: "Drinking Around the World. Four Parks, One Day. The Transportation Challenge. Under the Fireworks. More than thirty stamps in all — some for what you ate, some for where you slept, some for being there on the right night.",
     ring: "from-brand-3 to-brand-4",
   },
   {
