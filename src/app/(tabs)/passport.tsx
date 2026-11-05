@@ -9,7 +9,12 @@ import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { currentMilestone, useAchievements } from '@/hooks/use-achievements';
 import { useBottomInset } from '@/hooks/use-bottom-inset';
-import { STAY_CHALLENGE_IDS, type Challenge, usePassport } from '@/hooks/use-passport';
+import {
+  QUEST_CHALLENGE_IDS,
+  STAY_CHALLENGE_IDS,
+  type Challenge,
+  usePassport,
+} from '@/hooks/use-passport';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -60,10 +65,24 @@ export default function PassportScreen() {
   }
 
   const earned = challenges.filter((c) => c.complete).length;
+  /**
+   * Four pages, and the split is by WHAT EARNS THE STAMP.
+   *
+   * The first cut of this had a page called "Challenges" and a page called
+   * "Parks and areas", which put food challenges on both — the set pieces on
+   * one and "every place to eat in EPCOT" on the other — with nothing in
+   * either title to say why. Both are food; one is a list someone set out to
+   * finish and the other is coverage of a place. Naming them for that is the
+   * whole fix.
+   */
   const areas = challenges.filter((c) => c.id.startsWith('area-'));
   const stays = challenges.filter((c) => STAY_CHALLENGE_IDS.includes(c.id));
-  const named = challenges.filter(
-    (c) => !c.id.startsWith('area-') && !STAY_CHALLENGE_IDS.includes(c.id),
+  const quests = challenges.filter((c) => QUEST_CHALLENGE_IDS.includes(c.id));
+  const food = challenges.filter(
+    (c) =>
+      !c.id.startsWith('area-') &&
+      !STAY_CHALLENGE_IDS.includes(c.id) &&
+      !QUEST_CHALLENGE_IDS.includes(c.id),
   );
 
   return (
@@ -97,22 +116,21 @@ export default function PassportScreen() {
           ]}
         >
           <PassportPage
-            title="Challenges"
+            title="Food and drink"
             caption="Set pieces — finish the whole list to earn the stamp."
           >
-            {named.map((c) => (
+            {food.map((c) => (
               <Stamp key={c.id} challenge={c} fresh={isFresh(c, fresh)} />
             ))}
           </PassportPage>
 
-          {/* Kept apart from the challenges above because they are a
-              different kind of thing entirely: these are earned by sleeping
-              somewhere or by being here in a given month, and none of them
-              needs a meal. Buried in with twenty restaurant stamps they would
-              read as more of the same. */}
+          {/* Kept apart from the food above because they are a different
+              kind of thing entirely: earned by sleeping somewhere, with no
+              meal involved. Buried in with thirteen restaurant stamps they
+              would read as more of the same. */}
           <PassportPage
-            title="Stays and days"
-            caption="Earned by where you slept and when you were here."
+            title="Resort stays"
+            caption="Earned by where you slept, not what you ate."
           >
             {stays.map((c) => (
               <Stamp key={c.id} challenge={c} fresh={isFresh(c, fresh)} />
@@ -120,8 +138,17 @@ export default function PassportScreen() {
           </PassportPage>
 
           <PassportPage
+            title="Quests"
+            caption="Where you were, when you were here, and how you got around."
+          >
+            {quests.map((c) => (
+              <Stamp key={c.id} challenge={c} fresh={isFresh(c, fresh)} />
+            ))}
+          </PassportPage>
+
+          <PassportPage
             title="Parks and areas"
-            caption="One stamp per area, earned by eating at every place in it."
+            caption="Also food: one stamp per area, earned by eating at every place in it."
           >
             {areas.map((c) => (
               <Stamp key={c.id} challenge={c} fresh={isFresh(c, fresh)} />

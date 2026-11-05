@@ -1,6 +1,6 @@
 {
-  "version": "d2ff6af07249",
-  "generated_at": "2026-10-27T04:08:57.649Z",
+  "version": "80d31ac0e93c",
+  "generated_at": "2026-11-05T18:50:08.899Z",
   "destinations": [
     {
       "id": "wdw",
@@ -3085,7 +3085,9 @@
       "lat": 28.41548467,
       "lng": -81.57429844,
       "description": "An evening cocktail reception on the top floor of Disney's Contemporary Resort, serving sushi, small plates from the California Grill kitchen, desserts, and an open bar for guests 21 and over. The lights dim for the Magic Kingdom fireworks viewed from the observation deck, with a dessert and coffee course afterward.",
-      "tags": [],
+      "tags": [
+        "fireworks"
+      ],
       "keywords": [
         "lounge",
         "events",
@@ -6252,7 +6254,9 @@
       "lat": 28.37490106,
       "lng": -81.54938168,
       "description": "A 21-and-over lounge serving cocktails and small plates, overlooking the Seven Seas Lagoon.",
-      "tags": [],
+      "tags": [
+        "fireworks"
+      ],
       "keywords": [
         "lounge",
         "events",
@@ -9283,7 +9287,9 @@
       "lat": 28.41810875,
       "lng": -81.58052097,
       "description": "Watch the \"Happily Ever After\" fireworks show from a reserved standing area in the Plaza Garden before heading to the Tomorrowland Terrace Restaurant for an unlimited dessert buffet.",
-      "tags": [],
+      "tags": [
+        "fireworks"
+      ],
       "keywords": [
         "events",
         "magic-kingdom",
@@ -9324,7 +9330,9 @@
       "lat": 28.41810875,
       "lng": -81.58052097,
       "description": "An all-you-can-eat dessert buffet and drinks at Tomorrowland Terrace Restaurant before you head to a reserved standing area in the Plaza Garden for the \"Happily Ever After\" fireworks show",
-      "tags": [],
+      "tags": [
+        "fireworks"
+      ],
       "keywords": [
         "events",
         "magic-kingdom",
@@ -9365,7 +9373,9 @@
       "lat": 28.41810875,
       "lng": -81.58052097,
       "description": "Provides an all-you-care-to-enjoy dessert buffet and a guaranteed seated view of the Happily Ever After nighttime spectacular from the outdoor terrace of Tomorrowland Terrace Restaurant",
-      "tags": [],
+      "tags": [
+        "fireworks"
+      ],
       "keywords": [
         "events",
         "magic-kingdom",
@@ -9978,7 +9988,9 @@
       "lat": 28.41812762,
       "lng": -81.58056389,
       "description": "A holiday dining experience at Magic Kingdom that features an all-you-care-to-enjoy dessert buffet and reserved seated viewing for the park's Christmas fireworks show",
-      "tags": [],
+      "tags": [
+        "fireworks"
+      ],
       "keywords": [
         "events",
         "seasonal",
@@ -10019,7 +10031,9 @@
       "lat": 28.41812762,
       "lng": -81.58056389,
       "description": "A holiday dining experience at Magic Kingdom that features an all-you-care-to-enjoy dessert buffet and reserved seated viewing for the park's Christmas fireworks show",
-      "tags": [],
+      "tags": [
+        "fireworks"
+      ],
       "keywords": [
         "events",
         "seasonal",
@@ -10402,7 +10416,9 @@
       "lat": 28.41812762,
       "lng": -81.58056389,
       "description": "All-you-care-to-enjoy Halloween-themed buffet and a reserved seated view of the Magic Kingdom fireworks during Mickey's Not-So-Scary Halloween Party.",
-      "tags": [],
+      "tags": [
+        "fireworks"
+      ],
       "keywords": [
         "halloween",
         "seasonal",
@@ -10444,7 +10460,9 @@
       "lat": 28.41812762,
       "lng": -81.58056389,
       "description": "All-you-care-to-enjoy Halloween-themed buffet and a reserved seated view of the Magic Kingdom fireworks during Mickey's Not-So-Scary Halloween Party.",
-      "tags": [],
+      "tags": [
+        "fireworks"
+      ],
       "keywords": [
         "halloween",
         "seasonal",
@@ -12319,7 +12337,8 @@
       "lng": -81.55166406,
       "description": "Provides a prix fixe British dinner on an outdoor patio with waterfront views of the Luminous The Symphony of Us nighttime spectacular",
       "tags": [
-        "world-showcase-bar"
+        "world-showcase-bar",
+        "fireworks"
       ],
       "keywords": [
         "epcot",
@@ -13069,7 +13088,8 @@
       "lng": -81.55070702,
       "description": "Enjoy a feast for the senses, with a delicious sushi izakaya meal and dazzling views of the nighttime fireworks show at EPCOT",
       "tags": [
-        "world-showcase-bar"
+        "world-showcase-bar",
+        "fireworks"
       ],
       "keywords": [
         "events",

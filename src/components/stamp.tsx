@@ -80,6 +80,8 @@ const CHALLENGE_GLYPH: Record<string, Glyph> = {
   'resort-collection': g('key.fill', 'key'),
   'all-year-round': g('calendar', 'calendar_month'),
   'park-hopper': g('ticket.fill', 'confirmation_number'),
+  transportation: g('arrow.triangle.branch', 'alt_route'),
+  fireworks: g('sparkles', 'auto_awesome'),
 };
 
 const AREA_GLYPH: Record<string, Glyph> = {

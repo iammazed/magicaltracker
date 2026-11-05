@@ -246,20 +246,34 @@ both must count.
   `polynesian-village-resort`. Two stops are tagged on a restaurant rather than a
   bar — `narcoossees` and `california-grill` — because the catalog has no separate
   bar row for either.
+- `fireworks` — a reserved view of a nighttime show you can book: dessert parties, fireworks
+  dining packages, rooftop receptions (11 rows, all of them `event`). **Tag only from what the
+  row itself says.** Every one of these names fireworks in its own name or description;
+  `spice-road-table-dining-package` is deliberately NOT tagged, because its description says
+  only "the nighttime show" — fix the description and the tag follows, not the other way round.
 - `world-showcase-bar` — any World Showcase venue serving alcohol (47 rows)
 - `world-showcase-snack` — any you can grab food from without a sit-down meal: kiosks, carts,
   snack stands, quick service (23 rows)
 
-Events count toward these. The event exclusion applies only to coverage *percentages*, where a
-seasonal party would make a park uncompletable; a tequila tasting in Mexico is unambiguously a
-drink in Mexico.
+Events count toward these, and the precise rule is worth stating because getting it wrong has
+cost a bug in both directions:
+
+- **A grouped challenge counts events.** A pavilion is ticked by any one venue inside it, so a
+  tagged event only ever adds a WAY IN — never a requirement. A tequila tasting in Mexico is
+  unambiguously a drink in Mexico, and so is the Rose & Crown fireworks package in the United
+  Kingdom.
+- **A flat, one-step-per-venue challenge does not.** There, one more tagged row is one more thing
+  you are required to do. `signature` on "The Magic of New Year's Eve at California Grill" put a
+  specific New Year's Eve party between every user and a finished challenge.
+
+So tag the event either way; the code decides which of the two shapes is counting.
 
 ### `tags`
 
 Pipe-delimited. These drive achievements, so they are functional, not descriptive:
 
 `world-showcase-bar` · `world-showcase-snack` · `character-dining` · `signature` ·
-`monorail-bar-crawl` ·
+`monorail-bar-crawl` · `fireworks` ·
 `breakfast` · `lunch` · `dinner` · `mobile-order` · `outdoor-seating`
 
 Tag as you go. Retrofitting tags across 200 rows later costs a full day.

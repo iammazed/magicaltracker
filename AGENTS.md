@@ -1332,8 +1332,8 @@ second.
 
 ## The passport and the stats tab
 
-**They were one screen and it did not work.** Passport rendered an area grid of thirteen tiles,
-then five challenge cards, then the SAME thirteen areas again as full cards — eighteen cards,
+**They were one screen and it did not work.** Passport rendered an area grid of twelve tiles,
+then five challenge cards, then the SAME twelve areas again as full cards — seventeen cards,
 each with a stripe, a medal, a title, a badge, a blurb, a progress bar and up to three further
 lines. Over a hundred text elements in one scroll, and the bottom half was a second rendering of
 the top. It was reported as overwhelming by the person it was built for.
@@ -1343,12 +1343,27 @@ The split follows what the two halves actually are:
 | Tab | Holds | Shape |
 |---|---|---|
 | **Stats** | coverage percentages, the area grid, resort progress | numbers |
-| **Passport** | the stamps, on three pages | a keepsake |
+| **Passport** | the stamps, on four pages | a keepsake |
 
-The three pages are **Challenges**, **Stays and days** and **Parks and areas**, split by
-`STAY_CHALLENGE_IDS` in `use-passport.ts`. The middle page exists because the challenges that are
-not about eating — resorts slept at, months of the year, four parks in a day — read as more of
-the same when they sit among twenty stamps about restaurants.
+The four pages are split **by what earns the stamp**, via `STAY_CHALLENGE_IDS` and
+`QUEST_CHALLENGE_IDS` in `use-passport.ts`:
+
+| Page | Earned by | Count |
+|---|---|---|
+| **Food and drink** | eating or drinking your way through a list | 13 |
+| **Resort stays** | sleeping somewhere — no meal involved | 4 |
+| **Quests** | where you were, when, and how you got around | 4 |
+| **Parks and areas** | eating at every place in one area — also food | 12 |
+
+The areas page holds **12**, not 14: `byArea` groups the venues that exist, so Typhoon Lagoon and
+Disney's BoardWalk have no stamp because they have no eligible venue. An area appears the day it
+gets its first row.
+
+The first cut of this had a page called "Challenges" and a page called "Parks and areas", which
+put food challenges on both — the set pieces on one, "every place to eat in EPCOT" on the other —
+with nothing in either title to say why. Both are food; one is a list someone sets out to finish
+and the other is coverage of a place. Naming them for that was the whole fix, and it is why the
+areas page says "Also food" in its caption rather than being merged into a page of 26 stamps.
 
 Each area tile on Stats opens `challenge/area-<id>`, which is what the duplicate card list used to
 do. Deleting a list and making the thing above it tappable is usually the better trade: the
@@ -1426,7 +1441,7 @@ verified from Windows, and there is already enough unverified layout in flight.
 
 ## Challenges
 
-Thirty-two of them, and **none needs a catalog import**. They are derived from
+Thirty-three of them, and all but one need **no catalog import**. They are derived from
 columns the rows already carry — `venue_kind`, `dining_style`, `price_tier`,
 `cuisine`, `resort_id`, `area_id`, `sub_area`, `tags`, resort `tier` and
 `transport` — plus the dates already on the visit and stay log. That is what
@@ -1489,6 +1504,35 @@ trips is not park hopping. Three of four means one day got close, not that three
 
 `stayable` is `eligible`'s counterpart: Disney-owned and open. The resort percentage on Stats and
 every stay challenge count from it, so the two cannot disagree about the total.
+
+### Quests
+
+| challenge | counts | target |
+|---|---|---|
+| Four Parks, One Day | the four parks on your best single day | 4 |
+| The Transportation Challenge | reaching a resort served by each way of getting around | 5 |
+| Under the Fireworks | every bookable reserved view of a nighttime show, tiered | 11 |
+| All Year Round | a visit or a stay in each calendar month | 12 |
+
+**A resort counts as REACHED if you stayed there OR ate there**, because both mean you travelled
+to it — you cannot have dinner at the Polynesian without a monorail, a boat or a bus. What the
+app cannot know is which one you took. "The monorail, the Skyliner, a bus and a ferry in the same
+trip" was the request, and nothing short of a transport log would support it, so the blurb
+promises only what is counted. Transport steps carry no `options`: bus serves 32 resorts, and a
+row of 32 chips is not a checklist, so the second line names them under five and counts them
+above.
+
+**`eligible` excludes events; `withEvents` does not, and which one a builder uses depends on its
+SHAPE.** The rule at the top of `use-passport.ts` keeps events out of a denominator, and that is
+right for a flat challenge, where one more tagged row is one more thing you must do — the
+Signature Dining bug was a New Year's Eve party standing between every user and a finished
+challenge. It is wrong for a GROUPED challenge, where an event can only add a way in. Routing
+the pavilions through `eligible` quietly stopped six real ways in from counting: La Cava, the
+Rose & Crown and Shiki-Sai fireworks packages, and the three festival packages at the American
+Adventure. `data/README.md` had said so all along. Under the Fireworks is counted from
+`withEvents` for the same reason in reverse: every row in it is an event, the challenge is
+visibly about seasonal parties, and it is tiered so that two Halloween-only and two
+Christmas-only parties do not mean three trips before the first sign of progress.
 
 **Every challenge counts from `eligible`, never from the raw catalog.** This
 was a live bug: Signature Dining counted from all rows, and "The Magic of New
@@ -1903,6 +1947,46 @@ Some fields are functionally load-bearing rather than descriptive: the eleven Wo
 pavilion slugs drive Drinking/Snacking Around the World, and `transport` on resorts drives the
 Transportation Challenge. Wrong value, unearnable badge.
 
+### A CSV edit that has not been imported does not exist
+
+This one reached a phone, and its symptom pointed nowhere near its cause: **the Monorail Bar
+Crawl opened to an empty checklist** — the banner, the blurb, the progress bar, and nothing
+underneath.
+
+`data/venues.csv` had grown a `monorail-bar-crawl` tag on ten rows and `src/data/catalog.json`
+had been regenerated from it, so the change looked shipped. `npm run db:import` was never run, so
+Supabase still held those ten rows untagged. On a device:
+
+1. **install or update** — SQLite is seeded from the bundled `catalog.json`, which HAS the tag.
+   The challenge works.
+2. **first refresh** — `writeCatalog(..., source: 'remote')` DELETEs every row and rewrites it
+   from Supabase, which does not. The challenge silently drops to zero steps.
+
+So it was broken only on devices that had been online, which is the opposite of how a
+missing-data bug is expected to behave, and it looked like a layout bug rather than a data one.
+`use-catalog`'s guard catches a refresh that returns NOTHING — the loud failure. Nothing caught
+one that returned rows that were merely old.
+
+**The remote catalog always wins on a device.** Regenerating the bundle makes a CSV change look
+live right up until the first refresh takes it away again, which is worse than not shipping it.
+So the order is always: edit CSV → `npm run db:import` → `npm run data:bundle` → publish.
+
+    node scripts/check-catalog-sync.mjs
+
+compares every verified CSV row against the deployed catalog, field by field, using the same
+publishable key and the same columns the app reads — so it sees what a phone sees and needs no
+`DATABASE_URL`. Coordinates are compared to 1e-9 degrees, because PostgREST serialises a double
+to 15 significant digits and 28.371383424602794 comes back as 28.3713834246028: a rendering
+difference, not a data difference. Orphans are reported and do not fail, since the importer never
+deletes.
+
+**It is deliberately not an npm script.** The `scripts` block of `package.json` is a fingerprint
+source (`packageJson:scripts`), so one more line in it moves the runtime version and orphans
+every binary already on a phone. A developer convenience is never worth a new build. Same reason
+`check-catalog-sync.mjs` and `import-catalog.mjs` share their CSV cell converters out of
+`scripts/vocabulary.mjs`: a guard with its own private idea of what an empty cell means is a
+guard that will eventually disagree with the thing it guards.
+
 ---
 
 ## Before saying something works
@@ -1912,6 +1996,9 @@ Transportation Challenge. Wrong value, unearnable badge.
 - `npm run validate:data` passes, if the CSVs changed.
 - `npm run check:catalog` passes, if `CATALOG_DDL` changed. A fresh install is not a test —
   this one upgrades an existing database, which is what every current user actually does.
+- `node scripts/check-catalog-sync.mjs` passes, if either CSV changed. A bundle rebuild is not an
+  import, and the device prefers the server — see "A CSV edit that has not been imported does not
+  exist".
 - `npm run check:iap` passes, if a product identifier or the paywall changed. A mismatch has
   no symptom: the plan shows its fallback price, says "Not available here" when tapped, and the
   only sign is revenue that never arrives. It caught `premium_annual` vs `premium_yearly` on its

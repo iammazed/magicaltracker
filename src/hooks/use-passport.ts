@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 
 import { useCatalog } from '@/hooks/use-catalog';
-import { TIER_LABEL, useResorts } from '@/hooks/use-resorts';
+import { TIER_LABEL, TRANSPORT_LABEL, useResorts } from '@/hooks/use-resorts';
 import { useVenues } from '@/hooks/use-venues';
 import { useVisits } from '@/hooks/use-visits';
 import { MONTH_LABELS, formatDate, parseISO } from '@/lib/calendar';
@@ -94,9 +94,22 @@ export const STAY_CHALLENGE_IDS = [
   'skyliner-resorts',
   'resort-tiers',
   'resort-collection',
-  'all-year-round',
-  'park-hopper',
 ];
+
+/**
+ * The ones that are neither a meal nor a night: where you were, when, and how
+ * you got around. Ordered as the page should read them.
+ */
+export const QUEST_CHALLENGE_IDS = [
+  'park-hopper',
+  'transportation',
+  'fireworks',
+  'all-year-round',
+];
+
+/** The order the five ways of getting around should be listed in, which is
+ *  not alphabetical and is not the order the catalog happens to hold. */
+const TRANSPORT_ORDER = ['monorail', 'skyliner', 'boat', 'bus', 'walk'];
 
 /**
  * "Disney's Polynesian Village Resort" → "Polynesian Village Resort".
@@ -287,6 +300,32 @@ export function usePassport() {
     [venues],
   );
 
+  /**
+   * `eligible` plus the events — and the distinction is not the one the rule
+   * at the top of this file makes, so it needs stating.
+   *
+   * That rule keeps events out of a DENOMINATOR. It is right for a flat
+   * challenge, where one more tagged row is one more thing you are required to
+   * do: the Signature Dining bug was exactly that, a New Year's Eve party
+   * standing between someone and a finished challenge.
+   *
+   * It is wrong for a GROUPED challenge, where an event can only ever add a
+   * WAY IN and never a requirement. `data/README.md` has said so all along —
+   * "a tequila tasting in Mexico is unambiguously a drink in Mexico" — and
+   * routing the pavilions through `eligible` quietly stopped six real ways in
+   * from counting: La Cava, Rose & Crown's fireworks package, Shiki-Sai's, and
+   * the three festival packages at the American Adventure. Somebody who did
+   * the Rose & Crown package HAS drunk in the United Kingdom, and the app was
+   * telling them they had not.
+   *
+   * Closed rows are filtered again here rather than relied upon: `useVenues`
+   * already drops them, and this keeps the rule true of this list on its own.
+   */
+  const withEvents = useMemo(
+    () => venues.filter((v) => v.status !== 'permanently-closed'),
+    [venues],
+  );
+
   const overall = useMemo<Coverage>(() => {
     const visited = eligible.filter((v) => byVenue.has(v.id)).length;
     return {
@@ -451,8 +490,11 @@ export function usePassport() {
       blurb: string,
       tag: string,
     ): Challenge => {
+      // `withEvents`, not `eligible` — see the note on it. A pavilion step is
+      // a group, so an event here is one more way in, never one more
+      // requirement.
       const inPavilion = new Map<string, typeof eligible>();
-      for (const r of eligible) {
+      for (const r of withEvents) {
         if (!r.tags?.includes(tag) || !r.sub_area) continue;
         const list = inPavilion.get(r.sub_area) ?? [];
         list.push(r);
@@ -701,6 +743,78 @@ export function usePassport() {
     };
 
     /**
+     * Every way of getting around the property.
+     *
+     * A resort counts as REACHED if you stayed there or ate there, because
+     * both mean you travelled to it — you cannot have dinner at the
+     * Polynesian without taking the monorail, a boat or a bus. What the app
+     * cannot know is which one you actually took: there is no transport log,
+     * and nothing short of one would let this say "the monorail, the Skyliner,
+     * a bus and a ferry in the same trip". So it counts what is knowable and
+     * says exactly that in the blurb.
+     *
+     * Steps carry no `options`. Bus serves all 31 resorts and a row of 31
+     * chips is not a checklist, so the second line names them where there are
+     * few and counts them where there are many.
+     */
+    const transportChallenge = (): Challenge => {
+      const transportOf = new Map(resorts.map((r) => [r.id, r.transport]));
+
+      const reached = new Set<string>();
+      for (const r of resorts) if (byResort.has(r.id)) reached.add(r.id);
+      for (const v of eligible) if (v.resort_id && visitedIds.has(v.id)) reached.add(v.resort_id);
+
+      const modesReached = new Set<string>();
+      for (const id of reached) {
+        for (const mode of transportOf.get(id) ?? []) modesReached.add(mode);
+      }
+
+      const steps: ChallengeStep[] = TRANSPORT_ORDER.map((mode) => {
+        const served = resorts.filter((r) => r.transport.includes(mode));
+        return {
+          id: mode,
+          label: TRANSPORT_LABEL[mode] ?? titleCase(mode),
+          done: modesReached.has(mode),
+          venueId: null,
+          where:
+            served.length <= 4
+              ? served.map((r) => shortResort(r.name)).join(', ')
+              : `${served.length} resorts`,
+        };
+      });
+
+      return fromSteps(
+        'transportation',
+        'The Transportation Challenge',
+        'Reach a resort served by every way of getting around — monorail, Skyliner, boat, bus and on foot.',
+        steps,
+      );
+    };
+
+    /**
+     * Fireworks, from the places that sell you a view of them.
+     *
+     * Counted from `withEvents`, because every one of these IS an event — a
+     * dessert party, a dining package, a cocktail reception on a top floor.
+     * The rule that keeps events out of a denominator exists so a seasonal
+     * party cannot make a park uncompletable; it has nothing to say about a
+     * challenge that is deliberately and visibly about seasonal parties, and
+     * nobody opens this one expecting to finish it in a week.
+     *
+     * Tiered for that reason. Two of these run only at Halloween and two only
+     * at Christmas, so all-or-nothing would mean three trips in three seasons
+     * before the first sign of progress.
+     */
+    const fireworksChallenge = (): Challenge =>
+      fromSteps(
+        'fireworks',
+        'Under the Fireworks',
+        'Dessert parties, dining packages and rooftops — every reserved view of a nighttime show.',
+        venueSteps(withEvents.filter((r) => r.tags?.includes('fireworks'))),
+        true,
+      );
+
+    /**
      * One step per cuisine, ticked by any one place that serves it.
      *
      * The same shape as the pavilions — the step is the cuisine, several
@@ -868,15 +982,23 @@ export function usePassport() {
         () => true,
         true,
       ),
-      yearChallenge(),
+      // ── Quests ────────────────────────────────────────────────────────
+      // Neither a meal nor a night: where you were, when, and how you moved.
+      // In `QUEST_CHALLENGE_IDS` order, because that is the order the
+      // passport page prints them in and two orderings would drift.
       parkHopperChallenge(),
+      transportChallenge(),
+      fireworksChallenge(),
+      yearChallenge(),
     ];
   }, [
     byVenue,
     byResort,
     byArea,
     eligible,
+    withEvents,
     stayable,
+    resorts,
     visits,
     stays,
     areaNames,

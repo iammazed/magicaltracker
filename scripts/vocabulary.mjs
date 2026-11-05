@@ -78,6 +78,12 @@ export const WORLD_SHOWCASE = [
 export const TAGS = [
   'world-showcase-bar', 'world-showcase-snack', 'character-dining', 'signature',
   'monorail-bar-crawl',
+  // Only on `event` rows, and only where the row's OWN name or description
+  // says so. Tagging from memory is how a challenge starts asking for
+  // something that is not there — `spice-road-table-dining-package` is
+  // deliberately untagged because its description says "the nighttime show"
+  // and never says fireworks.
+  'fireworks',
   'breakfast', 'lunch', 'dinner', 'mobile-order', 'outdoor-seating',
 ];
 
@@ -107,8 +113,15 @@ export const VENUE_COLUMNS = [
   'description', 'tags', 'keywords', 'verified_on', 'source_url',
 ];
 
-/** Columns that hold a pipe-separated list rather than a single value. */
-export const MULTI_VALUE_COLUMNS = ['service_type', 'dining_style', 'tags', 'keywords'];
+/**
+ * Columns that hold a pipe-separated list rather than a single value, across
+ * BOTH tables — `transport` is on resorts and is as pipe-separated as `tags`.
+ * It was missing from this list while nothing read it, which is exactly how a
+ * list like this goes wrong.
+ */
+export const MULTI_VALUE_COLUMNS = [
+  'service_type', 'dining_style', 'tags', 'keywords', 'transport',
+];
 
 /** Every meal-period menu column, so callers do not hard-code the list. */
 export const MENU_COLUMNS = [
@@ -148,6 +161,27 @@ export function parseCsv(text) {
   if (inQuotes) throw new Error('Unterminated quoted field — check for a stray " character');
   return rows.filter((r) => r.some((c) => c.trim() !== ''));
 }
+
+/* ── CSV cell converters ──────────────────────────────────────────────────
+ *
+ * One copy, because the importer writes the database with these and
+ * `check-catalog-sync.mjs` decides whether the database matches using them.
+ * Two implementations of "what does an empty cell mean" is how a guard starts
+ * disagreeing with the thing it guards.
+ */
+
+/** An empty cell is NULL, not 0. */
+export const num = (v) => (v === '' || v == null ? null : Number(v));
+
+/** Only the literal `TRUE` is true. A blank is false, not unknown. */
+export const bool = (v) => v === 'TRUE';
+
+/** An empty cell is NULL, not the empty string. */
+export const nullable = (v) => (v === '' ? null : v);
+
+/** A pipe-separated cell as a trimmed array, empty for a blank. */
+export const pipes = (v) =>
+  v === '' || v == null ? [] : v.split('|').map((s) => s.trim()).filter(Boolean);
 
 /** Reads a CSV into `{ rec, line }` records keyed by header name. */
 export function readTable(path, expectedColumns, fs) {

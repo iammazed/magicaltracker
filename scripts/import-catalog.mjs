@@ -26,7 +26,8 @@ import { fileURLToPath } from 'node:url';
 import postgres from 'postgres';
 
 import {
-  AREA_ROWS, DESTINATION_ROWS, RESORT_COLUMNS, VENUE_COLUMNS, readTable,
+  AREA_ROWS, DESTINATION_ROWS, RESORT_COLUMNS, VENUE_COLUMNS,
+  bool, num, pipes, nullable, readTable,
 } from './vocabulary.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -55,11 +56,6 @@ console.log('  Validation passed.');
 
 const resortTable = readTable(join(ROOT, 'data', 'resorts.csv'), RESORT_COLUMNS, fs);
 const venueTable = readTable(join(ROOT, 'data', 'venues.csv'), VENUE_COLUMNS, fs);
-
-const num = (v) => (v === '' || v == null ? null : Number(v));
-const bool = (v) => v === 'TRUE';
-const nullable = (v) => (v === '' ? null : v);
-const pipes = (v) => (v === '' || v == null ? [] : v.split('|').map((s) => s.trim()).filter(Boolean));
 
 const allResorts = resortTable.records.map((r) => r.rec);
 const allVenues = venueTable.records.map((r) => r.rec);
