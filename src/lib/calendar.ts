@@ -35,6 +35,9 @@ const DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 /** `Jan`…`Dec`, for the twelve-month grid in the date picker. */
 export const MONTH_SHORT = MONTHS.map((m) => m.slice(0, 3));
 
+/** Spelled out, for somewhere with room — a checklist rather than a grid. */
+export const MONTH_LABELS = MONTHS;
+
 /** Sunday-first, which is the US convention and Walt Disney World is in Florida. */
 export const WEEKDAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 

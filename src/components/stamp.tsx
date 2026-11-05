@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
@@ -20,19 +21,26 @@ import { useTheme } from '@/hooks/use-theme';
  *   - a rule across the middle splitting the face into mark and legend
  *   - short, wide-tracked, all-caps type
  *   - ink that is not quite opaque, over a disc of the same colour
+ *   - the status word set on an ARC, following the ring
  *   - pressed crooked
  *
  * Three states, and the distance between them is the point — the complaint
  * that started this was that finishing something "can be missed":
  *
- *   | state       | ring  | disc | lean    | ink        |
- *   |-------------|-------|------|---------|------------|
- *   | complete    | 3px   | yes  | crooked | gold       |
- *   | in progress | 1.5px | no   | square  | tier/area  |
- *   | untouched   | 1px   | no   | square  | faint      |
+ *   | state       | ring  | disc | lean    | ink        | legend     |
+ *   |-------------|-------|------|---------|------------|------------|
+ *   | complete    | 3px   | yes  | crooked | gold       | arc        |
+ *   | in progress | 1.5px | no   | square  | tier/area  | straight   |
+ *   | untouched   | 1px   | no   | square  | faint      | straight   |
  *
  * Only an earned stamp leans. A page of upright outlines with two crooked
  * inked stamps in it reads instantly, at arm's length, with no text.
+ *
+ * **Everything inside is sized from the measured diameter, not in points.**
+ * One stamp is ~99pt wide in the passport grid and 84pt in the home strip,
+ * and the version before this used a fixed 22pt mark for both — which is 22%
+ * of the grid cell and reads as a small icon lost in a big circle. The
+ * proportions below hold at every width.
  */
 
 /** Material names for Android and web, which have no SF Symbols. */
@@ -63,6 +71,15 @@ const CHALLENGE_GLYPH: Record<string, Glyph> = {
   'street-eats': g('box.truck.fill', 'local_shipping'),
   lounges: g('wineglass.fill', 'wine_bar'),
   cuisines: g('fork.knife.circle.fill', 'restaurant'),
+
+  // The stays half of the passport, which is where the challenges that are
+  // not about eating live.
+  'monorail-resorts': g('tram.fill', 'tram'),
+  'skyliner-resorts': g('cablecar.fill', 'tram'),
+  'resort-tiers': g('square.stack.3d.up.fill', 'layers'),
+  'resort-collection': g('key.fill', 'key'),
+  'all-year-round': g('calendar', 'calendar_month'),
+  'park-hopper': g('ticket.fill', 'confirmation_number'),
 };
 
 const AREA_GLYPH: Record<string, Glyph> = {
@@ -117,6 +134,75 @@ function stampLabel(c: Challenge): string {
   return c.title.replace(/^The /, '');
 }
 
+/**
+ * The status word bent around the inside of the ring.
+ *
+ * There is no text-on-a-path in React Native and no SVG in this project's
+ * dependencies — `react-native-svg` is not installed, and adding it would
+ * move the fingerprint and orphan every build already on a phone. So each
+ * letter is its own absolutely-positioned box filling the circle, which puts
+ * its transform origin exactly at the centre, and then:
+ *
+ *     transform: [{ rotate: a }, { translateY: r }]
+ *
+ * Transforms compose left to right, so the box's frame turns by `a` first and
+ * the letter then slides `r` down that turned axis — landing on the circle of
+ * radius `r` at angle `a` from the bottom, already rotated tangentially. A
+ * POSITIVE angle lands left of bottom-centre and tilts the letter the way the
+ * arc does there, which is why the angles count DOWN across the word: the
+ * result reads left to right along the bottom of the stamp, right way up.
+ *
+ * Spacing is one approximated advance width per letter rather than measured
+ * glyph metrics. Measuring would cost a layout pass per character for a
+ * six-letter word nobody is going to kern.
+ */
+function ArcText({
+  text,
+  radius,
+  fontSize,
+  color,
+}: {
+  text: string;
+  radius: number;
+  fontSize: number;
+  color: string;
+}) {
+  const chars = [...text];
+  const advance = fontSize * 0.66 + fontSize * 0.16;
+  const step = ((advance / radius) * 180) / Math.PI;
+  const first = ((chars.length - 1) / 2) * step;
+
+  return (
+    <>
+      {chars.map((ch, i) => (
+        <View
+          // Letters repeat, so the index has to be part of the key.
+          key={`${i}-${ch}`}
+          pointerEvents="none"
+          style={[
+            styles.arcChar,
+            { transform: [{ rotate: `${first - i * step}deg` }, { translateY: radius }] },
+          ]}
+        >
+          <ThemedText
+            style={{
+              color,
+              fontSize,
+              lineHeight: fontSize + 2,
+              fontWeight: '800',
+              // Tracking comes from the angles above, so adding it here would
+              // double-count it AND push each glyph off its own centre.
+              letterSpacing: 0,
+            }}
+          >
+            {ch}
+          </ThemedText>
+        </View>
+      ))}
+    </>
+  );
+}
+
 export function Stamp({
   challenge: c,
   fresh = false,
@@ -139,6 +225,19 @@ export function Stamp({
   const theme = useTheme();
   const router = useRouter();
 
+  /**
+   * The measured diameter, which everything inside is a fraction of.
+   *
+   * Seeded from `width` when it is a number so the horizontal strip draws
+   * correctly on its first frame; a percentage cannot be resolved here, so
+   * the grid draws the rings on frame one and the contents on frame two.
+   */
+  const [d, setD] = useState(typeof width === 'number' ? width : 0);
+  const onLayout = (e: LayoutChangeEvent) => {
+    const next = Math.round(e.nativeEvent.layout.width);
+    if (next > 0 && next !== d) setD(next);
+  };
+
   const started = c.earned > 0;
   // A tiered challenge inks in its tier's metal; an all-or-nothing one has no
   // tier to show, so it borrows the accent until it is finished and gold.
@@ -149,6 +248,17 @@ export function Stamp({
       : started
         ? theme.accent
         : theme.textFaint;
+
+  // The proportions. Measured against the grid cell (~99pt) and the home
+  // strip (84pt), which are the only two sizes this is used at.
+  const inset = Math.max(4, Math.round(d * 0.05));
+  const mark = Math.round(d * 0.34);
+  const legendSize = Math.max(9, Math.round(d * 0.115));
+  const arcSize = Math.max(8, Math.round(d * 0.105));
+  // Just inside the inner ring: its inset, a point of air, and half a cap
+  // height, since the letter is centred on this radius rather than hung
+  // from it.
+  const arcRadius = d / 2 - inset - 2 - arcSize * 0.55;
 
   return (
     <Pressable
@@ -166,6 +276,7 @@ export function Stamp({
       ]}
     >
       <View
+        onLayout={onLayout}
         style={[
           styles.ring,
           {
@@ -190,22 +301,72 @@ export function Stamp({
           <View style={[styles.disc, { backgroundColor: ink, opacity: 0.16 }]} />
         ) : null}
 
-        {/* The second ring. One ring is a badge; two is a stamp. */}
+        {/* The second ring. One ring is a badge; two is a stamp — but only if
+            you can see it, and at a hairline against a tinted disc you could
+            not. A full point, and a point and a half once there is ink in
+            the circle to hold its own against. */}
         <View
-          style={[styles.innerRing, { borderColor: ink, opacity: c.complete ? 0.45 : 0.25 }]}
+          style={[
+            styles.innerRing,
+            {
+              borderColor: ink,
+              borderWidth: c.complete ? 1.5 : 1,
+              left: inset,
+              right: inset,
+              top: inset,
+              bottom: inset,
+              opacity: c.complete ? 0.55 : 0.35,
+            },
+          ]}
         />
 
-        <View style={styles.face}>
-          <SymbolView name={stampGlyph(c.id)} size={22} weight="semibold" tintColor={ink} />
-          {/* The rule across the middle. On a real entry stamp it separates
-              the office from the date; here it separates the mark from the
-              reading, and it is most of what stops this looking like an app
-              icon in a circle. */}
-          <View style={[styles.rule, { backgroundColor: ink, opacity: 0.55 }]} />
-          <ThemedText style={[styles.legend, { color: ink }]} numberOfLines={1}>
-            {c.complete ? 'EARNED' : `${c.earned}/${c.target}`}
-          </ThemedText>
-        </View>
+        {d > 0 ? (
+          <>
+            <View
+              style={[
+                styles.face,
+                // Lifted off centre on a finished stamp to leave the arc its
+                // own room along the bottom.
+                c.complete ? { paddingBottom: Math.round(d * 0.14) } : null,
+              ]}
+            >
+              <SymbolView
+                name={stampGlyph(c.id)}
+                size={mark}
+                weight="semibold"
+                tintColor={ink}
+              />
+              {/* The rule across the middle. On a real entry stamp it
+                  separates the office from the date; here it separates the
+                  mark from the reading, and it is most of what stops this
+                  looking like an app icon in a circle. */}
+              <View
+                style={[
+                  styles.rule,
+                  { backgroundColor: ink, width: Math.round(d * 0.28), opacity: 0.55 },
+                ]}
+              />
+              {/* A fraction stays straight. "4/26" on an arc is unreadable at
+                  this size and says nothing a curve would add — the arc is
+                  there to mark the one state worth marking. */}
+              {c.complete ? null : (
+                <ThemedText
+                  style={[
+                    styles.legend,
+                    { color: ink, fontSize: legendSize, lineHeight: legendSize + 3 },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {c.earned}/{c.target}
+                </ThemedText>
+              )}
+            </View>
+
+            {c.complete ? (
+              <ArcText text="EARNED" radius={arcRadius} fontSize={arcSize} color={ink} />
+            ) : null}
+          </>
+        ) : null}
       </View>
 
       {fresh ? <View style={[styles.freshDot, { backgroundColor: theme.gold }]} /> : null}
@@ -278,18 +439,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   disc: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, borderRadius: 999 },
-  innerRing: {
-    position: 'absolute',
-    left: 4,
-    right: 4,
-    top: 4,
-    bottom: 4,
-    borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
+  /** Inset and border width are set per stamp from the measured diameter. */
+  innerRing: { position: 'absolute', borderRadius: 999 },
   face: { alignItems: 'center', gap: 2, paddingHorizontal: 6 },
-  rule: { width: 26, height: StyleSheet.hairlineWidth + 0.5 },
-  legend: { fontSize: 8, lineHeight: 11, fontWeight: '800', letterSpacing: 1.1 },
+  /** Width is proportional; only the thickness is fixed, because a rule that
+   *  scaled would be a bar at the top of the range and vanish at the bottom. */
+  rule: { height: StyleSheet.hairlineWidth + 0.5 },
+  legend: { fontWeight: '800', letterSpacing: 1.1 },
+  /** One letter of the arc. Fills the circle so that its transform origin is
+   *  the circle's centre — see `ArcText`. */
+  arcChar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   freshDot: {
     position: 'absolute',
     top: -2,

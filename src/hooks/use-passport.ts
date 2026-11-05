@@ -1,9 +1,10 @@
 import { useMemo } from 'react';
 
 import { useCatalog } from '@/hooks/use-catalog';
-import { useResorts } from '@/hooks/use-resorts';
+import { TIER_LABEL, useResorts } from '@/hooks/use-resorts';
 import { useVenues } from '@/hooks/use-venues';
 import { useVisits } from '@/hooks/use-visits';
+import { MONTH_LABELS, formatDate, parseISO } from '@/lib/calendar';
 import { formatSubArea, titleCase } from '@/lib/labels';
 
 /**
@@ -44,6 +45,74 @@ export const CRESCENT_LAKE = [
  * nobody can plan a meal around does not belong in a checklist.
  */
 const NOT_A_CUISINE = new Set(['lounge', 'international', 'european']);
+
+/**
+ * The monorail resorts, grouped BY RESORT rather than by catalog row.
+ *
+ * Six rows carry `monorail`, because each of the three resorts has a DVC
+ * half: Bay Lake Tower is the Contemporary, the Villas are the Grand
+ * Floridian, the Bungalows are the Polynesian. The challenge people mean when
+ * they say "the monorail resorts" is the three resorts, and scoring it over
+ * six rows would quietly require buying into Disney Vacation Club — so a stay
+ * at either half ticks the resort off, and both halves are listed as ways in.
+ */
+export const MONORAIL_RESORTS = [
+  {
+    id: 'grand-floridian',
+    label: 'Grand Floridian',
+    rows: ['grand-floridian-resort-and-spa', 'villas-at-grand-floridian-resort'],
+  },
+  {
+    id: 'polynesian',
+    label: 'Polynesian Village',
+    rows: ['polynesian-village-resort', 'polynesian-villas-and-bungalows'],
+  },
+  {
+    id: 'contemporary',
+    label: 'Contemporary',
+    rows: ['contemporary-resort', 'bay-lake-tower-contemporary-resort'],
+  },
+];
+
+/** Resort tiers, in the order the price list runs. */
+const RESORT_TIERS = ['value', 'moderate', 'deluxe', 'campground'];
+
+/** The four theme parks by `area_id` — the water parks are not parks for the
+ *  purposes of hopping between them. */
+export const PARKS = ['magic-kingdom', 'epcot', 'hollywood-studios', 'animal-kingdom'];
+
+/**
+ * The challenges that are not about eating, which earn their own page in the
+ * passport rather than sitting among twenty stamps about restaurants.
+ *
+ * A list here rather than a flag on the challenge, because the passport is
+ * the only thing that needs to know and the alternative is a field every
+ * builder has to remember to set.
+ */
+export const STAY_CHALLENGE_IDS = [
+  'monorail-resorts',
+  'skyliner-resorts',
+  'resort-tiers',
+  'resort-collection',
+  'all-year-round',
+  'park-hopper',
+];
+
+/**
+ * "Disney's Polynesian Village Resort" → "Polynesian Village Resort".
+ *
+ * The possessive is on nearly every row and distinguishes nothing, and these
+ * names have to fit a checklist row and a chip.
+ */
+function shortResort(name: string): string {
+  return name.replace(/^(Disney's|Walt Disney World|The)\s+/, '');
+}
+
+/** The month of an ISO date as a 0-11 index, or -1 if it is not a date. */
+function monthOf(iso: string | null | undefined): number {
+  const p = iso ? parseISO(iso) : null;
+  return p ? p.month : -1;
+}
 
 export type Coverage = {
   id: string;
@@ -97,6 +166,12 @@ export const TIER_COLOR: Record<string, string> = {
  * Showcase pavilion is the exception: the step is the pavilion, several places
  * inside it would satisfy it, and there is no single venue to open — so
  * `venueId` is null and `options` carries them instead.
+ *
+ * A step with NEITHER is a step the catalog does not hold at all — a month of
+ * the year, a park covered on a single day. Those are real steps with nothing
+ * to open, which is why `options` is left undefined rather than empty: an
+ * empty array means "this is a choice and the catalog has nothing to offer",
+ * and the detail screen says so.
  */
 export type ChallengeStep = {
   /** A venue id, or a World Showcase pavilion slug. */
@@ -105,6 +180,11 @@ export type ChallengeStep = {
   done: boolean;
   /** Where a tap goes, or null when more than one place satisfies this step. */
   venueId: string | null;
+  /**
+   * Which detail screen `venueId` and `options` open. Omitted means a venue,
+   * since all but the stays challenges count meals.
+   */
+  kind?: 'venue' | 'resort';
   /** The area, to tell two similarly named places apart. */
   where?: string;
   /** Pavilion steps only: the places that would tick this off. */
@@ -169,7 +249,10 @@ function tierProgress(earned: number, total: number) {
 export function usePassport() {
   const { data: venues, loading: venuesLoading } = useVenues();
   const { data: resorts, loading: resortsLoading } = useResorts();
-  const { byVenue, byResort } = useVisits();
+  // `visits` and `stays` in full, not just the per-place rollups: the
+  // challenges that are not about places at all — a month of the year, four
+  // parks in one day — are scored off the DATES on the log.
+  const { byVenue, byResort, visits, stays } = useVisits();
   const { areas } = useCatalog();
 
   const areaNames = useMemo(
@@ -234,17 +317,33 @@ export function usePassport() {
       .sort((a, b) => b.total - a.total);
   }, [eligible, byVenue, areaNames]);
 
+  /**
+   * Resorts you could actually book a night at, which is `eligible`'s
+   * counterpart for the stays half of the passport.
+   *
+   * Disney-owned only — the reasoning is at the top of the file — and open,
+   * for the same reason a closed restaurant is not in a denominator. Both the
+   * resort percentage and the stay challenges count from here so the two can
+   * never disagree about what the total is.
+   */
+  const stayable = useMemo(
+    () =>
+      resorts.filter(
+        (r) => r.ownership === 'disney-owned' && r.status !== 'permanently-closed',
+      ),
+    [resorts],
+  );
+
   const resortCoverage = useMemo<Coverage>(() => {
-    const own = resorts.filter((r) => r.ownership === 'disney-owned');
-    const visited = own.filter((r) => byResort.has(r.id)).length;
+    const visited = stayable.filter((r) => byResort.has(r.id)).length;
     return {
       id: 'resorts',
       label: 'Disney resorts',
       visited,
-      total: own.length,
-      pct: own.length ? visited / own.length : 0,
+      total: stayable.length,
+      pct: stayable.length ? visited / stayable.length : 0,
     };
-  }, [resorts, byResort]);
+  }, [stayable, byResort]);
 
   const challenges = useMemo<Challenge[]>(() => {
     const visitedIds = new Set(byVenue.keys());
@@ -271,20 +370,78 @@ export function usePassport() {
       rows: typeof venues,
       scope: 'property' | 'area' = 'property',
     ): ChallengeStep[] =>
-      rows.map((r) => ({
-        id: r.id,
-        label: r.name,
-        done: visitedIds.has(r.id),
-        venueId: r.id,
-        where:
-          scope === 'area'
-            ? r.sub_area
-              ? formatSubArea(r.sub_area)
-              : undefined
-            : r.resort_id
-              ? resortNames[r.resort_id] ?? areaNames[r.area_id] ?? r.area_id
-              : areaNames[r.area_id] ?? r.area_id,
-      }));
+      rows
+        .map((r) => ({
+          id: r.id,
+          label: r.name,
+          done: visitedIds.has(r.id),
+          venueId: r.id,
+          where:
+            scope === 'area'
+              ? r.sub_area
+                ? formatSubArea(r.sub_area)
+                : undefined
+              : r.resort_id && resortNames[r.resort_id]
+                ? shortResort(resortNames[r.resort_id])
+                : areaNames[r.area_id] ?? r.area_id,
+        }))
+        // Grouped by that second line, then alphabetical inside it. The
+        // catalog's own order is alphabetical by name across the whole list,
+        // which scatters a crawl: the three Contemporary bars came out first,
+        // fourth and eighth, interleaved with the Grand Floridian's, so a
+        // list that named every resort correctly still could not be walked in
+        // the order it was printed. Same reasoning for the park challenges,
+        // where this groups by land.
+        .sort(
+          (a, b) =>
+            (a.where ?? '').localeCompare(b.where ?? '') || a.label.localeCompare(b.label),
+        );
+
+    /**
+     * The common tail of every checklist challenge: count the ticks, then
+     * fill in either the tier ladder or the all-or-nothing fields.
+     *
+     * One place rather than six. Four builders were each writing out the same
+     * eight properties, and the only thing that varied between them was which
+     * rows became steps — which is the only thing a builder should decide.
+     */
+    const fromSteps = (
+      id: string,
+      title: string,
+      blurb: string,
+      steps: ChallengeStep[],
+      tiered = false,
+    ): Challenge => {
+      const earned = steps.filter((st) => st.done).length;
+      if (tiered) {
+        return {
+          id,
+          title,
+          blurb,
+          earned,
+          target: steps.length,
+          tiered: true,
+          steps,
+          ...tierProgress(earned, steps.length),
+        };
+      }
+      return {
+        id,
+        title,
+        blurb,
+        earned,
+        target: steps.length,
+        complete: steps.length > 0 && earned === steps.length,
+        tiered: false,
+        tier: null,
+        nextTier: null,
+        toNext: 0,
+        steps,
+        // Names rather than ids, because this is rendered straight into
+        // "Still to go". Left off the tiered ones on purpose — see the type.
+        remaining: steps.filter((st) => !st.done).map((st) => st.label),
+      };
+    };
 
     /** Pavilion challenges count PAVILIONS COVERED, not venues visited —
      *  a drink at either Mexico bar completes Mexico. */
@@ -321,22 +478,7 @@ export function usePassport() {
           options,
         };
       });
-      const missing = steps.filter((st) => !st.done);
-
-      return {
-        id,
-        title,
-        blurb,
-        earned: steps.length - missing.length,
-        target: steps.length,
-        complete: missing.length === 0,
-        tiered: false,
-        tier: null,
-        nextTier: null,
-        toNext: 0,
-        steps,
-        remaining: missing.map((st) => st.label),
-      };
+      return fromSteps(id, title, blurb, steps);
     };
 
     /**
@@ -347,55 +489,30 @@ export function usePassport() {
      * improved by a Bronze medal at a quarter of the way through, and nobody
      * claims a partial bar crawl. Tiers exist to make "4 of 61" survivable;
      * "4 of 10" is already a next step.
-     *
-     * `remaining` holds venue names rather than ids, because it is rendered
-     * straight into "Still to go".
      */
     const setChallenge = (
       id: string,
       title: string,
       blurb: string,
       tag: string,
-    ): Challenge => {
+    ): Challenge =>
       // `tags` is string[] here, not the pipe-joined CSV form — `catalog-db`
       // parses the JSON column on the way out — so this is exact membership.
-      const steps = venueSteps(eligible.filter((r) => r.tags?.includes(tag)));
-      const done = steps.filter((st) => st.done).length;
-      return {
-        id,
-        title,
-        blurb,
-        earned: done,
-        target: steps.length,
-        complete: steps.length > 0 && done === steps.length,
-        tiered: false,
-        tier: null,
-        nextTier: null,
-        toNext: 0,
-        steps,
-        remaining: steps.filter((st) => !st.done).map((st) => st.label),
-      };
-    };
+      fromSteps(id, title, blurb, venueSteps(eligible.filter((r) => r.tags?.includes(tag))));
 
     const tagChallenge = (
       id: string,
       title: string,
       blurb: string,
       tag: string,
-    ): Challenge => {
-      const steps = venueSteps(eligible.filter((r) => r.tags?.includes(tag)));
-      const earned = steps.filter((st) => st.done).length;
-      return {
+    ): Challenge =>
+      fromSteps(
         id,
         title,
         blurb,
-        earned,
-        target: steps.length,
-        tiered: true,
-        steps,
-        ...tierProgress(earned, steps.length),
-      };
-    };
+        venueSteps(eligible.filter((r) => r.tags?.includes(tag))),
+        true,
+      );
 
     /**
      * Any slice of the catalog the existing columns can already describe.
@@ -410,29 +527,177 @@ export function usePassport() {
       blurb: string,
       pick: (r: (typeof eligible)[number]) => boolean,
       tiered = false,
+    ): Challenge => fromSteps(id, title, blurb, venueSteps(eligible.filter(pick)), tiered);
+
+    /**
+     * One step per resort, counted in STAYS rather than meals.
+     *
+     * The other half of the app, and until now the half with nothing to earn:
+     * every challenge on the passport was a thing you ate or drank. These read
+     * off `byResort`, which is the stay log, so none of them require a meal.
+     */
+    const resortSteps = (rows: typeof stayable): ChallengeStep[] =>
+      rows
+        .map((r) => ({
+          id: r.id,
+          label: shortResort(r.name),
+          done: byResort.has(r.id),
+          venueId: r.id,
+          kind: 'resort' as const,
+          where: `${TIER_LABEL[r.tier] ?? titleCase(r.tier)} · ${areaNames[r.area_id] ?? r.area_id}`,
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+
+    const stayChallenge = (
+      id: string,
+      title: string,
+      blurb: string,
+      pick: (r: (typeof stayable)[number]) => boolean,
+      tiered = false,
+    ): Challenge => fromSteps(id, title, blurb, resortSteps(stayable.filter(pick)), tiered);
+
+    /**
+     * A stay challenge whose steps are groups of resorts, any one of which
+     * ticks the step off. The same shape as a World Showcase pavilion, and
+     * for the same reason: the step is the thing people mean, not the row the
+     * catalog happens to keep.
+     */
+    const groupedStayChallenge = (
+      id: string,
+      title: string,
+      blurb: string,
+      groups: { id: string; label: string; rows: string[] }[],
     ): Challenge => {
-      const steps = venueSteps(eligible.filter(pick));
-      const earned = steps.filter((st) => st.done).length;
-      if (tiered) {
+      const steps: ChallengeStep[] = groups.map((grp) => {
+        const options = grp.rows
+          .map((rid) => stayable.find((r) => r.id === rid))
+          .filter((r): r is (typeof stayable)[number] => !!r)
+          .map((r) => ({ id: r.id, name: shortResort(r.name), done: byResort.has(r.id) }));
         return {
-          id, title, blurb, earned,
-          target: steps.length,
-          tiered: true,
-          steps,
-          ...tierProgress(earned, steps.length),
+          id: grp.id,
+          label: grp.label,
+          done: options.some((o) => o.done),
+          venueId: options.length === 1 ? options[0].id : null,
+          kind: 'resort' as const,
+          options,
         };
+      });
+      return fromSteps(id, title, blurb, steps);
+    };
+
+    /**
+     * Every resort tier, from a tent to the Grand Floridian.
+     *
+     * Grouped by `tier` off the catalog rather than listed, so a new resort
+     * joins the step it belongs to instead of needing a code change. Mapped
+     * over `RESORT_TIERS` rather than over what the catalog holds, so a tier
+     * with nothing in it is a step you cannot tick rather than a target that
+     * silently shrank.
+     */
+    const tierStayChallenge = (): Challenge =>
+      groupedStayChallenge(
+        'resort-tiers',
+        'Every Kind of Stay',
+        'A night in each tier — Value, Moderate, Deluxe, and a tent in the woods.',
+        RESORT_TIERS.map((t) => ({
+          id: t,
+          label: TIER_LABEL[t] ?? titleCase(t),
+          rows: stayable.filter((r) => r.tier === t).map((r) => r.id),
+        })),
+      );
+
+    /**
+     * A visit or a stay in all twelve months.
+     *
+     * **Only exactly dated visits count.** The onboarding backfill writes
+     * today's date with `date_exact = 0` against everything someone ticks
+     * off, so counting those would hand whoever installed the app in March a
+     * free March for a hundred meals they had years ago — and the one month
+     * it filled would be the one month they could never earn honestly.
+     *
+     * Stays have no such flag because they are always entered with their real
+     * check-in date.
+     *
+     * A stay credits every month it TOUCHES, not just the month it started
+     * in. Checking in on 30 October and out on 3 November means you were here
+     * in November, and a challenge about being here would be wrong to say
+     * otherwise.
+     */
+    const yearChallenge = (): Challenge => {
+      const hit = new Set<number>();
+      for (const v of visits) if (v.date_exact) hit.add(monthOf(v.visited_on));
+      for (const s of stays) {
+        const from = parseISO(s.check_in);
+        if (!from) continue;
+        const to = (s.check_out && parseISO(s.check_out)) || from;
+        // Capped, because the loop is driven by two dates typed by hand and a
+        // check-out in 2124 must not hang the passport.
+        let { year, month } = from;
+        for (let i = 0; i < 24; i += 1) {
+          hit.add(month);
+          if (year > to.year || (year === to.year && month >= to.month)) break;
+          month += 1;
+          if (month > 11) {
+            month = 0;
+            year += 1;
+          }
+        }
       }
-      return {
-        id, title, blurb, earned,
-        target: steps.length,
-        complete: steps.length > 0 && earned === steps.length,
-        tiered: false,
-        tier: null,
-        nextTier: null,
-        toNext: 0,
+      const steps: ChallengeStep[] = MONTH_LABELS.map((label, i) => ({
+        id: `month-${i + 1}`,
+        label,
+        done: hit.has(i),
+        venueId: null,
+      }));
+      return fromSteps(
+        'all-year-round',
+        'All Year Round',
+        'Be at Walt Disney World in every month of the year. Not in one year — ever.',
         steps,
-        remaining: steps.filter((st) => !st.done).map((st) => st.label),
-      };
+      );
+    };
+
+    /**
+     * The four parks in a single day.
+     *
+     * Scored on your BEST day rather than cumulatively, which is the whole
+     * point of it: four parks across four trips is not park hopping. So the
+     * day with the most parks on it is the score, and the steps show which
+     * parks that day covered — three of four means one day got close, not
+     * that three parks are permanently banked.
+     */
+    const parkHopperChallenge = (): Challenge => {
+      const areaOf = new Map(eligible.map((v) => [v.id, v.area_id]));
+      const byDay = new Map<string, Set<string>>();
+      for (const v of visits) {
+        if (!v.date_exact) continue;
+        const area = areaOf.get(v.venue_id);
+        if (!area || !PARKS.includes(area)) continue;
+        const set = byDay.get(v.visited_on) ?? new Set<string>();
+        set.add(area);
+        byDay.set(v.visited_on, set);
+      }
+      let bestDay = '';
+      let best = new Set<string>();
+      for (const [day, set] of byDay) {
+        if (set.size > best.size) {
+          bestDay = day;
+          best = set;
+        }
+      }
+      const steps: ChallengeStep[] = PARKS.map((p) => ({
+        id: p,
+        label: areaNames[p] ?? titleCase(p),
+        done: best.has(p),
+        venueId: null,
+        where: best.has(p) ? formatDate(bestDay) : undefined,
+      }));
+      return fromSteps(
+        'park-hopper',
+        'Four Parks, One Day',
+        'Eat in all four theme parks between one sunrise and the next.',
+        steps,
+      );
     };
 
     /**
@@ -467,21 +732,12 @@ export function usePassport() {
           venueId: options.length === 1 ? options[0].id : null,
           options,
         }));
-      const missing = steps.filter((st) => !st.done);
-      return {
-        id: 'cuisines',
-        title: 'A Taste of Everywhere',
-        blurb: 'Something from every kind of kitchen on property.',
-        earned: steps.length - missing.length,
-        target: steps.length,
-        complete: missing.length === 0,
-        tiered: false,
-        tier: null,
-        nextTier: null,
-        toNext: 0,
+      return fromSteps(
+        'cuisines',
+        'A Taste of Everywhere',
+        'Something from every kind of kitchen on property.',
         steps,
-        remaining: missing.map((st) => st.label),
-      };
+      );
     };
 
     // `byArea` carries the counts; the steps need the rows behind them, and
@@ -587,8 +843,45 @@ export function usePassport() {
         true,
       ),
       cuisineChallenge(),
+
+      // ── Stays ─────────────────────────────────────────────────────────
+      // Everything above this line is something you ate or drank, which was
+      // the whole passport until now. These are scored off the stay log and
+      // the dates on it, so none of them need a meal.
+      groupedStayChallenge(
+        'monorail-resorts',
+        'The Monorail Resorts',
+        'A night at the Grand Floridian, the Polynesian and the Contemporary — the three you can reach without a bus.',
+        MONORAIL_RESORTS,
+      ),
+      stayChallenge(
+        'skyliner-resorts',
+        'The Skyliner Line',
+        'A night at every resort on the Skyliner.',
+        (r) => r.transport.includes('skyliner'),
+      ),
+      tierStayChallenge(),
+      stayChallenge(
+        'resort-collection',
+        'Resort Collector',
+        'A night at every Disney-owned resort at Walt Disney World.',
+        () => true,
+        true,
+      ),
+      yearChallenge(),
+      parkHopperChallenge(),
     ];
-  }, [byVenue, byArea, eligible, areaNames, resortNames]);
+  }, [
+    byVenue,
+    byResort,
+    byArea,
+    eligible,
+    stayable,
+    visits,
+    stays,
+    areaNames,
+    resortNames,
+  ]);
 
   return {
     loading: venuesLoading || resortsLoading,

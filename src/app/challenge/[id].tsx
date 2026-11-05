@@ -193,12 +193,19 @@ function TierLadder({ challenge: c }: { challenge: Challenge }) {
  * A step with a `venueId` is a place, and tapping it opens that place. A
  * pavilion is not a place — several restaurants inside it would satisfy it —
  * so the row itself does not navigate and the options underneath do.
+ *
+ * And a step can be neither: a month of the year, a park counted on one day.
+ * Those have nothing to open and no options to offer, which is a different
+ * thing from a choice with nothing in it.
  */
 function StepRow({ step }: { step: ChallengeStep }) {
   const router = useRouter();
   const theme = useTheme();
-  const open = (venueId: string) =>
-    router.push({ pathname: '/venue/[id]', params: { id: venueId } });
+  // A stay challenge's steps are resorts, so they open the resort screen.
+  const open = (id: string) =>
+    step.kind === 'resort'
+      ? router.push({ pathname: '/resort/[id]', params: { id } })
+      : router.push({ pathname: '/venue/[id]', params: { id } });
 
   const body = (
     <>
@@ -251,7 +258,7 @@ function StepRow({ step }: { step: ChallengeStep }) {
     );
   }
 
-  const choices = step.options ?? [];
+  const choices = step.options;
   return (
     <View
       style={[
@@ -261,7 +268,7 @@ function StepRow({ step }: { step: ChallengeStep }) {
       ]}
     >
       <View style={styles.stepHead}>{body}</View>
-      {choices.length ? (
+      {choices?.length ? (
         <View style={styles.options}>
           {choices.map((o) => (
             <Pressable
@@ -283,11 +290,14 @@ function StepRow({ step }: { step: ChallengeStep }) {
             </Pressable>
           ))}
         </View>
-      ) : (
+      ) : choices ? (
+        // An empty `options` array means this step IS a choice and the catalog
+        // has nothing to offer for it. `undefined` means it was never a choice
+        // — a month is simply a month — and saying this there would be wrong.
         <ThemedText type="small" themeColor="textFaint">
           Nothing in the catalog covers this one yet.
         </ThemedText>
-      )}
+      ) : null}
     </View>
   );
 }

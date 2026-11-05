@@ -1343,7 +1343,12 @@ The split follows what the two halves actually are:
 | Tab | Holds | Shape |
 |---|---|---|
 | **Stats** | coverage percentages, the area grid, resort progress | numbers |
-| **Passport** | the stamps | a keepsake |
+| **Passport** | the stamps, on three pages | a keepsake |
+
+The three pages are **Challenges**, **Stays and days** and **Parks and areas**, split by
+`STAY_CHALLENGE_IDS` in `use-passport.ts`. The middle page exists because the challenges that are
+not about eating — resorts slept at, months of the year, four parks in a day — read as more of
+the same when they sit among twenty stamps about restaurants.
 
 Each area tile on Stats opens `challenge/area-<id>`, which is what the duplicate card list used to
 do. Deleting a list and making the thing above it tappable is usually the better trade: the
@@ -1354,11 +1359,11 @@ content was never the problem, the second copy was.
 `src/components/stamp.tsx`. Three states, and the distance between them is the point — the
 complaint that started this was that completing something "can be missed":
 
-| state | ring | disc | lean | ink |
-|---|---|---|---|---|
-| complete | 3px | yes | crooked | `gold` |
-| in progress | 1.5px | no | square | tier colour, or `accent` when untiered |
-| untouched | 1px at 40% opacity | no | square | `textFaint` |
+| state | ring | disc | lean | ink | legend |
+|---|---|---|---|---|---|
+| complete | 3px | yes | crooked | `gold` | `EARNED` on an arc |
+| in progress | 1.5px | no | square | tier colour, or `accent` when untiered | `4/26`, straight |
+| untouched | 1px at 40% opacity | no | square | `textFaint` | `0/26`, straight |
 
 It is a **rubber** stamp, not a postage stamp — no serrated edge, no
 perforations, no rectangle with a picture in it. What makes an entry stamp
@@ -1372,6 +1377,27 @@ which is what the first version was and what it was reported as.
 a finished stamp with `goldSurface` — which is the colour of the page it sits
 on, so there was nothing to see. That is why "I completed some and it doesn't
 look much like a stamp" was the report.
+
+**Everything inside a stamp is a fraction of the MEASURED diameter**, captured with `onLayout` —
+nothing inside is in points. A stamp is ~99pt wide in the passport grid and 84pt in the home
+strip, and a version of this used a fixed 22pt mark for both, which is 22% of the grid cell and
+reads as a small icon lost in a big circle. The ratios: mark `0.34`, straight legend `0.115`, arc
+legend `0.105`, inner-ring inset `0.05`, rule width `0.28`. A percentage width cannot be resolved
+during render, so the grid draws its rings on the first frame and their contents on the second.
+
+**The arc is hand-placed letters, because there is no text-on-a-path and no SVG.** Each letter is
+its own absolutely-positioned box filling the circle — which puts its transform origin exactly at
+the centre — and then `transform: [{ rotate: a }, { translateY: r }]`. Transforms compose left to
+right as in CSS, so the frame turns by `a` first and the letter then slides `r` down that turned
+axis, landing on the circle of radius `r` already rotated tangentially. A **positive** angle lands
+left of bottom-centre, so the angles count DOWN across the word for it to read left to right.
+Spacing is one approximated advance width (`0.66em + 0.16em`) per letter rather than measured
+metrics: measuring costs a layout pass per character for a six-letter word nobody will kern.
+**Only the completed state gets the arc.** "4/26" on a curve is unreadable at this size and the
+arc is there to mark the one state worth marking.
+
+**The inner ring is a full point, not a hairline.** At `StyleSheet.hairlineWidth` over a tinted
+disc it was invisible, which left one visible ring — and one ring is a badge.
 
 **Only an earned stamp leans**, and the angle is hashed from the challenge id rather than random —
 a random angle re-rolls on every render and the page wobbles. Square to the page is what a printed
@@ -1400,23 +1426,69 @@ verified from Windows, and there is already enough unverified layout in flight.
 
 ## Challenges
 
-Twenty-six of them, and **none needs a catalog import**. They are derived from
+Thirty-two of them, and **none needs a catalog import**. They are derived from
 columns the rows already carry — `venue_kind`, `dining_style`, `price_tier`,
-`cuisine`, `resort_id`, `area_id`, `sub_area` and `tags` — which is what makes
-a new challenge an over-the-air change rather than a new binary.
+`cuisine`, `resort_id`, `area_id`, `sub_area`, `tags`, resort `tier` and
+`transport` — plus the dates already on the visit and stay log. That is what
+makes a new challenge an over-the-air change rather than a new binary.
 
-Four builders, in `use-passport.ts`:
+Every builder ends in **`fromSteps`**, which counts the ticks and fills in either the tier ladder
+or the all-or-nothing fields. Each builder therefore decides one thing only: which rows become
+steps. Six of them were each writing out the same eight properties before this.
 
 | builder | shape | used by |
 |---|---|---|
 | `tagChallenge` | tiered, one step per tagged venue | Character, Signature |
 | `setChallenge` | all-or-nothing, one step per tagged venue | Monorail Bar Crawl |
 | `pickChallenge` | either, one step per venue matching a predicate | the crawls and collections |
-| `pavilionChallenge` / `cuisineChallenge` | all-or-nothing, one step per GROUP, ticked by any member | Drinking/Snacking Around the World, A Taste of Everywhere |
+| `stayChallenge` | either, one step per RESORT matching a predicate | Skyliner Line, Resort Collector |
+| `pavilionChallenge` / `cuisineChallenge` / `groupedStayChallenge` | all-or-nothing, one step per GROUP, ticked by any member | Drinking/Snacking Around the World, A Taste of Everywhere, Monorail Resorts, Every Kind of Stay |
 
 The group shape is the one to reach for whenever several places satisfy one
 step. `venueId` is null there unless exactly one place would tick it, because
 picking one on the user's behalf is guessing.
+
+**`ChallengeStep.kind` decides which detail screen a tap opens** — `'resort'` for the stays
+challenges, a venue otherwise. And a step can have no `venueId` and no `options` at all: a month
+of the year is a real step with nothing to open. That is why `options` is left `undefined` there
+rather than empty, because an EMPTY array means "this step is a choice and the catalog has
+nothing to offer for it", and the detail screen says exactly that.
+
+**Steps are sorted by their second line, then alphabetically inside it.** The catalog's own order
+is alphabetical by name across the whole list, which scatters a crawl: the Monorail Bar Crawl's
+three Contemporary bars came out first, fourth and eighth, interleaved with the Grand Floridian's.
+A list that named every resort correctly still could not be walked in the order it was printed.
+On an area challenge the same sort groups by land, which is what the second line is for there.
+
+### The half that is not about eating
+
+Everything up to this point was something you ate or drank. These are scored off the **stay log**
+and the **dates on it**, so none of them needs a meal:
+
+| challenge | counts | target |
+|---|---|---|
+| The Monorail Resorts | a night at each of the three, either half of each | 3 |
+| The Skyliner Line | a night at each resort whose `transport` has `skyliner` | 4 |
+| Every Kind of Stay | a night in each resort `tier` | 4 |
+| Resort Collector | every Disney-owned resort, tiered | 31 |
+| All Year Round | a visit or a stay in each calendar month | 12 |
+| Four Parks, One Day | the four parks on your BEST single day | 4 |
+
+**The monorail resorts are grouped, not listed.** Six rows carry `monorail`, because each of the
+three resorts has a DVC half — Bay Lake Tower is the Contemporary, the Villas are the Grand
+Floridian, the Bungalows are the Polynesian. Scoring over six rows would quietly require buying
+into Disney Vacation Club, so either half ticks the resort off and both are offered as ways in.
+
+**Only exactly dated visits count toward All Year Round.** The onboarding backfill writes today's
+date with `date_exact = 0` against everything someone ticks off, so counting those hands whoever
+installed the app in March a free March for a hundred meals from years ago — and the one month it
+filled would be the one month they could never then earn honestly.
+
+**Four Parks, One Day is scored on the best single day, not cumulatively.** Four parks across four
+trips is not park hopping. Three of four means one day got close, not that three parks are banked.
+
+`stayable` is `eligible`'s counterpart: Disney-owned and open. The resort percentage on Stats and
+every stay challenge count from it, so the two cannot disagree about the total.
 
 **Every challenge counts from `eligible`, never from the raw catalog.** This
 was a live bug: Signature Dining counted from all rows, and "The Magic of New
@@ -1441,6 +1513,11 @@ missing from `venues.csv`: Petals Pool Bar (Pop Century), The Drop Off (Art of
 Animation), and on the BoardWalk side Jellyrolls, Atlantic Dance Hall and
 Boardwalk Joe's. Add those rows and both challenges become one `pickChallenge`
 call each.
+
+Two name defects show up in a checklist, where the full name is printed rather than a card
+heading: **"The Perch at Disneys Grand Floridian Resort and Spa"** repeats its own resort — which
+is already the row's second line — and several rows have lost their apostrophes (`Narcoossees`,
+`Trader Sams Grog Grotto`). Fixing these is a `venues.csv` edit and an import, not a code change.
 
 ---
 

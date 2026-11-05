@@ -9,7 +9,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { currentMilestone, useAchievements } from '@/hooks/use-achievements';
 import { useBottomInset } from '@/hooks/use-bottom-inset';
-import { type Challenge, usePassport } from '@/hooks/use-passport';
+import { STAY_CHALLENGE_IDS, type Challenge, usePassport } from '@/hooks/use-passport';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -60,8 +60,11 @@ export default function PassportScreen() {
   }
 
   const earned = challenges.filter((c) => c.complete).length;
-  const named = challenges.filter((c) => !c.id.startsWith('area-'));
   const areas = challenges.filter((c) => c.id.startsWith('area-'));
+  const stays = challenges.filter((c) => STAY_CHALLENGE_IDS.includes(c.id));
+  const named = challenges.filter(
+    (c) => !c.id.startsWith('area-') && !STAY_CHALLENGE_IDS.includes(c.id),
+  );
 
   return (
     <ThemedView style={styles.container}>
@@ -98,6 +101,20 @@ export default function PassportScreen() {
             caption="Set pieces — finish the whole list to earn the stamp."
           >
             {named.map((c) => (
+              <Stamp key={c.id} challenge={c} fresh={isFresh(c, fresh)} />
+            ))}
+          </PassportPage>
+
+          {/* Kept apart from the challenges above because they are a
+              different kind of thing entirely: these are earned by sleeping
+              somewhere or by being here in a given month, and none of them
+              needs a meal. Buried in with twenty restaurant stamps they would
+              read as more of the same. */}
+          <PassportPage
+            title="Stays and days"
+            caption="Earned by where you slept and when you were here."
+          >
+            {stays.map((c) => (
               <Stamp key={c.id} challenge={c} fresh={isFresh(c, fresh)} />
             ))}
           </PassportPage>
