@@ -41,18 +41,24 @@ const FREE = [
   "Full catalog, search and filters",
   "List and map views",
   "One active trip with countdown",
-  "Coverage badges, per park and overall",
+  "The whole passport — every stamp, free forever",
 ];
 
 const PREMIUM = [
   "Notes, dishes ordered and photos",
   "Unlimited trips and trip planning",
-  "The complete challenge set",
   "Live near-me map with walk-up filters",
-  "Community rankings and trending",
   "Home screen countdown widget",
   "Export your whole passport",
 ];
+
+/**
+ * Promised, not built — kept visible because it is the plan, kept separate
+ * because a subscriber who pays for something that is not there is a refund
+ * and a one-star review. Rankings need a population before they mean
+ * anything, so they ship once there is one.
+ */
+const PREMIUM_SOON = ["Community rankings and trending"];
 
 export default function Home() {
   return (
@@ -212,6 +218,20 @@ export default function Home() {
                   </li>
                 ))}
               </ul>
+
+              <div className="relative mt-7 border-t border-gold/25 pt-5">
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-ink-faint">
+                  Coming after launch
+                </p>
+                <ul className="mt-3.5 flex flex-col gap-3.5">
+                  {PREMIUM_SOON.map((item) => (
+                    <li key={item} className="flex gap-3 text-[15px] text-ink-faint">
+                      <span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-ink-faint/50" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </div>
 

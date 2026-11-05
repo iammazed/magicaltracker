@@ -704,10 +704,22 @@ trigger and badge stays as written. Until then the entitlement is false for ever
 build, because shipping a switch that unlocks premium is the business model behind a tap.
 
 **Never paywall data entry.** Unlimited check-offs, unlimited ratings, the whole catalog, search,
-the map and the passport percentages are free, permanently. Every rating a free user logs is what
-makes a Top 10, trending and recommendations possible later, so charging for logging would starve
-the thing that eventually makes premium worth buying. Premium sells depth and convenience:
-notes, dishes, photos, trips past the first, near-me, export.
+the map and **the whole passport — all 33 stamps, not just the coverage percentages** — are free,
+permanently. Every rating a free user logs is what makes a Top 10, trending and recommendations
+possible later, so charging for logging would starve the thing that eventually makes premium worth
+buying. Premium sells depth and convenience: notes, dishes, photos, trips past the first, near-me,
+export.
+
+**The passport is free, and that settles a conflict between two documents.** `docs/build-plan.html`
+lists "full passport" in v1 premium; the rule above says the passport is free permanently. The
+marketing site was following the build plan and promised "The complete challenge set" under Premium,
+which no code ever implemented — `PremiumFeature` has never had a challenges value. Resolved in
+favour of free (decided 2026-11-05), for three reasons: the share card is the only organic
+acquisition channel and a stamp is the thing worth sharing, so gating stamps feeds that channel only
+from people who already paid; a stamp is a readout of data entry, which the rule protects; and
+premium already sells six things that are all depth and convenience, which is a coherent pitch in a
+way "also your trophies" is not. **The build-plan line is superseded. Do not add a challenges
+gate.**
 
 **Gate with `PremiumGate`, which shows what is behind the gate rather than hiding it.** A feature
 nobody can see is a feature nobody buys, and a field that silently vanishes reads as a bug while a
