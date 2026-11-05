@@ -73,6 +73,32 @@ export default function PrivacyPage() {
         separate permission we have no reason to request.
       </p>
 
+      <h3>Steps</h3>
+      <p>
+        <strong>Only if you turn it on.</strong> The app can show how many steps
+        you walked on a park day, which requires access to your device&rsquo;s
+        motion activity.
+      </p>
+      <p>
+        Your steps are read from your phone&rsquo;s own motion sensor and stored
+        on your phone, in the app&rsquo;s database. <strong>They are never sent
+        to us or to anyone else.</strong> Because they are never uploaded, they
+        are also not part of the backup that signing in gives you — like photos,
+        your step history is lost if you delete the app or move to a new phone.
+      </p>
+      <p>
+        We store a single total per day and nothing else. There are no routes,
+        no distances, no times of day, no workouts and no heart rate. We do not
+        read Apple Health, and the app does not ask for access to it.
+      </p>
+      <p>
+        <strong>Why we keep a copy at all.</strong> iOS keeps only the last seven
+        days of step history, so a trip you took last month can no longer be
+        asked about. The app copies each day&rsquo;s total into its own records
+        while that day is still available, which is the only way a step count
+        from a past trip can still be shown to you later.
+      </p>
+
       <h3>Crash reports</h3>
       <p>
         When the app crashes or hits an error, it sends a report so we can fix
