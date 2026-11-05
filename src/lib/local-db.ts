@@ -22,7 +22,7 @@ import { seedCatalogIfNeeded, syncCatalogSchema } from '@/lib/catalog-db';
 export const DATABASE_NAME = 'magicaltracker.db';
 
 /** Bump when the schema below changes, and add a matching step in migrate(). */
-const SCHEMA_VERSION = 8;
+const SCHEMA_VERSION = 9;
 
 export async function migrate(db: SQLiteDatabase) {
   // WAL keeps reads fast while a write is in flight, which matters when the
@@ -214,6 +214,36 @@ export async function migrate(db: SQLiteDatabase) {
     version = 8;
   }
 
+  if (version < 9) {
+    await db.execAsync(`
+      -- Daily step totals, because iOS does not keep them.
+      --
+      -- CMPedometer stores only the past seven days: "Specifying a start
+      -- date that is more than seven days in the past returns only the
+      -- available data." So a trip's step count cannot be asked for after
+      -- the fact — it has to be copied out of the sensor into somewhere
+      -- durable while it is still answerable, which is what this table is.
+      --
+      -- One row per LOCAL day. A guest walking Magic Kingdom until midnight
+      -- is walking on that day, not on tomorrow in UTC, which is the same
+      -- reasoning that governs todayISO() below.
+      --
+      -- Deliberately local-only: no synced_at column and no server table.
+      -- Step counts are health-adjacent data, so putting them on a server
+      -- means a new RLS policy, a new line in the privacy policy and a new
+      -- answer on the App Privacy questionnaire — none of which buys
+      -- anything while the only reader is the phone that generated them.
+      -- Adding sync later is an ALTER and a backfill, which is a smaller
+      -- act than retracting a disclosure.
+      CREATE TABLE IF NOT EXISTS step_days (
+        day        TEXT PRIMARY KEY NOT NULL,   -- YYYY-MM-DD, local
+        steps      INTEGER NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+    version = 9;
+  }
+
   await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
 
   // The catalog tables are NOT governed by the ladder above, and must not be.
@@ -292,6 +322,12 @@ export type Stay = {
   created_at: string;
   updated_at: string;
   synced_at: string | null;
+};
+
+/** One local day's step total, copied out of CMPedometer before iOS drops it. */
+export type StepDay = {
+  day: string;
+  steps: number;
 };
 
 export type Visit = {

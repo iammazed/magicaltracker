@@ -2,6 +2,9 @@ import { useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ProgressBar } from '@/components/progress-bar';
+import { ProgressRing } from '@/components/progress-ring';
+import { Section } from '@/components/section';
+import { StepsSection } from '@/components/steps-section';
 import { SkyHeader, useHeaderCollapse } from '@/components/sky-header';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -30,6 +33,7 @@ export default function StatsScreen() {
   const { loading, overall, byArea, resortCoverage, challenges } = usePassport();
   const bottomInset = useBottomInset();
   const { collapsed, onScroll } = useHeaderCollapse();
+  const router = useRouter();
 
   if (loading) {
     return (
@@ -46,10 +50,20 @@ export default function StatsScreen() {
       <View style={styles.safe}>
         <SkyHeader eyebrow="WALT DISNEY WORLD" title="Stats" collapsed={collapsed}>
           <View style={styles.summary}>
-            <ThemedText style={styles.pct}>
-              {Math.round(overall.pct * 100)}
-              <ThemedText style={styles.pctSign}>%</ThemedText>
-            </ThemedText>
+            {/* The ring is the headline number now. A bar for "how much of
+                Walt Disney World have you eaten" always read as a loading
+                indicator; a ring reads as a thing being filled in. */}
+            <ProgressRing
+              size={92}
+              pct={overall.pct}
+              color="#E5B45F"
+              trackColor="rgba(255,255,255,0.16)"
+            >
+              <ThemedText style={styles.pct}>
+                {Math.round(overall.pct * 100)}
+                <ThemedText style={styles.pctSign}>%</ThemedText>
+              </ThemedText>
+            </ProgressRing>
             <View style={styles.summaryStats}>
               <HeroStat value={overall.visited} total={overall.total} label="Places" />
               <HeroStat
@@ -84,6 +98,12 @@ export default function StatsScreen() {
             </View>
           </Section>
 
+          {/* Above Resorts because it is the only number here that changes
+              every day, and a section that moves belongs near the top. It
+              carries its own heading so that a device with no pedometer shows
+              no heading either. */}
+          <StepsSection />
+
           <Section title="Resorts">
             <ProgressBar
               label="Disney-owned resorts stayed at"
@@ -96,6 +116,31 @@ export default function StatsScreen() {
               count toward this.
             </ThemedText>
           </Section>
+
+          {/* Lives here rather than on Passport because what the card shows is
+              these numbers, and a share button next to the thing it shares
+              needs no explaining. Hidden until there is something worth
+              posting: a card reading 0% is not an advert. */}
+          {overall.visited > 0 ? (
+            <Pressable
+              onPress={() => router.push('/share')}
+              accessibilityRole="button"
+              accessibilityLabel="Make a share card from your passport"
+              style={({ pressed }) => [
+                styles.shareButton,
+                {
+                  borderColor: theme.gold,
+                  backgroundColor: theme.goldSurface,
+                  opacity: pressed ? 0.8 : 1,
+                },
+              ]}
+            >
+              <ThemedText type="smallBold">Share your passport</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                Make a card from these numbers
+              </ThemedText>
+            </Pressable>
+          ) : null}
         </ScrollView>
       </View>
     </ThemedView>
@@ -179,29 +224,6 @@ function AreaTile({ area }: { area: Coverage }) {
   );
 }
 
-function Section({
-  title,
-  caption,
-  children,
-}: {
-  title: string;
-  caption?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <View style={styles.section}>
-      <ThemedText type="small" themeColor="textFaint" style={styles.sectionTitle}>
-        {title.toUpperCase()}
-      </ThemedText>
-      {caption ? (
-        <ThemedText type="small" themeColor="textFaint">
-          {caption}
-        </ThemedText>
-      ) : null}
-      <View style={styles.sectionBody}>{children}</View>
-    </View>
-  );
-}
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -216,8 +238,10 @@ const styles = StyleSheet.create({
   summary: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   // Literals, because the sky gradient is the same dark in both schemes —
   // theme text tokens would invert and vanish on it.
-  pct: { color: '#E5B45F', fontSize: 44, lineHeight: 48, fontWeight: '700' },
-  pctSign: { color: '#E5B45F', fontSize: 22, fontWeight: '700' },
+  // Sized to fit INSIDE the ring: a 92pt ring with an 8pt stroke leaves a
+  // 76pt bore, and "100%" at the old 44pt is half again wider than that.
+  pct: { color: '#E5B45F', fontSize: 26, lineHeight: 30, fontWeight: '700' },
+  pctSign: { color: '#E5B45F', fontSize: 13, fontWeight: '700' },
   summaryStats: {
     flex: 1,
     flexDirection: 'row',
@@ -234,6 +258,13 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '700',
     letterSpacing: 1,
+  },
+  shareButton: {
+    alignItems: 'center',
+    gap: 2,
+    padding: Spacing.three,
+    borderRadius: Radius.medium,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   areaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   areaTile: {
@@ -253,7 +284,4 @@ const styles = StyleSheet.create({
   areaCount: { fontSize: 11 },
   areaSpacer: { flex: 1 },
   chevron: { fontSize: 15, lineHeight: 18, fontWeight: '700' },
-  section: { gap: Spacing.two },
-  sectionTitle: { letterSpacing: 1, fontSize: 11, fontWeight: '700' },
-  sectionBody: { gap: Spacing.three },
 });

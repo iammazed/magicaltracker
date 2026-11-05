@@ -806,6 +806,80 @@ no reason to ask for.
 
 ---
 
+## The share card
+
+`src/app/share.tsx` previews the card and `src/components/share-card.tsx` draws it. Free and
+ungated, permanently: it is the only organic acquisition channel the app has, and behind the
+paywall it would only ever be posted by people who already paid.
+
+**The card must be on screen to be captured.** `captureRef` snapshots what the render server
+actually drew, so parking the card off-screen at `left: -9999` yields a blank or a failure on iOS
+depending on how the view was culled. The preview screen is not courtesy, it is the mechanism —
+and it also means nobody posts a readout of their own travel sight-unseen.
+
+**`collapsable={false}` on the captured wrapper is required.** React Native flattens a view with no
+styling of its own out of the native hierarchy, and a view that does not exist natively cannot be
+snapshotted. The failure is a null ref that looks like a bug in view-shot.
+
+**Square, and literal colours only.** 1:1 survives an Instagram post, a story, a text message and
+Facebook uncropped; anything else means picking one platform to look right on. Every colour is a
+literal because the card is the sky gradient, which is dark in both schemes — a theme token would
+invert to near-black in light mode and ship an unreadable image.
+
+**It shows totals and nothing else.** No place, no date, no rating. The card is designed to be
+posted publicly, so what goes on it is a privacy decision rather than a layout one.
+
+## Steps
+
+`src/hooks/use-steps.ts` rolls `expo-sensors` into the `step_days` table (schema 9).
+
+**This is a rollup, not a read, and it cannot be anything else.** CMPedometer keeps seven days:
+"Specifying a start date that is more than seven days in the past returns only the available
+data." So "how far did we walk in October" is not a question the sensor can ever answer — only
+something that was copying the totals down at the time can. The window is re-read on mount and on
+every foreground, all seven days rather than just today, so opening the app once a week loses
+nothing. Ten days closed loses the first three, and nothing can recover them; that gap is real and
+is documented rather than hidden.
+
+**Days are written with `MAX(existing, incoming)`, never overwritten.** If motion access is revoked
+or the phone is restored from a backup, the sensor answers 0 for days that really had 12,000
+steps, and an overwrite would destroy the only copy. MAX cannot lose data; the worst it can do is
+keep a number that is too high, which is visible and recoverable, whereas a zeroed trip is
+neither.
+
+**Failures are per-day.** The oldest day drifting past the seven-day edge mid-run should cost that
+day, not the six that would have come after it.
+
+**Days are LOCAL days.** A guest walking Magic Kingdom until midnight walked on that day, not on
+tomorrow in UTC. Today's range is clamped to now, because asking a sensor about the rest of the
+afternoon is asking about the future. The window logic was verified headlessly against month, year
+and leap-day crossings, and against the **25-hour DST fall-back day** in America/New_York — which
+Florida trips in early November actually straddle, so the range has to cover all 25 hours rather
+than stopping an hour short. That test was not committed: it mirrored the implementation by
+copy-paste, and a copied test gives false confidence the moment the original changes. These rules
+are the thing to preserve.
+
+**Distance is deliberately absent.** It would have to come from CMPedometer's stride estimate,
+which is guessed from height and wrong by a wide margin for most people. A step count is a number
+someone can trust; "4.2 miles" invites an argument the app cannot win.
+
+**`step_days` is local-only on purpose** — no `synced_at`, no server table. Step counts are
+health-adjacent, so a server copy means a new RLS policy, a new line in the privacy policy and a
+new answer on the App Privacy questionnaire, none of which buys anything while the only reader is
+the phone that generated them. Adding sync later is an ALTER and a backfill, which is a smaller
+act than retracting a disclosure.
+
+**`StepsSection` renders nothing — heading included — when there is no pedometer.** A simulator, an
+iPad and an Android device without Health Connect all land there, and a bare "STEPS" label over
+empty space reads as a broken feature rather than an absent sensor. That is why `Section` lives in
+`src/components/section.tsx` instead of inside the Stats screen: a section has to be able to
+return null and take its own title with it.
+
+**Denied is final.** iOS will not show the system prompt twice, so the denied state names the
+Settings path instead of offering a button that would do nothing.
+
+---
+
 ## Dates
 
 **`SyncProvider` is the innermost data provider**, below both `VisitsProvider` and
@@ -1254,7 +1328,7 @@ standalone `eas submit`. Running `eas build` and `eas submit` as two separate co
 same time is how this went wrong once: the submit had no finished store build to find, offered a
 menu of development builds, and App Store Connect rejects those.
 
-**`eas.json` is one of the fingerprint's 130 sources, so editing it orphans every installed
+**`eas.json` is one of the fingerprint's 133 sources, so editing it orphans every installed
 build from over-the-air updates.** This is the trap that cost a build: adding `ascAppId` — pure
 submission metadata, nothing the binary can observe — moved the iOS runtime version from
 `ed8385a7…` to `d41cd429…`, and the next `eas update` published to a runtime version that no
@@ -1263,7 +1337,7 @@ nobody.
 
 Check before publishing, not after:
 
-    npx expo-updates fingerprint:generate --platform ios   # hash + the 130 sources
+    npx expo-updates fingerprint:generate --platform ios   # hash + the 133 sources
     npx eas build:list --platform ios --limit 1            # the shipped build's Fingerprint
 
 **Use `npx expo-updates`, never `npx @expo/fingerprint@latest`.** The standalone package at
@@ -1441,14 +1515,26 @@ against a 320pt screen.
 `borderStyle: 'dashed'` is deliberately not used for the unearned ring: combined with a corner
 radius it renders solid on iOS, so the dashes would appear on web and Android only.
 
-### Rings need a build, so there are none yet
+### Rings
 
-A circular progress ring is the obvious next step and `react-native-svg` is **not a dependency**.
-Adding one edits `package.json`, which is a fingerprint source, which orphans every existing
-binary — so a ring cannot ship over the air. It waits for the native batch. Hand-rolling an arc
-out of rotated half-circles is possible and was rejected: it is fiddly geometry that cannot be
-verified from Windows, and there is already enough unverified layout in flight.
+`react-native-svg` landed in the native batch of 2026-11-05, so the Stats headline is a ring now
+rather than a bare number. `ProgressRing` takes a diameter, a 0–1 fraction and two colours, and
+centres whatever you pass as children.
 
+**The radius is `(size - stroke) / 2`, not `size / 2`.** A stroke straddles its path, so half of it
+falls outside a radius measured to the edge and the ring is clipped on all four sides.
+
+**The rotation is on a `<G>`, not the `<Circle>`.** A dash array starts at three o'clock and
+progress has to start at twelve. Rotating the group leaves `r` and the circumference readable as
+the numbers they are, and circle-level `rotation` is honoured on iOS but dropped by some web
+renderers — and this component renders on web.
+
+**Nothing is drawn at zero.** `strokeLinecap="round"` paints a dot for a zero-length dash, so an
+empty ring would carry a bead at twelve o'clock that reads as one visit logged out of hundreds.
+
+**Text inside a ring is sized against the bore, not the diameter.** The 92pt ring on Stats has an
+8pt stroke, leaving 76pt of usable width; the 44pt number that used to sit there alone is half
+again wider than that. It is 26pt now.
 ---
 
 ## Challenges
@@ -1715,6 +1801,27 @@ frames, so Expo Go does not warn on every launch about a module that was never g
 ---
 
 ## Builds
+
+### The native batch landed on 2026-11-05, and the runtime version moved
+
+`react-native-svg`, `react-native-view-shot` and `expo-sensors` were added together, on purpose.
+Each one is a native dependency, so each one alone would have moved the fingerprint and cost a
+build; batching them cost one. The hash went from **`d41cd429e25dcb2a8513567d4b7617f6a1a7e7fa`**
+(130 sources) to **`bd1bedc58beaa998a1332aaeed19f4eb6894371e`** (133 sources) — the three new
+sources being `node_modules/expo-sensors/ios`, `node_modules/react-native-svg`,
+`node_modules/react-native-view-shot`, plus both autolinking configs rehashing.
+
+**Builds 4 and 5 are therefore orphaned and cannot be reached over the air again.** Do not publish
+an update until a build carrying the new fingerprint is in TestFlight: `eas update` would succeed,
+report a healthy update group, and reach nobody — which is exactly the trap documented under
+Over-the-air updates. The testers must install the new build; there is no OTA path to it.
+
+Still unanswered, and it matters before `expo-widgets` is added: **whether widget JS is reachable
+over the air at all.** A widget component compiles into a separate bundle inside the extension,
+and neither the SDK 57 docs nor Expo's own announcement says whether `expo-updates` reaches it. If
+it does not, every widget tweak is a new binary.
+
+### Identifiers
 
 The bundle identifier is **`com.greyfoxcreations.magicaltracker`** on both platforms, and it is
 permanent — changing it after the first App Store submission means a new listing with no reviews

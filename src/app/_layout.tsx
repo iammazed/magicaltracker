@@ -158,6 +158,10 @@ function RootLayout() {
                 name="paywall"
                 options={{ title: '', presentation: 'modal' }}
               />
+              <Stack.Screen
+                name="share"
+                options={{ title: 'Share', presentation: 'modal' }}
+              />
               <Stack.Screen name="settings" options={{ title: 'Settings' }} />
               <Stack.Screen
                 name="sign-in"

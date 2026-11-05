@@ -65,6 +65,12 @@
         }
       ],
       [
+        "expo-sensors",
+        {
+          "motionPermission": "MagicalTracker counts your steps so you can see how far you walked on a park day. Step counts are stored on your device and are never uploaded."
+        }
+      ],
+      [
         "@sentry/react-native/expo",
         {
           "url": "https://sentry.io/",
