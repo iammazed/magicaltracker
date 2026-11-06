@@ -107,6 +107,18 @@ const CHALLENGE_GLYPH: Record<string, Glyph> = {
   // reaches every resort on property.
   transportation: g('bus.fill', 'directions_bus'),
   fireworks: g('sparkles', 'auto_awesome'),
+  // A thing, not a diagram — see the rule above. A festival is booths you
+  // eat and drink your way along, which is the one property all four share;
+  // a flower or a paint palette would each fit exactly one of them. Close to
+  // `cuisines` above, but that one is enclosed in a circle and they never
+  // appear on the same page.
+  'epcot-festivals': g('fork.knife', 'restaurant'),
+  // `party.popper.fill` is the obvious glyph and cannot be used: it is SF
+  // Symbols 4, so iOS 16, and this app's floor is 15.1 — where it renders as
+  // empty space, which is indistinguishable from a layout bug. All three
+  // parties are AFTER-HOURS events, which is the property they actually
+  // share, and `moon.stars.fill` has shipped since SF Symbols 1.
+  'holiday-parties': g('moon.stars.fill', 'nights_stay'),
 };
 
 const AREA_GLYPH: Record<string, Glyph> = {

@@ -1585,7 +1585,7 @@ The three pages are split **by what earns the stamp**, via `STAY_CHALLENGE_IDS` 
 |---|---|---|
 | **Food and drink** | eating — finishing a list, or covering a park or area | 9 + 12 |
 | **Resort stays** | sleeping somewhere — no meal involved | 4 |
-| **Quests** | the four the app cannot observe, tickable by hand | 4 |
+| **Quests** | the ones the app cannot observe, tickable by hand | 6 |
 
 The area half holds **12**, not 14: `byArea` groups the venues that exist, so Typhoon Lagoon and
 Disney's BoardWalk have no stamp because they have no eligible venue. An area appears the day it
@@ -1789,6 +1789,8 @@ every stay challenge count from it, so the two cannot disagree about the total.
 | Four Parks, One Day | the four parks on your best single day | 4 |
 | The Transportation Challenge | reaching a resort served by each way of getting around | 5 |
 | Under the Fireworks | the four free nighttime shows, hand-ticked only | 4 |
+| The EPCOT Festivals | the four festivals, hand-ticked only | 4 |
+| The Holiday Parties | the three after-hours parties, hand-ticked only | 3 |
 | All Year Round | a visit or a stay in each calendar month | 12 |
 
 The page is captioned **"More fun challenges."** Not "where you were, when you were here, and
@@ -1813,7 +1815,7 @@ re-added challenge would simply not re-celebrate a tier it had already acknowled
 
 Food and drink went 13 named challenges to **9**, so the page now holds 9 + 12 area stamps.
 
-#### These four, and ONLY these four, can be ticked by hand
+#### These six, and ONLY these six, can be ticked by hand
 
 `MANUAL_CHALLENGE_IDS` in `use-passport.ts`, which is `QUEST_CHALLENGE_IDS`. The reason it is
 exactly the quests is that they are the only challenges **the app cannot observe**, and each one
@@ -1825,10 +1827,47 @@ fails differently:
   monorail runs between Magic Kingdom and EPCOT, the Skyliner stops at two parks, and the ferry
   needs no resort at all — so the most obvious way to ride each of them is exactly the one with
   no resort to infer it from.
-- **Under the Fireworks** has nothing whatsoever to score from — see below. It is the only
-  challenge in the passport the log can never move.
+- **Under the Fireworks** has nothing whatsoever to score from — see below.
+- **The EPCOT Festivals** looks observable and is not. A festival is a DATE RANGE over a park,
+  and the log holds dates and areas, so "ate at EPCOT in October" seems like it ought to settle
+  it. The dates move every year, nothing in the app knows them, and hardcoding four moving
+  ranges would be a calendar to maintain forever that silently mislabels a trip the first year
+  it goes stale.
+- **The Holiday Parties** are separate tickets and nothing about buying one reaches the app.
+  A party is not a meal either: somebody can spend a whole evening at Not-So-Scary eating
+  nothing but the free candy.
 - **All Year Round** reads dates off the log, which a day trip with no meal and no hotel never
   leaves behind.
+
+Three of the six — fireworks, festivals and parties — **the log can never move at all.** Every
+step is `done: false` at birth and only a tick changes it.
+
+#### The festivals and the parties are hardcoded too
+
+Added 2026-11-06 at Jake's request. `EPCOT_FESTIVALS` and `HOLIDAY_PARTIES` in
+`use-passport.ts`, beside `NIGHTTIME_SHOWS` and for the same reason: neither a festival nor a
+party is a place you book a table at, so neither belongs in `catalog_venues`.
+
+**The catalog is a trap for both, in exactly the fireworks shape.** It carries three festival
+DINING PACKAGES — the Candlelight Processional package, Disney on Broadway, the Food & Wine
+Concert Series — and two Not-So-Spooky dessert parties. Every one is a paid add-on. Scoring
+either challenge off them would count the people who bought a dinner and miss everyone who
+walked the booths or wore a costume, which is what attending actually is.
+
+**The free-with-admission rule does NOT apply to the parties, and that is deliberate.** Under the
+Fireworks excludes the Halloween and Christmas party fireworks because they need a party ticket;
+this challenge is ABOUT that ticket. A separate ticket is the defining feature of a hard-ticket
+party, not a barrier that crept in. Do not "fix" one of these by applying the other's rule.
+
+The festivals carry no `where`, because all four are at EPCOT and the challenge says so in its
+title. The parties do, because they are not all in the same park — Jollywood Nights is at
+Hollywood Studios and the other two are Magic Kingdom.
+
+**`party.popper.fill` is the obvious stamp for the parties and cannot be used.** It is SF
+Symbols 4, so iOS 16, and this app's deployment floor is 15.1 — where an unknown symbol renders
+as empty space, indistinguishable from a layout bug. `moon.stars.fill` has shipped since SF
+Symbols 1 and says the thing all three parties actually share, which is that they happen after
+the park has closed to everyone else.
 
 #### Under the Fireworks counts SHOWS, and they are hardcoded
 

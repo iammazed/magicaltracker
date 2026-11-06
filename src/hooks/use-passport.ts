@@ -105,6 +105,8 @@ export const QUEST_CHALLENGE_IDS = [
   'park-hopper',
   'transportation',
   'fireworks',
+  'epcot-festivals',
+  'holiday-parties',
   'all-year-round',
 ];
 
@@ -161,6 +163,56 @@ const TRANSPORT_ORDER = ['monorail', 'skyliner', 'boat', 'bus', 'walk'];
  * Enchantment — so expect to edit this, and check the park-admission rule each
  * time rather than adding whatever is newest.
  */
+/**
+ * The four EPCOT festivals, for the festivals quest.
+ *
+ * Hardcoded for the same reason as `NIGHTTIME_SHOWS`: a festival is not a
+ * place you book a table at, so it has no business in `catalog_venues`. The
+ * catalog does carry three festival DINING PACKAGES — the Candlelight
+ * Processional package, Disney on Broadway, the Food & Wine Concert Series —
+ * and they are the fireworks trap all over again. Each one is a paid add-on,
+ * so scoring the quest off them would count the people who bought a dinner
+ * and miss everyone who simply walked the booths, which is what attending a
+ * festival actually is.
+ *
+ * In calendar order through the year, which is how somebody works out which
+ * one they are missing.
+ *
+ * No `where`: the challenge is called The EPCOT Festivals and every one of
+ * them is at EPCOT, so a second line reading "EPCOT" four times is noise.
+ */
+const EPCOT_FESTIVALS: { id: string; label: string }[] = [
+  { id: 'festival-of-the-arts', label: 'Festival of the Arts' },
+  { id: 'flower-and-garden', label: 'Flower & Garden Festival' },
+  { id: 'food-and-wine', label: 'Food & Wine Festival' },
+  { id: 'festival-of-the-holidays', label: 'Festival of the Holidays' },
+];
+
+/**
+ * The after-hours parties.
+ *
+ * **These cost extra, and that is correct here.** Under the Fireworks applies
+ * a free-with-admission rule and this one deliberately does not — a separate
+ * ticket is the defining feature of a hard-ticket party, not a barrier that
+ * crept in. Do not "fix" this by applying the fireworks rule to it.
+ *
+ * The park matters, unlike the festivals, because these are not all in the
+ * same one.
+ */
+const HOLIDAY_PARTIES: { id: string; label: string; where: string }[] = [
+  {
+    id: 'not-so-scary',
+    label: "Mickey's Not-So-Scary Halloween Party",
+    where: 'Magic Kingdom',
+  },
+  {
+    id: 'very-merry',
+    label: "Mickey's Very Merry Christmas Party",
+    where: 'Magic Kingdom',
+  },
+  { id: 'jollywood-nights', label: 'Disney Jollywood Nights', where: 'Hollywood Studios' },
+];
+
 const NIGHTTIME_SHOWS: { id: string; label: string; where: string }[] = [
   { id: 'happily-ever-after', label: 'Happily Ever After', where: 'Magic Kingdom' },
   { id: 'luminous', label: 'Luminous: The Symphony of Us', where: 'EPCOT' },
@@ -921,6 +973,57 @@ export function usePassport() {
     };
 
     /**
+     * The four EPCOT festivals.
+     *
+     * Unobservable for a reason worth stating, because it looks observable
+     * at first glance: a festival is a DATE RANGE over a park, and the log
+     * holds dates and areas, so "ate at EPCOT in October" looks like it ought
+     * to settle it. It does not. The dates move every year, nothing in the
+     * app knows them, and hardcoding four moving date ranges would be a
+     * calendar to maintain forever that silently mislabels a trip the first
+     * year it goes stale. A tick is both simpler and more honest.
+     */
+    const festivalChallenge = (): Challenge =>
+      fromSteps(
+        'epcot-festivals',
+        'The EPCOT Festivals',
+        'All four festivals — the park changes completely for each one. Tick off the ones you have walked.',
+        EPCOT_FESTIVALS.map((f) => ({
+          id: f.id,
+          label: f.label,
+          done: false,
+          venueId: null,
+        })),
+        false,
+        true,
+      );
+
+    /**
+     * The three after-hours parties.
+     *
+     * A separate ticket each, and nothing about buying one reaches the app —
+     * there is no ticket integration and there will not be. A party is also
+     * not a meal: somebody can spend a whole evening at Not-So-Scary eating
+     * nothing but the free candy, so even the dessert parties the catalog
+     * holds would miss most attendees.
+     */
+    const partyChallenge = (): Challenge =>
+      fromSteps(
+        'holiday-parties',
+        'The Holiday Parties',
+        'Halloween, Christmas and Jollywood Nights — three separate tickets, three completely different parks after dark.',
+        HOLIDAY_PARTIES.map((party) => ({
+          id: party.id,
+          label: party.label,
+          where: party.where,
+          done: false,
+          venueId: null,
+        })),
+        false,
+        true,
+      );
+
+    /**
      * The nighttime shows, watched from anywhere at all.
      *
      * **The only challenge in the passport that the log can never score.**
@@ -1107,6 +1210,8 @@ export function usePassport() {
       parkHopperChallenge(),
       transportChallenge(),
       fireworksChallenge(),
+      festivalChallenge(),
+      partyChallenge(),
       yearChallenge(),
     ];
   }, [

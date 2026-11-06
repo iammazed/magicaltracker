@@ -97,8 +97,8 @@ export default function ChallengeDetailScreen() {
 
           {/*
             Said once, here, rather than implied by the presence of tappable
-            circles. A checkbox that appears on four screens out of twenty-two
-            needs to explain why it is there, and the honest explanation is
+            circles. A checkbox that appears on six challenge screens and not
+            the rest needs to explain why it is there, and the honest explanation is
             that the app cannot see this one — which is also the answer to
             "why did my park day not count?".
           */}
