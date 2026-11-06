@@ -1025,32 +1025,6 @@ export function usePassport() {
 
       // ── Collections ───────────────────────────────────────────────────
       pickChallenge(
-        'buffets',
-        'The Buffet Line',
-        'Every all-you-care-to-eat buffet on property.',
-        (r) => r.dining_style.includes('buffet'),
-      ),
-      pickChallenge(
-        'street-eats',
-        'Street Eats',
-        'Every cart, wagon and food truck — the places with no front door.',
-        (r) => r.venue_kind === 'food-truck' || r.venue_kind === 'cart',
-      ),
-      pickChallenge(
-        'set-menu',
-        'Set Menu',
-        'Prix-fixe and family-style dining, where the kitchen decides.',
-        (r) => r.dining_style.some((d) => d === 'prix-fixe' || d === 'family-style'),
-        true,
-      ),
-      pickChallenge(
-        'top-dollar',
-        'Top Dollar',
-        'Every four-dollar-sign restaurant at Walt Disney World.',
-        (r) => r.price_tier === 4,
-        true,
-      ),
-      pickChallenge(
         'lounges',
         'Lounge Lizard',
         'Every lounge and bar on property, all seventy-odd of them.',

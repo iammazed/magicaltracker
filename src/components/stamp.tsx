@@ -87,10 +87,6 @@ const CHALLENGE_GLYPH: Record<string, Glyph> = {
   'snacking-around-the-world': g('takeoutbag.and.cup.and.straw.fill', 'lunch_dining'),
   'character-dining': g('crown.fill', 'workspace_premium'),
   'signature-dining': g('star.circle.fill', 'star'),
-  buffets: g('tray.full.fill', 'restaurant_menu'),
-  'set-menu': g('list.bullet.rectangle.fill', 'list_alt'),
-  'top-dollar': g('dollarsign.circle.fill', 'paid'),
-  'street-eats': g('box.truck.fill', 'local_shipping'),
   lounges: g('wineglass.fill', 'wine_bar'),
   cuisines: g('fork.knife.circle.fill', 'restaurant'),
 

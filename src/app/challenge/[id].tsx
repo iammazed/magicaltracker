@@ -105,8 +105,8 @@ export default function ChallengeDetailScreen() {
           {c.manual ? (
             <ThemedText type="small" themeColor="textSecondary">
               The app can only see what you log, and this one happens away from
-              the table — so tick anything you have done. Tapping a circle
-              marks it; tapping it again takes the mark back.
+              the table — so tick anything you have done. Tap a row to mark it;
+              tap it again to take the mark back.
             </ThemedText>
           ) : null}
         </View>
@@ -233,17 +233,27 @@ function StepRow({
       : router.push({ pathname: '/venue/[id]', params: { id } });
 
   /**
-   * The tick is the mark control; the rest of the row still navigates.
+   * On a manual step the WHOLE ROW is the control, not just the circle.
    *
-   * This split matters on the fireworks challenge, where every step is a real
-   * venue worth opening. Making the whole row toggle would have cost the tap
-   * that goes to the restaurant, and putting the toggle in a swipe or a long
-   * press would hide the only control that explains what the screen is for.
+   * The first cut made only the circle tappable, on the reasoning that the
+   * row's tap belonged to navigation. That was wrong in the most ordinary
+   * way: three of the four manual challenges — park-hopper, transportation,
+   * all-year-round — build steps with `venueId: null` and no options, so on
+   * those the row had nothing to navigate to and was simply inert. A tester
+   * tapped the box, nothing happened, and there was no way to discover that
+   * a 20pt circle was the only live part of a full-width row. A control you
+   * have to be told about is not a control.
    *
-   * A step the LOG earned is deliberately not tappable, and that is the
-   * additive rule showing through the interface: there is nothing a tap could
-   * do there that would be honest. Un-ticking it cannot un-log the meal, so
-   * the circle would either lie or bounce back.
+   * Fireworks is the one manual challenge whose steps are real venues, and
+   * it keeps its navigation on an explicit chevron at the trailing edge.
+   * That is the ordinary trade — the row does the main thing, a small button
+   * does the secondary thing — and marking is unambiguously the main thing
+   * on a screen that exists BECAUSE the app cannot observe the achievement.
+   *
+   * A step the LOG earned is still not tappable, and that is the additive
+   * rule showing through the interface: there is nothing a tap could do
+   * there that would be honest. Un-ticking it cannot un-log the meal, so the
+   * row would either lie or bounce back.
    */
   const canMark = !!step.manual && (!step.done || !!step.marked);
 
@@ -255,6 +265,8 @@ function StepRow({
     else tapPicked();
   };
 
+  const venueId = step.venueId;
+
   const tick = (
     <View
       style={[
@@ -263,9 +275,10 @@ function StepRow({
           ? { backgroundColor: theme.accent }
           : {
               borderColor: canMark ? theme.accent : theme.border,
-              // A circle you are invited to tap has to look different from one
-              // that is only reporting. A full-weight accent outline is the
-              // lightest thing that reads as "this is a control".
+              // Still weighted differently even though the whole row is live
+              // now. The circle is what says the row is a CHECKBOX rather
+              // than a link, which is the one thing a tap cannot tell you
+              // before you have made it.
               borderWidth: canMark ? 1.5 : StyleSheet.hairlineWidth,
             },
       ]}
@@ -278,27 +291,7 @@ function StepRow({
 
   const body = (
     <>
-      {canMark ? (
-        <Pressable
-          onPress={onToggle}
-          accessibilityRole="checkbox"
-          accessibilityState={{ checked: !!step.done }}
-          accessibilityLabel={
-            step.done
-              ? `${step.label}, marked done by you. Tap to take the mark back.`
-              : `${step.label}, not done. Tap to mark it done.`
-          }
-          // The circle is 20pt and a touch target must not be. The negative
-          // margin keeps the row's own layout exactly as it was while giving
-          // the tap the space Apple asks for.
-          hitSlop={12}
-          style={({ pressed }) => (pressed ? styles.tickPressed : null)}
-        >
-          {tick}
-        </Pressable>
-      ) : (
-        tick
-      )}
+      {tick}
       <View style={styles.stepMain}>
         <ThemedText
           type="smallBold"
@@ -321,11 +314,89 @@ function StepRow({
           </ThemedText>
         ) : null}
       </View>
+      {/* Only where the mark has taken the row over AND there is somewhere to
+          go. On every other row the row itself navigates, and a chevron would
+          point at the thing already under your thumb. */}
+      {canMark && venueId ? (
+        <Pressable
+          onPress={() => open(venueId)}
+          accessibilityRole="button"
+          accessibilityLabel={`Open ${step.label}`}
+          hitSlop={12}
+          style={({ pressed }) => (pressed ? styles.tickPressed : null)}
+        >
+          <ThemedText style={[styles.chevron, { color: theme.textFaint }]}>›</ThemedText>
+        </Pressable>
+      ) : null}
     </>
   );
 
-  if (step.venueId) {
-    const venueId = step.venueId;
+  const choices = step.options;
+  const optionsBlock = choices?.length ? (
+    <View style={styles.options}>
+      {choices.map((o) => (
+        <Pressable
+          key={o.id}
+          onPress={() => open(o.id)}
+          accessibilityRole="button"
+          accessibilityLabel={`${o.name}${o.done ? ', visited' : ''}`}
+          style={({ pressed }) => [
+            styles.option,
+            { borderColor: o.done ? theme.accent : theme.border, opacity: pressed ? 0.6 : 1 },
+          ]}
+        >
+          <ThemedText type="small" style={{ color: o.done ? theme.accent : theme.textSecondary }}>
+            {o.done ? `✓ ${o.name}` : o.name}
+          </ThemedText>
+        </Pressable>
+      ))}
+    </View>
+  ) : choices ? (
+    // An empty `options` array means this step IS a choice and the catalog
+    // has nothing to offer for it. `undefined` means it was never a choice
+    // — a month is simply a month — and saying this there would be wrong.
+    <ThemedText type="small" themeColor="textFaint">
+      Nothing in the catalog covers this one yet.
+    </ThemedText>
+  ) : null;
+
+  // A venue step is one row. Everything else stacks its options under its
+  // name, so the name goes in `stepHead` and the whole thing is a column.
+  const inner = venueId ? (
+    body
+  ) : (
+    <>
+      <View style={styles.stepHead}>{body}</View>
+      {optionsBlock}
+    </>
+  );
+
+  if (canMark) {
+    return (
+      <Pressable
+        onPress={onToggle}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: !!step.done }}
+        accessibilityLabel={
+          step.done
+            ? `${step.label}, marked done by you. Tap to take the mark back.`
+            : `${step.label}, not done. Tap to mark it done.`
+        }
+        style={({ pressed }) => [
+          styles.step,
+          venueId ? null : styles.stepGroup,
+          {
+            backgroundColor: pressed ? theme.backgroundSelected : theme.backgroundElement,
+            borderColor: theme.border,
+          },
+        ]}
+      >
+        {inner}
+      </Pressable>
+    );
+  }
+
+  if (venueId) {
     return (
       <Pressable
         onPress={() => open(venueId)}
@@ -339,12 +410,11 @@ function StepRow({
           },
         ]}
       >
-        {body}
+        {inner}
       </Pressable>
     );
   }
 
-  const choices = step.options;
   return (
     <View
       style={[
@@ -353,37 +423,7 @@ function StepRow({
         { backgroundColor: theme.backgroundElement, borderColor: theme.border },
       ]}
     >
-      <View style={styles.stepHead}>{body}</View>
-      {choices?.length ? (
-        <View style={styles.options}>
-          {choices.map((o) => (
-            <Pressable
-              key={o.id}
-              onPress={() => open(o.id)}
-              accessibilityRole="button"
-              accessibilityLabel={`${o.name}${o.done ? ', visited' : ''}`}
-              style={({ pressed }) => [
-                styles.option,
-                { borderColor: o.done ? theme.accent : theme.border, opacity: pressed ? 0.6 : 1 },
-              ]}
-            >
-              <ThemedText
-                type="small"
-                style={{ color: o.done ? theme.accent : theme.textSecondary }}
-              >
-                {o.done ? `✓ ${o.name}` : o.name}
-              </ThemedText>
-            </Pressable>
-          ))}
-        </View>
-      ) : choices ? (
-        // An empty `options` array means this step IS a choice and the catalog
-        // has nothing to offer for it. `undefined` means it was never a choice
-        // — a month is simply a month — and saying this there would be wrong.
-        <ThemedText type="small" themeColor="textFaint">
-          Nothing in the catalog covers this one yet.
-        </ThemedText>
-      ) : null}
+      {inner}
     </View>
   );
 }
@@ -451,6 +491,7 @@ const styles = StyleSheet.create({
   },
   tickMark: { fontSize: 12, fontWeight: '700', lineHeight: 16 },
   tickPressed: { opacity: 0.5 },
+  chevron: { fontSize: 15, lineHeight: 18, fontWeight: '700' },
   options: {
     flexDirection: 'row',
     flexWrap: 'wrap',

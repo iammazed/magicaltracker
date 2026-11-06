@@ -127,7 +127,7 @@ export default function PassportScreen() {
 
           <PassportPage
             title="Food and drink"
-            caption="Earned by what you ate — finishing a list, or eating everywhere in one park or area."
+            caption="Earn stamps for the places you eat and drink."
           >
             {[...food, ...areas].map((c) => (
               <Stamp key={c.id} challenge={c} fresh={isFresh(c, fresh)} />
@@ -140,7 +140,7 @@ export default function PassportScreen() {
               would read as more of the same. */}
           <PassportPage
             title="Resort stays"
-            caption="Earned by where you slept, not what you ate."
+            caption="Earn stamps for the resorts you stay at."
           >
             {stays.map((c) => (
               <Stamp key={c.id} challenge={c} fresh={isFresh(c, fresh)} />

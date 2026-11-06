@@ -1531,7 +1531,7 @@ The three pages are split **by what earns the stamp**, via `STAY_CHALLENGE_IDS` 
 
 | Page | Earned by | Count |
 |---|---|---|
-| **Food and drink** | eating — finishing a list, or covering a park or area | 13 + 12 |
+| **Food and drink** | eating — finishing a list, or covering a park or area | 9 + 12 |
 | **Resort stays** | sleeping somewhere — no meal involved | 4 |
 | **Quests** | the four the app cannot observe, tickable by hand | 4 |
 
@@ -1744,6 +1744,23 @@ how you got around", which was accurate and said nothing — four stamps whose o
 is that none of them is a meal. Nobody needs that taxonomy; they need to know there is more in
 here.
 
+#### Four food challenges were removed on 2026-11-06
+
+**The Buffet Line**, **Street Eats**, **Set Menu** and **Top Dollar** are gone from the array in
+`use-passport.ts` and their glyphs are gone from `stamp.tsx`. Jake's wife judged them surplus, and
+the reasoning holds up: three of the four sorted venues by a property nobody plans a trip around.
+"Every prix-fixe restaurant" and "every four-dollar-sign restaurant" are facts about a price
+column, not things anyone sets out to do, and the passport works because its challenges name an
+outing someone would actually describe to a friend.
+
+**Nothing is lost by removing one.** A challenge is derived from the log on every render, so a
+stamp is a view over meals that are still there — delete the challenge and the meals remain, add
+it back and the stamp returns at exactly the progress it had. The only casualty is
+`achievements_seen`, which keeps the orphaned milestone keys forever; they are inert, and a
+re-added challenge would simply not re-celebrate a tier it had already acknowledged.
+
+Food and drink went 13 named challenges to **9**, so the page now holds 9 + 12 area stamps.
+
 #### These four, and ONLY these four, can be ticked by hand
 
 `MANUAL_CHALLENGE_IDS` in `use-passport.ts`, which is `QUEST_CHALLENGE_IDS`. The reason it is
@@ -1787,10 +1804,23 @@ back. `step.marked` is true only when the mark is doing the work, which is what 
 you" line under a row is keyed on — saying it under a step the log earned would be false, and
 saying nothing at all leaves no way to tell which ticks are yours to undo.
 
-**The tick is the control; the rest of the row still navigates.** This matters on Under the
-Fireworks, where every step is a real venue worth opening. A whole-row toggle would cost the tap
-that goes to the restaurant, and hiding the toggle in a swipe or a long press would hide the only
-control that explains what the screen is for.
+**On a manual step the WHOLE ROW is the control, and a chevron does the navigating.** The first
+cut made only the circle tappable, reasoning that the row's tap belonged to navigation. That was
+wrong in the most ordinary way: three of the four manual challenges — park-hopper, transportation,
+all-year-round — build steps with `venueId: null` and no options, so on those the row had nothing
+to navigate to and was simply **inert**. A tester tapped the box, nothing happened, and there was
+no way to discover that a 20pt circle was the only live part of a full-width row.
+
+**A control you have to be told about is not a control.** The circle still looks different on a
+markable row — `borderWidth: 1.5` in `theme.accent` against a hairline `theme.border` — but it now
+says "this row is a checkbox" rather than "aim here".
+
+Under the Fireworks is the one manual challenge whose steps are real venues, and it keeps its
+navigation on an explicit `›` at the trailing edge. That is the ordinary trade — the row does the
+main thing, a small button does the secondary thing — and marking is unambiguously the main thing
+on a screen that exists BECAUSE the app cannot observe the achievement. The chevron renders only
+when `canMark && venueId`; on every other row the row itself navigates and a chevron would point
+at the thing already under your thumb.
 
 Marks live in `challenge_marks`, carry NOTHING but the challenge id and step id, and **sync** —
 see Sync and Database. No date, no place, no note: the step id is the whole claim. "I rode the
