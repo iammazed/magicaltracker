@@ -6,8 +6,9 @@ import { SkyCard, Stars } from '@/components/sky-card';
 import { PlaceOnDay, TripDays } from '@/components/trip-days';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { AreaTone, Radius, Spacing, TierTone } from '@/constants/theme';
-import { TIER_LABEL, useResorts } from '@/hooks/use-resorts';
+import { TimeField } from '@/components/time-field';
+import { TripStay } from '@/components/trip-stay';
+import { AreaTone, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { daysUntil, tripStatus, useTrips } from '@/hooks/use-trips';
 import { useVenues } from '@/hooks/use-venues';
@@ -19,14 +20,13 @@ export default function TripScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const theme = useTheme();
-  const { trips, plansFor, removePlan, toggleBooked, deleteTrip } = useTrips();
+  const { trips, plansFor, removePlan, toggleBooked, setReservationTime, deleteTrip } =
+    useTrips();
   const { data: venues } = useVenues();
-  const { data: resorts } = useResorts();
   const { byVenue } = useVisits();
 
   const trip = trips.find((t) => t.id === id) ?? null;
   const venueById = useMemo(() => new Map(venues.map((v) => [v.id, v])), [venues]);
-  const resort = trip?.resort_id ? resorts.find((r) => r.id === trip.resort_id) : null;
 
   if (!trip) {
     return (
@@ -124,31 +124,7 @@ export default function TripScreen() {
         </Section>
 
         <Section title="Staying at">
-          {resort ? (
-            <Pressable
-              onPress={() => router.push({ pathname: '/resort/[id]', params: { id: resort.id } })}
-              accessibilityRole="button"
-              style={[styles.card, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}
-            >
-              <View style={[styles.bar, { backgroundColor: theme[TierTone[resort.tier] ?? 'brandTeal'] }]} />
-              <View style={styles.cardText}>
-                <ThemedText type="smallBold">{resort.name}</ThemedText>
-                <ThemedText type="small" themeColor="textFaint">
-                  {TIER_LABEL[resort.tier] ?? resort.tier}
-                </ThemedText>
-              </View>
-            </Pressable>
-          ) : (
-            <Pressable
-              onPress={() => router.push('/resorts')}
-              accessibilityRole="button"
-              style={[styles.dashed, { borderColor: theme.border }]}
-            >
-              <ThemedText type="small" style={{ color: theme.accent }}>
-                Choose a resort
-              </ThemedText>
-            </Pressable>
-          )}
+          <TripStay trip={trip} />
         </Section>
 
         {/* ── Dining plan ──────────────────────────────────────── */}
@@ -195,9 +171,26 @@ export default function TripScreen() {
                     <ThemedText type="smallBold" numberOfLines={1}>
                       {v?.name ?? p.venue_id}
                     </ThemedText>
-                    <ThemedText type="small" themeColor="textFaint" numberOfLines={1}>
-                      {visited ? 'Already visited' : formatCuisine(v?.cuisine)}
-                    </ThemedText>
+                    {/* On the second line rather than the already-crowded
+                        first one. A meal in the pool has no day, so a time on
+                        it is unusual — but it happens when somebody takes a
+                        booked meal off a day, and leaving no way to clear it
+                        would strand the time where nothing could reach it. */}
+                    <View style={styles.planMeta}>
+                      <ThemedText
+                        type="small"
+                        themeColor="textFaint"
+                        numberOfLines={1}
+                        style={styles.planCuisine}
+                      >
+                        {visited ? 'Already visited' : formatCuisine(v?.cuisine)}
+                      </ThemedText>
+                      <TimeField
+                        compact
+                        value={p.reservation_time}
+                        onChange={(t) => void setReservationTime(p.id, t)}
+                      />
+                    </View>
                   </View>
                   <PlaceOnDay trip={trip} plan={p} />
                   <Pressable
@@ -317,6 +310,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden', paddingRight: Spacing.three,
   },
   planMain: { flex: 1, paddingVertical: Spacing.three, gap: 1 },
+  planMeta: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  planCuisine: { flexShrink: 1 },
   bookedPill: {
     paddingHorizontal: Spacing.two, paddingVertical: 3,
     borderRadius: Radius.pill, borderWidth: StyleSheet.hairlineWidth,

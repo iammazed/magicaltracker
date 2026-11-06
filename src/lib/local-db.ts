@@ -22,7 +22,7 @@ import { seedCatalogIfNeeded, syncCatalogSchema } from '@/lib/catalog-db';
 export const DATABASE_NAME = 'magicaltracker.db';
 
 /** Bump when the schema below changes, and add a matching step in migrate(). */
-const SCHEMA_VERSION = 10;
+const SCHEMA_VERSION = 11;
 
 export async function migrate(db: SQLiteDatabase) {
   // WAL keeps reads fast while a write is in flight, which matters when the
@@ -292,6 +292,55 @@ export async function migrate(db: SQLiteDatabase) {
     version = 10;
   }
 
+  if (version < 11) {
+    await db.execAsync(`
+      -- Split stays, and a time against a planned meal.
+      --
+      -- ## Why a second resort column rather than a trip_resorts table
+      --
+      -- A table keyed on (trip_id, resort_id, nights) is the general answer
+      -- and it is the wrong size for the problem. A split stay is two hotels
+      -- in practice -- the pattern is "a few nights here, then there" -- and
+      -- a join table buys a third and fourth resort at the cost of a second
+      -- sync table, a second RLS policy, and a UI that has to teach people
+      -- what a stay segment is. Two columns and a date say the same thing
+      -- for the case that happens.
+      --
+      -- If three resorts ever turns out to be real, the migration out of
+      -- here is mechanical: every trip becomes one or two rows in the new
+      -- table and these columns are dropped. That is a smaller act than
+      -- shipping the join table now and never needing it.
+      --
+      -- \`resort_switch_on\` is the date you CHECK IN to the second resort,
+      -- so a trip from the 14th to the 18th switching on the 16th is two
+      -- nights at the first and two at the second. Storing the changeover
+      -- rather than two ranges means the two halves cannot contradict each
+      -- other or leave a gap, which two independent date pairs would.
+      --
+      -- Null in either is the ordinary case -- one resort, or none chosen --
+      -- so every row written before this existed is already correct and
+      -- there is nothing to backfill.
+      ALTER TABLE trips ADD COLUMN resort_id_2 TEXT;
+      ALTER TABLE trips ADD COLUMN resort_switch_on TEXT;   -- YYYY-MM-DD
+
+      -- ## The reservation time
+      --
+      -- 'HH:MM', 24-hour, local to Walt Disney World and NOT a timestamp.
+      --
+      -- A dining reservation is a wall-clock time at a specific restaurant.
+      -- It does not move when the person planning the trip is in another
+      -- time zone, which is exactly what storing an instant would do: book
+      -- 7:40pm from California, fly to Florida, and a UTC-backed field now
+      -- reads 10:40pm. The date it belongs to is already on the row as
+      -- \`planned_on\`, so there is nothing a full timestamp would add.
+      --
+      -- Null means no time, which is different from a time of midnight and
+      -- is the state every existing row is in.
+      ALTER TABLE trip_plans ADD COLUMN reservation_time TEXT;   -- HH:MM
+    `);
+    version = 11;
+  }
+
   await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
 
   // The catalog tables are NOT governed by the ladder above, and must not be.
@@ -341,6 +390,10 @@ export type Trip = {
   start_date: string;
   end_date: string;
   resort_id: string | null;
+  /** The second half of a split stay. Null unless the trip is split. */
+  resort_id_2: string | null;
+  /** YYYY-MM-DD: the day you check in to `resort_id_2`. */
+  resort_switch_on: string | null;
   note: string | null;
   created_at: string;
   updated_at: string;
@@ -355,6 +408,8 @@ export type TripPlan = {
   note: string | null;
   /** YYYY-MM-DD, or null while the meal is still in the pool. */
   planned_on: string | null;
+  /** 'HH:MM' in 24-hour park-local time, or null for no time. */
+  reservation_time: string | null;
   created_at: string;
   synced_at: string | null;
 };

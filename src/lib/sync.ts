@@ -99,6 +99,8 @@ type LocalTrip = {
   start_date: string;
   end_date: string;
   resort_id: string | null;
+  resort_id_2: string | null;
+  resort_switch_on: string | null;
   note: string | null;
   created_at: string;
   updated_at: string;
@@ -111,6 +113,7 @@ type LocalPlan = {
   booked: number;
   note: string | null;
   planned_on: string | null;
+  reservation_time: string | null;
   created_at: string;
 };
 
@@ -172,6 +175,8 @@ async function push(db: SQLiteDatabase, userId: string): Promise<number> {
     start_date: t.start_date,
     end_date: t.end_date,
     resort_id: t.resort_id,
+    resort_id_2: t.resort_id_2,
+    resort_switch_on: t.resort_switch_on,
     note: t.note,
     created_at: t.created_at,
     updated_at: t.updated_at,
@@ -204,6 +209,7 @@ async function push(db: SQLiteDatabase, userId: string): Promise<number> {
     booked: !!p.booked,
     note: p.note,
     planned_on: p.planned_on,
+    reservation_time: p.reservation_time,
     created_at: p.created_at,
   }), userId);
 
@@ -276,9 +282,16 @@ async function pull(db: SQLiteDatabase, userId: string): Promise<number> {
   let total = 0;
 
   const tables = [
-    { name: 'trips', columns: 'id, name, start_date, end_date, resort_id, note, created_at, updated_at' },
+    {
+      name: 'trips',
+      columns:
+        'id, name, start_date, end_date, resort_id, resort_id_2, resort_switch_on, note, created_at, updated_at',
+    },
     { name: 'trip_days', columns: 'id, trip_id, day, area_id, kind, note, created_at, updated_at' },
-    { name: 'trip_plans', columns: 'id, trip_id, venue_id, booked, note, planned_on, created_at' },
+    {
+      name: 'trip_plans',
+      columns: 'id, trip_id, venue_id, booked, note, planned_on, reservation_time, created_at',
+    },
     { name: 'visits', columns: 'id, venue_id, visited_on, date_exact, rating, would_return, party_size, note, dishes, created_at, updated_at' },
     { name: 'stays', columns: 'id, resort_id, check_in, check_out, rating, room_type, note, created_at, updated_at' },
     { name: 'challenge_marks', columns: 'id, challenge_id, step_id, created_at, updated_at' },
@@ -330,10 +343,12 @@ async function insertPulled(
   if (table === 'trips') {
     await db.runAsync(
       `INSERT OR IGNORE INTO trips
-         (id, name, start_date, end_date, resort_id, note, created_at, updated_at, synced_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (id, name, start_date, end_date, resort_id, resort_id_2, resort_switch_on,
+          note, created_at, updated_at, synced_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       String(r.id), String(r.name), String(r.start_date), String(r.end_date),
-      (r.resort_id as string) ?? null, (r.note as string) ?? null,
+      (r.resort_id as string) ?? null, (r.resort_id_2 as string) ?? null,
+      (r.resort_switch_on as string) ?? null, (r.note as string) ?? null,
       String(r.created_at), String(r.updated_at), now,
     );
   } else if (table === 'trip_days') {
@@ -348,11 +363,13 @@ async function insertPulled(
   } else if (table === 'trip_plans') {
     await db.runAsync(
       `INSERT OR IGNORE INTO trip_plans
-         (id, trip_id, venue_id, booked, note, planned_on, created_at, synced_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+         (id, trip_id, venue_id, booked, note, planned_on, reservation_time,
+          created_at, synced_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       String(r.id), String(r.trip_id), String(r.venue_id),
       bit(r.booked) ?? 0, (r.note as string) ?? null,
-      (r.planned_on as string) ?? null, String(r.created_at), now,
+      (r.planned_on as string) ?? null, (r.reservation_time as string) ?? null,
+      String(r.created_at), now,
     );
   } else if (table === 'visits') {
     await db.runAsync(

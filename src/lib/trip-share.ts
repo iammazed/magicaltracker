@@ -1,4 +1,5 @@
 import { datesBetween, formatRange, parseISO } from '@/lib/calendar';
+import { byTimeThenName, formatTime } from '@/lib/clock';
 import type { Trip, TripDay, TripPlan } from '@/lib/local-db';
 
 /**
@@ -19,6 +20,8 @@ import type { Trip, TripDay, TripPlan } from '@/lib/local-db';
 export type ItineraryMeal = {
   name: string;
   booked: boolean;
+  /** 'HH:MM' 24-hour, or null for "some time that day". */
+  time: string | null;
 };
 
 export type ItineraryDay = {
@@ -35,13 +38,28 @@ export type ItineraryDay = {
    */
   where: string | null;
   meals: ItineraryMeal[];
+  /**
+   * Set only on the day a split stay changes hotel, to the resort being
+   * moved INTO. The move is a thing that happens on a day, so it belongs on
+   * the day rather than being left for a reader to work out from two date
+   * ranges in the header.
+   */
+  movingTo: string | null;
 };
 
 export type Itinerary = {
   name: string;
   /** `March 14 – 21, 2027`. */
   dates: string;
-  resort: string | null;
+  /**
+   * Where you sleep, in order, already formatted.
+   *
+   * Nought, one or two entries — a split stay is two hotels and the schema
+   * holds exactly that. Each carries its own date range so a reader can tell
+   * which nights are where, which is the whole reason the changeover date is
+   * stored at all.
+   */
+  stays: { name: string; range: string }[];
   days: ItineraryDay[];
   /** Meals with no day, or a day outside the trip's own dates. */
   unplaced: ItineraryMeal[];
@@ -90,6 +108,7 @@ export function buildItinerary({
     const meal: ItineraryMeal = {
       name: venueName(p.venue_id) ?? 'Somewhere',
       booked: !!p.booked,
+      time: p.reservation_time,
     };
     // Same rule as the trip screen: a `planned_on` outside the trip's own
     // dates is unplaced, which is what makes moving a trip's dates safe.
@@ -102,9 +121,38 @@ export function buildItinerary({
     }
   }
 
-  const byName = (a: ItineraryMeal, b: ItineraryMeal) => a.name.localeCompare(b.name);
-  for (const list of byDate.values()) list.sort(byName);
-  unplaced.sort(byName);
+  // Timed meals in clock order, then the loose ones alphabetically — see
+  // `byTimeThenName`. The pool has no day and therefore no schedule, so it
+  // sorts the same way and the times are simply along for the ride.
+  for (const list of byDate.values()) list.sort(byTimeThenName);
+  unplaced.sort(byTimeThenName);
+
+  /**
+   * The stay, or the two halves of it.
+   *
+   * `resort_switch_on` is the day you check IN to the second resort, so it
+   * is the end of the first range and the start of the second. A changeover
+   * outside the trip's own dates is ignored rather than drawn, because a
+   * trip whose dates were shortened after the split was set would otherwise
+   * print a range that runs backwards.
+   */
+  const second = trip.resort_id_2 ? resortName(trip.resort_id_2) ?? null : null;
+  const switchOn =
+    second && trip.resort_switch_on && inRange.has(trip.resort_switch_on)
+      ? trip.resort_switch_on
+      : null;
+  const first = trip.resort_id ? resortName(trip.resort_id) ?? null : null;
+
+  const stays: { name: string; range: string }[] = [];
+  if (first) {
+    stays.push({
+      name: first,
+      range: formatRange(trip.start_date, switchOn ?? trip.end_date),
+    });
+  }
+  if (second && switchOn) {
+    stays.push({ name: second, range: formatRange(switchOn, trip.end_date) });
+  }
 
   const itineraryDays: ItineraryDay[] = dates.map((date) => {
     const row = days.get(date);
@@ -115,13 +163,19 @@ export function buildItinerary({
         : row?.kind === 'resort'
           ? 'Resort day'
           : null;
-    return { date, label: dayLabel(date), where, meals: byDate.get(date) ?? [] };
+    return {
+      date,
+      label: dayLabel(date),
+      where,
+      meals: byDate.get(date) ?? [],
+      movingTo: switchOn === date ? second : null,
+    };
   });
 
   return {
     name: trip.name,
     dates: formatRange(trip.start_date, trip.end_date),
-    resort: trip.resort_id ? resortName(trip.resort_id) ?? null : null,
+    stays,
     days: itineraryDays,
     unplaced,
     mealCount: plans.length,
@@ -148,7 +202,10 @@ export function buildItinerary({
  */
 export function itineraryText(it: Itinerary, { includeDining }: { includeDining: boolean }): string {
   const out: string[] = [it.name, it.dates];
-  if (it.resort) out.push(it.resort);
+  // One resort prints as a bare name; two print with their ranges, because
+  // with two the dates are the only thing that says which is which.
+  if (it.stays.length === 1) out.push(it.stays[0].name);
+  else for (const st of it.stays) out.push(`${st.name} · ${st.range}`);
   out.push('');
 
   it.days.forEach((d, i) => {
@@ -166,15 +223,26 @@ export function itineraryText(it: Itinerary, { includeDining }: { includeDining:
     // Worded exactly as the card words it. A recipient seeing "—" has to
     // guess whether it means a rest day or an oversight.
     out.push(`${d.label}  ${d.where ?? 'Nothing planned yet'}`);
+    // Above the meals: you change hotel before dinner, and a reader scanning
+    // the day wants the logistics before the plans.
+    if (d.movingTo) out.push(`  → Moving to ${d.movingTo}`);
     if (includeDining) {
-      for (const m of d.meals) out.push(`  ${m.booked ? '✓' : '·'} ${m.name}`);
+      for (const m of d.meals) {
+        // The time leads the line. A column of times down the left is what
+        // makes a day readable as a schedule rather than a list.
+        const when = m.time ? `${formatTime(m.time)} ` : '';
+        out.push(`  ${when}${m.booked ? '✓' : '·'} ${m.name}`);
+      }
     }
   });
 
   if (includeDining && it.unplaced.length) {
     out.push('');
     out.push('NOT ON A DAY YET');
-    for (const m of it.unplaced) out.push(`  ${m.booked ? '✓' : '·'} ${m.name}`);
+    for (const m of it.unplaced) {
+      const when = m.time ? `${formatTime(m.time)} ` : '';
+      out.push(`  ${when}${m.booked ? '✓' : '·'} ${m.name}`);
+    }
   }
 
   out.push('');

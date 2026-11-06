@@ -157,6 +157,21 @@ export const trips = pgTable(
 
     /** Where you are staying, if decided. */
     resortId: text('resort_id').references(() => resorts.id, { onDelete: 'restrict' }),
+
+    /**
+     * The second half of a split stay.
+     *
+     * Two columns rather than a `trip_resorts` table, because a split stay
+     * is two hotels in practice and a join table buys a third at the cost of
+     * another sync table, another policy and a UI that has to explain what a
+     * stay segment is. See the note at local `SCHEMA_VERSION 11`.
+     */
+    resortId2: text('resort_id_2').references(() => resorts.id, { onDelete: 'restrict' }),
+
+    /** The day you CHECK IN to `resort_id_2`. Storing the changeover rather
+     *  than two ranges means the halves cannot contradict or leave a gap. */
+    resortSwitchOn: date('resort_switch_on'),
+
     note: text('note'),
 
     ...timestamps,
@@ -164,6 +179,22 @@ export const trips = pgTable(
   (t) => [
     index('trips_user_idx').on(t.userId),
     index('trips_user_start_idx').on(t.userId, t.startDate),
+
+    /**
+     * A second resort with no first one is not a split stay, it is a trip
+     * whose resort got written to the wrong column. The app cannot produce
+     * it; RLS lets an authenticated request POST at Postgres directly, which
+     * is why the guard is here and not only in the client.
+     */
+    check('trips_split_needs_first', sql`${t.resortId2} is null or ${t.resortId} is not null`),
+
+    /** A changeover date without a second resort says nothing, and a second
+     *  resort without one leaves every night ambiguous. They travel together. */
+    check(
+      'trips_split_needs_date',
+      sql`(${t.resortId2} is null) = (${t.resortSwitchOn} is null)`,
+    ),
+
     ownRowsOnly('trips'),
   ],
 );
@@ -188,6 +219,22 @@ export const tripPlans = pgTable(
       .references(() => venues.id, { onDelete: 'restrict' }),
 
     booked: boolean('booked').notNull().default(false),
+
+    /**
+     * 'HH:MM', 24-hour, park-local. **`text`, not `time`, on purpose.**
+     *
+     * Sync is a straight column copy, and a Postgres `time` comes back as
+     * '19:40:00' — which would land in SQLite as a different string from the
+     * '19:40' the app wrote, so a row would change shape every round trip.
+     * Matching the local representation exactly is worth more here than the
+     * column type being self-describing.
+     *
+     * Not a timestamp either: a reservation is a wall-clock time at a
+     * restaurant. It does not move when the person planning is in another
+     * zone, which is exactly what an instant would do.
+     */
+    reservationTime: text('reservation_time'),
+
     note: text('note'),
 
     /**

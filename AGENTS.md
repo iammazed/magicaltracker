@@ -877,6 +877,90 @@ invert to near-black in light mode and ship an unreadable image.
 **It shows totals and nothing else.** No place, no date, no rating. The card is designed to be
 posted publicly, so what goes on it is a privacy decision rather than a layout one.
 
+## Split stays and reservation times
+
+Added 2026-11-06 at local `SCHEMA_VERSION 11` and drizzle `0010_pale_christian_walker.sql`.
+Three columns: `trips.resort_id_2`, `trips.resort_switch_on`, `trip_plans.reservation_time`.
+
+### The migration MUST be live in Postgres before this code SHIPS
+
+Same rule and same failure as `challenge_marks`, and worth restating because it bites the same
+way: `pull()` names its columns explicitly, so the moment a phone runs the new `sync.ts` it asks
+Postgres for `resort_id_2, resort_switch_on, reservation_time` on **every sync**. Missing columns
+fail the whole cycle for **every user**, including the ones who never split a stay.
+`npm run db:migrate` comes before `npm run update:prod`, not after.
+
+### Two columns, not a `trip_resorts` table
+
+A join table keyed on (trip_id, resort_id, nights) is the general answer and the wrong size for
+the problem. A split stay is two hotels in practice — "a few nights here, then there" — and the
+table buys a third at the cost of another sync table, another RLS policy, and a UI that has to
+teach people what a stay segment is. If three ever turns out to be real the way out is
+mechanical: each trip becomes one or two rows in the new table and these columns drop.
+
+**`resort_switch_on` is the day you CHECK IN to the second resort**, so 14th–18th switching on
+the 16th is two nights at each. Storing the changeover rather than two ranges means the halves
+cannot contradict each other or leave a gap, which two independent date pairs would.
+
+Two server CHECKs hold the shape, because RLS lets an authenticated request POST at Postgres
+directly and the app is not the only possible writer:
+
+| constraint | says |
+|---|---|
+| `trips_split_needs_first` | a second resort requires a first |
+| `trips_split_needs_date` | the second resort and the changeover are both null or both set |
+
+`setResort(id, null)` therefore clears the split too. Leaving `resort_id_2` behind would make a
+row that fails to sync forever, and it is right on its own terms: "not staying anywhere yet"
+cannot be true of half a trip.
+
+**The changeover cannot be the first or last day.** Moving on arrival means you never stayed at
+the first resort; moving on departure means you never stayed at the second. Both are one stay
+entered wrongly, and either would print a zero-night range.
+
+### `reservation_time` is `text`, and is not a timestamp
+
+'HH:MM', 24-hour, park-local.
+
+**Not a timestamp**, because a reservation is a wall-clock time at a restaurant. It does not move
+when the person planning is in another zone, which is exactly what storing an instant would do:
+book 7:40pm from California, fly to Florida, and a UTC-backed field reads 10:40pm. The date is
+already on the row as `planned_on`.
+
+**`text` rather than Postgres `time`**, because sync is a straight column copy and `time` comes
+back as '19:40:00' — a different string from the '19:40' the app wrote, so a row would change
+shape on every round trip. Matching the local representation beats a self-describing column type.
+
+Helpers are in `src/lib/clock.ts`: `formatTime`, `isValidTime`, `byTimeThenName`. Pure, and kept
+out of any `.tsx` for the `datesBetween` reason — `trip-share.ts` formats itineraries outside
+React and must not pull React Native in to print a time.
+
+**Untimed meals sort LAST within a day.** A day's plan is read as a schedule, so rows with a place
+in it come first and the loose ones gather at the bottom as "also, some time today", which is
+what they are. Sorting them to the top would put the least settled thing at the hour somebody is
+checking. Lexicographic comparison is correct for zero-padded 24-hour times, so nothing parses.
+
+### `TimeField` is hand-rolled, and has to be
+
+`src/components/time-field.tsx`. `@react-native-community/datetimepicker` is the obvious answer
+and is a **native dependency**, so adding it changes the runtime fingerprint and forces a new
+binary — a fortnight of TestFlight, to pick a time. Hours then minutes rather than one list of
+slots: five-minute granularity from 6am to 11pm is 205 rows.
+
+Nothing is typed, for `DateField`'s reason. A mistyped time is silent and consequential —
+`07:40` for a dinner booking is a plausible slip, and an itinerary telling four people to turn up
+twelve hours early is wrong rather than broken, which is the kind nobody questions.
+
+The half-finished selection lives inside the sheet, not in the row. Writing `19:00` the moment
+somebody taps 7pm would leave a wrong time behind every time a sheet was dismissed.
+
+### `TripStay` is also the first way to change a trip's resort at all
+
+`src/components/trip-stay.tsx`. Before this, the resort was chosen once in `TripPlanner` and
+**`setResort` had no caller** — "Choose a resort" pushed to the resorts tab and nothing there
+wrote back, so a trip created without one could never get one. Building a picker for the second
+resort meant the first got one for free. Long-standing gap, closed incidentally.
+
 ## Sharing a trip
 
 `src/app/trip-share.tsx`, reached from a **Share** button in the trip screen's header. Two

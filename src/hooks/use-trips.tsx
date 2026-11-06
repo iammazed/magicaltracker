@@ -117,9 +117,58 @@ function useTripsStore() {
 
   const setResort = useCallback(
     async (tripId: string, resortId: string | null) => {
+      /**
+       * Clearing the first resort clears the split with it.
+       *
+       * The server has a CHECK saying a second resort needs a first, so
+       * leaving `resort_id_2` behind would produce a row that syncs forever
+       * and fails every time. It is also the right behaviour on its own
+       * terms: "we are not staying anywhere yet" cannot be true of the first
+       * half of a trip and false of the second.
+       */
+      const now = new Date().toISOString();
+      if (resortId === null) {
+        await db.runAsync(
+          `UPDATE trips
+              SET resort_id = NULL, resort_id_2 = NULL, resort_switch_on = NULL,
+                  updated_at = ?, synced_at = NULL
+            WHERE id = ?`,
+          now,
+          tripId,
+        );
+      } else {
+        await db.runAsync(
+          'UPDATE trips SET resort_id = ?, updated_at = ?, synced_at = NULL WHERE id = ?',
+          resortId,
+          now,
+          tripId,
+        );
+      }
+      await refresh();
+    },
+    [db, refresh],
+  );
+
+  /**
+   * The second half of a split stay, set or cleared as one act.
+   *
+   * Both columns always move together, because the server CHECK requires it
+   * — `(resort_id_2 is null) = (resort_switch_on is null)` — and because
+   * either one alone is meaningless. A second resort with no changeover
+   * leaves every night ambiguous; a changeover with no second resort says
+   * you moved somewhere unnamed.
+   */
+  const setSplitStay = useCallback(
+    async (
+      tripId: string,
+      split: { resortId: string; switchOn: string } | null,
+    ) => {
       await db.runAsync(
-        'UPDATE trips SET resort_id = ?, updated_at = ?, synced_at = NULL WHERE id = ?',
-        resortId,
+        `UPDATE trips
+            SET resort_id_2 = ?, resort_switch_on = ?, updated_at = ?, synced_at = NULL
+          WHERE id = ?`,
+        split?.resortId ?? null,
+        split?.switchOn ?? null,
         new Date().toISOString(),
         tripId,
       );
@@ -168,6 +217,19 @@ function useTripsStore() {
       await db.runAsync(
         'UPDATE trip_plans SET planned_on = ?, synced_at = NULL WHERE id = ?',
         day,
+        id,
+      );
+      await refresh();
+    },
+    [db, refresh],
+  );
+
+  /** 'HH:MM' in 24-hour park-local time, or null to clear it. */
+  const setReservationTime = useCallback(
+    async (id: string, time: string | null) => {
+      await db.runAsync(
+        'UPDATE trip_plans SET reservation_time = ?, synced_at = NULL WHERE id = ?',
+        time,
         id,
       );
       await refresh();
@@ -294,8 +356,10 @@ function useTripsStore() {
     addTrip,
     deleteTrip,
     setResort,
+    setSplitStay,
     addPlan,
     setPlanDay,
+    setReservationTime,
     removePlan,
     toggleBooked,
     refresh,

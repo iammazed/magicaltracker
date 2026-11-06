@@ -8,7 +8,9 @@ import { AreaTone, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useTrips } from '@/hooks/use-trips';
 import { useAreas, useVenues } from '@/hooks/use-venues';
+import { TimeField } from '@/components/time-field';
 import { datesBetween } from '@/lib/calendar';
+import { isValidTime } from '@/lib/clock';
 import type { DayKind, Trip, TripPlan } from '@/lib/local-db';
 
 /**
@@ -92,7 +94,7 @@ const dayAreas = <T extends { kind: string }>(areas: T[]) =>
 export function TripDays({ trip }: { trip: Trip }) {
   const theme = useTheme();
   const router = useRouter();
-  const { daysFor, plansFor, setDay, setPlanDay } = useTrips();
+  const { daysFor, plansFor, setDay, setPlanDay, setReservationTime } = useTrips();
   const { data: areas } = useAreas();
   const { data: venues } = useVenues();
   const [editing, setEditing] = useState<string | null>(null);
@@ -123,6 +125,22 @@ export function TripDays({ trip }: { trip: Trip }) {
       const list = map.get(p.planned_on);
       if (list) list.push(p);
       else map.set(p.planned_on, [p]);
+    }
+    /**
+     * A day's meals read as a schedule, so they sort by the clock: timed
+     * ones in order, then the untimed gathered at the bottom as "also, some
+     * time today". Sorting the loose ones to the top would put the least
+     * settled thing at the hour somebody is checking.
+     */
+    for (const list of map.values()) {
+      list.sort((a, b) => {
+        const at = isValidTime(a.reservation_time) ? a.reservation_time : null;
+        const bt = isValidTime(b.reservation_time) ? b.reservation_time : null;
+        if (at && bt && at !== bt) return at < bt ? -1 : 1;
+        if (at && !bt) return -1;
+        if (!at && bt) return 1;
+        return 0;
+      });
     }
     return map;
   }, [plansFor, trip.id, dates]);
@@ -188,6 +206,15 @@ export function TripDays({ trip }: { trip: Trip }) {
               <View style={[styles.meals, { borderTopColor: theme.borderSoft }]}>
                 {meals.map((p) => (
                   <View key={p.id} style={styles.meal}>
+                    {/* Leading the row, so the times form a column down the
+                        left and the day reads as a schedule. A meal with no
+                        time still shows the control, because an empty slot
+                        you can tap is how anyone discovers the feature. */}
+                    <TimeField
+                      compact
+                      value={p.reservation_time}
+                      onChange={(t) => void setReservationTime(p.id, t)}
+                    />
                     <Pressable
                       onPress={() =>
                         router.push({

@@ -71,6 +71,13 @@
       "when": 1793923138388,
       "tag": "0009_chilly_ironclad",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794000649477,
+      "tag": "0010_pale_christian_walker",
+      "breakpoints": true
     }
   ]
 }

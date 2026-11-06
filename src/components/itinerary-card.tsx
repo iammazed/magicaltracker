@@ -4,6 +4,7 @@ import { SkyCard, Stars } from '@/components/sky-card';
 import { ThemedText } from '@/components/themed-text';
 import { Wordmark } from '@/components/wordmark';
 import { Radius } from '@/constants/theme';
+import { formatTime } from '@/lib/clock';
 import type { Itinerary } from '@/lib/trip-share';
 
 /**
@@ -66,11 +67,14 @@ export function ItineraryCard({
           {it.name}
         </ThemedText>
         <ThemedText style={styles.dates}>{it.dates}</ThemedText>
-        {it.resort ? (
-          <ThemedText style={styles.resort} numberOfLines={1}>
-            {it.resort}
+        {/* One resort prints as a bare name. Two print with their ranges,
+            because with two the dates are the only thing saying which
+            nights are where. */}
+        {it.stays.map((st) => (
+          <ThemedText key={st.name + st.range} style={styles.resort} numberOfLines={1}>
+            {it.stays.length > 1 ? `${st.name} · ${st.range}` : st.name}
           </ThemedText>
-        ) : null}
+        ))}
       </View>
 
       <View style={styles.days}>
@@ -84,10 +88,22 @@ export function ItineraryCard({
                 {d.where ?? 'Nothing planned yet'}
               </ThemedText>
             </View>
+            {/* Above the meals and outside the dining toggle: changing
+                hotel is the shape of the trip, not part of the dining plan,
+                and somebody who turned the meals off still needs to know
+                which bed they are in. */}
+            {d.movingTo ? (
+              <ThemedText style={styles.moving} numberOfLines={1}>
+                → Moving to {d.movingTo}
+              </ThemedText>
+            ) : null}
             {includeDining && d.meals.length ? (
               <View style={styles.meals}>
                 {d.meals.slice(0, MAX_MEALS_PER_DAY).map((m, i) => (
                   <ThemedText key={`${m.name}-${i}`} style={styles.meal} numberOfLines={1}>
+                    {m.time ? (
+                      <ThemedText style={styles.mealTime}>{formatTime(m.time)} </ThemedText>
+                    ) : null}
                     {m.booked ? '✓' : '·'} {m.name}
                   </ThemedText>
                 ))}
@@ -157,6 +173,12 @@ const styles = StyleSheet.create({
 
   meals: { paddingLeft: 56 + 10, gap: 1 },
   meal: { color: 'rgba(255,255,255,0.75)', fontSize: 12 },
+  // Gold, so the times read as a column down the left of the meals even
+  // though they are inline spans rather than a real column. A fixed-width
+  // column would be truer and would also wrap the restaurant names on a
+  // phone-width card, which is the worse trade on an image people scan.
+  mealTime: { color: '#E5B45F', fontSize: 12, fontWeight: '700' },
+  moving: { color: 'rgba(255,255,255,0.6)', fontSize: 11, paddingLeft: 56 + 10, fontStyle: 'italic' },
   more: { color: 'rgba(255,255,255,0.45)', fontSize: 11, paddingLeft: 56 + 10 },
 
   foot: {
