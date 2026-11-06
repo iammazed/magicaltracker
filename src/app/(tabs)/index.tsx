@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -16,6 +16,7 @@ import { useBottomInset } from '@/hooks/use-bottom-inset';
 import { useOnboarding } from '@/hooks/use-onboarding';
 import { usePassport } from '@/hooks/use-passport';
 import { useResorts } from '@/hooks/use-resorts';
+import { useScrollToTopOnTabPress } from '@/hooks/use-scroll-to-top';
 import { useTheme } from '@/hooks/use-theme';
 import { daysUntil, tripStatus, useTrips } from '@/hooks/use-trips';
 import type { Trip } from '@/lib/local-db';
@@ -40,6 +41,16 @@ export default function HomeScreen() {
   const { loading, overall, byArea, resortCoverage, challenges } = usePassport();
   const { done: onboarded, loading: onboardingLoading } = useOnboarding();
   const bottomInset = useBottomInset();
+
+  /**
+   * Tapping Home while already on Home returns to the top.
+   *
+   * Registered before the early returns below, because a hook cannot be
+   * conditional — and the loading state renders no ScrollView at all, so the
+   * ref is simply null then and the handler is a no-op.
+   */
+  const scrollRef = useRef<ScrollView>(null);
+  useScrollToTopOnTabPress(scrollRef);
 
   /**
    * First run goes to the quick-start pass.
@@ -149,6 +160,7 @@ export default function HomeScreen() {
     <ThemedView style={styles.container}>
       <SafeAreaView edges={['top']} style={styles.safe}>
         <ScrollView
+          ref={scrollRef}
           automaticallyAdjustKeyboardInsets
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[

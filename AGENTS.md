@@ -304,6 +304,38 @@ five tabs, so opening a restaurant from Dining would read "‹ Home". A bare che
 is what Apple itself falls back to when a label will not fit. It is set once in the root Stack's
 `screenOptions`.
 
+### Re-tapping a tab scrolls it to the top, and it is wired in JS
+
+`src/hooks/use-scroll-to-top.ts`, used by Home.
+
+`NativeTabs` already passes `scrollToTop: !disableScrollToTop` to UIKit and that prop defaults to
+true, so in principle this is free. **In practice the native side has to FIND the scroll view**,
+and it does that by looking for the first one inside the screen — the same heuristic
+`disableAutomaticContentInsets` exists to work around two sections up, where it was picking the
+horizontal filter strip on Dining and Resorts instead of the list underneath. A screen with a
+nested horizontal `ScrollView` is exactly the shape it gets wrong, and Home has one.
+
+So the behaviour hangs off a ref the screen names explicitly. If the native side is already doing
+it the two agree — both scroll to offset zero — and if it is not, this is what makes it work. The
+outcome ruled out is the one before it, where whether it happened depended on the order of scroll
+views in a tree nobody was thinking about.
+
+**`navigation.isFocused()` inside the listener is the whole trick.** `tabPress` fires on the
+target tab's own navigation object whenever its button is tapped, INCLUDING when arriving from
+another tab, and focus has not moved yet at that point. So true means the tab was already in
+front of you and the tap was a second one. Without the guard, switching from Dining to Home would
+scroll Home to the top and throw away where somebody had been reading.
+
+`'tabPress'` is cast to `never` because the native tabs navigator emits it but it is absent from
+the base navigation prop's event union. Cast the event NAME and the listener, never `navigation`
+itself — casting the object would drop the typing on every other method on it.
+
+**This is unverified on a device.** It typechecks and the logic is the standard React Navigation
+recipe, but whether `tabPress` reaches JS on a re-tap of the ALREADY-selected native tab is a
+UIKit behaviour that cannot be tested from Windows. If it turns out not to fire, the native
+`scrollToTop` is still in play and the JS is simply inert — the feature degrades to what it was,
+not to broken.
+
 ### The tab bar sizes itself unless told not to
 
 `minimizeBehavior` defaults to `automatic`, which on iOS 26 shrinks the tab bar to a pill on
@@ -1492,27 +1524,32 @@ The split follows what the two halves actually are:
 | Tab | Holds | Shape |
 |---|---|---|
 | **Stats** | coverage percentages, the area grid, resort progress | numbers |
-| **Passport** | the stamps, on four pages | a keepsake |
+| **Passport** | the stamps, on three pages | a keepsake |
 
-The four pages are split **by what earns the stamp**, via `STAY_CHALLENGE_IDS` and
+The three pages are split **by what earns the stamp**, via `STAY_CHALLENGE_IDS` and
 `QUEST_CHALLENGE_IDS` in `use-passport.ts`:
 
 | Page | Earned by | Count |
 |---|---|---|
-| **Food and drink** | eating or drinking your way through a list | 13 |
+| **Food and drink** | eating — finishing a list, or covering a park or area | 13 + 12 |
 | **Resort stays** | sleeping somewhere — no meal involved | 4 |
-| **Quests** | where you were, when, and how you got around | 4 |
-| **Parks and areas** | eating at every place in one area — also food | 12 |
+| **Quests** | the four the app cannot observe, tickable by hand | 4 |
 
-The areas page holds **12**, not 14: `byArea` groups the venues that exist, so Typhoon Lagoon and
+The area half holds **12**, not 14: `byArea` groups the venues that exist, so Typhoon Lagoon and
 Disney's BoardWalk have no stamp because they have no eligible venue. An area appears the day it
 gets its first row.
 
-The first cut of this had a page called "Challenges" and a page called "Parks and areas", which
-put food challenges on both — the set pieces on one, "every place to eat in EPCOT" on the other —
-with nothing in either title to say why. Both are food; one is a list someone sets out to finish
-and the other is coverage of a place. Naming them for that was the whole fix, and it is why the
-areas page says "Also food" in its caption rather than being merged into a page of 26 stamps.
+**It was four pages, and the areas had one of their own captioned "Also food".** That caption was
+the tell: the page needed a sentence explaining that it belonged with the one three scrolls above
+it, which is what a page break in the wrong place looks like. Both halves are earned by eating —
+one by finishing a list someone set out to finish, the other by covering a place — and while the
+distinction is real it is not a distinction between PAGES. Splitting them meant somebody looking
+for "how am I doing on EPCOT" had to know that food lived in two places. Merged 2026-11-05 at
+Jake's request, who said the earlier split was never what he had meant.
+
+Inside the page, **named challenges come before coverage.** The named ones have a hook — Drinking
+Around the World is a thing people set out to do — while "every place to eat in Disney Springs" is
+a long grind that reads better as the back half of a page than the front of one.
 
 Each area tile on Stats opens `challenge/area-<id>`, which is what the duplicate card list used to
 do. Deleting a list and making the thing above it tappable is usually the better trade: the
@@ -1554,6 +1591,15 @@ ring with a thin second ring inside it, a rule across the middle splitting the
 face into mark and legend, short wide-tracked all-caps type, ink that is not
 quite opaque, and a lean. A single ring with an icon in it is an icon chip,
 which is what the first version was and what it was reported as.
+
+**A stamp's glyph is a THING, never a diagram.** The transportation stamp was
+`arrow.triangle.branch` — a branching arrow, which is what a transport network looks like drawn
+on a map, and which reads as a git merge or a detour sign. It is now `bus.fill`: the challenge is
+about riding things, so the mark is a thing you ride. A bus rather than a monorail or a boat
+because both of those already have their own stamps on the same page, and the bus is the one mode
+that reaches every resort on property. Same family as the earlier Magic Kingdom fix, where
+`building.columns` was read as a courthouse — at 34% of a ~99pt circle there is no room for a
+glyph that needs interpreting.
 
 **The disc is a wash of the ink, not `goldSurface`.** The first version filled
 a finished stamp with `goldSurface` — which is the colour of the page it sits

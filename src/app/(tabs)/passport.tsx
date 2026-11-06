@@ -66,14 +66,22 @@ export default function PassportScreen() {
 
   const earned = challenges.filter((c) => c.complete).length;
   /**
-   * Four pages, and the split is by WHAT EARNS THE STAMP.
+   * Three pages, and the split is by WHAT EARNS THE STAMP: something you ate,
+   * somewhere you slept, or something else entirely.
    *
-   * The first cut of this had a page called "Challenges" and a page called
-   * "Parks and areas", which put food challenges on both — the set pieces on
-   * one and "every place to eat in EPCOT" on the other — with nothing in
-   * either title to say why. Both are food; one is a list someone set out to
-   * finish and the other is coverage of a place. Naming them for that is the
-   * whole fix.
+   * It was four, with the park and area coverage stamps on a page of their
+   * own captioned "Also food". That caption was the tell — the page needed a
+   * sentence explaining that it belonged with the one three scrolls above it,
+   * which is what a page break in the wrong place looks like. Both halves are
+   * earned by eating: one by finishing a list someone set out to finish, the
+   * other by covering a place. The distinction is real but it is not a
+   * distinction between PAGES, and separating them meant someone looking for
+   * "how am I doing on EPCOT" had to know that food lived in two places.
+   *
+   * Named challenges come before coverage inside the page, because they are
+   * the ones with a hook — Drinking Around the World is a thing people set
+   * out to do, and "every place to eat in Disney Springs" is a long grind
+   * that reads better as the back half of a page than as the front of one.
    */
   const areas = challenges.filter((c) => c.id.startsWith('area-'));
   const stays = challenges.filter((c) => STAY_CHALLENGE_IDS.includes(c.id));
@@ -119,9 +127,9 @@ export default function PassportScreen() {
 
           <PassportPage
             title="Food and drink"
-            caption="Finish the whole list to earn the stamp."
+            caption="Earned by what you ate — finishing a list, or eating everywhere in one park or area."
           >
-            {food.map((c) => (
+            {[...food, ...areas].map((c) => (
               <Stamp key={c.id} challenge={c} fresh={isFresh(c, fresh)} />
             ))}
           </PassportPage>
@@ -147,15 +155,6 @@ export default function PassportScreen() {
               the challenge's own screen explains at the point it matters. */}
           <PassportPage title="Quests" caption="More fun challenges.">
             {quests.map((c) => (
-              <Stamp key={c.id} challenge={c} fresh={isFresh(c, fresh)} />
-            ))}
-          </PassportPage>
-
-          <PassportPage
-            title="Parks and areas"
-            caption="Also food: one stamp per area, earned by eating at every place in it."
-          >
-            {areas.map((c) => (
               <Stamp key={c.id} challenge={c} fresh={isFresh(c, fresh)} />
             ))}
           </PassportPage>

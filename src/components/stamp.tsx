@@ -102,7 +102,14 @@ const CHALLENGE_GLYPH: Record<string, Glyph> = {
   'resort-collection': g('key.fill', 'key'),
   'all-year-round': g('calendar', 'calendar_month'),
   'park-hopper': g('ticket.fill', 'confirmation_number'),
-  transportation: g('arrow.triangle.branch', 'alt_route'),
+  // A VEHICLE, not a route diagram. `arrow.triangle.branch` was a branching
+  // arrow — which is what a transport NETWORK looks like on a map, and is
+  // read as a git merge or a detour sign rather than as "getting around".
+  // The challenge is about riding things, so the stamp shows a thing you
+  // ride. A bus rather than a monorail or a boat because those two already
+  // have their own stamps on the same page, and the bus is the one mode that
+  // reaches every resort on property.
+  transportation: g('bus.fill', 'directions_bus'),
   fireworks: g('sparkles', 'auto_awesome'),
 };
 
