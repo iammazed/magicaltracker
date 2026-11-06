@@ -64,6 +64,13 @@
       "when": 1793463382363,
       "tag": "0008_dusty_arachne",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793923138388,
+      "tag": "0009_chilly_ironclad",
+      "breakpoints": true
     }
   ]
 }

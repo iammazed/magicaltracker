@@ -46,8 +46,16 @@ const EMPTY: SyncResult = {
  *  guest data, free to be adopted by whoever signs in first. */
 const OWNER_KEY = 'sync_owner_id';
 
-/** Child tables first: `trip_plans` and `trip_days` both reference `trips`. */
-const USER_TABLES = ['trip_plans', 'trip_days', 'visits', 'stays', 'trips'] as const;
+/** Child tables first: `trip_plans` and `trip_days` both reference `trips`.
+ *  `challenge_marks` references nothing, so its position here is free. */
+const USER_TABLES = [
+  'trip_plans',
+  'trip_days',
+  'challenge_marks',
+  'visits',
+  'stays',
+  'trips',
+] as const;
 
 /* ── Row shapes ───────────────────────────────────────────────────────── */
 
@@ -61,6 +69,14 @@ type LocalVisit = {
   note: string | null;
   dishes: string | null;
   date_exact: number;
+  created_at: string;
+  updated_at: string;
+};
+
+type LocalMark = {
+  id: string;
+  challenge_id: string;
+  step_id: string;
   created_at: string;
   updated_at: string;
 };
@@ -224,6 +240,22 @@ async function push(db: SQLiteDatabase, userId: string): Promise<number> {
     updated_at: s.updated_at,
   }), userId);
 
+  /**
+   * Quest steps someone ticked by hand. Last, because it depends on nothing —
+   * the ids in it are TypeScript constants, not foreign keys into any table
+   * above.
+   */
+  const marks = await db.getAllAsync<LocalMark>(
+    'SELECT * FROM challenge_marks WHERE synced_at IS NULL',
+  );
+  total += await pushTable(db, 'challenge_marks', marks, (m) => ({
+    id: m.id,
+    challenge_id: m.challenge_id,
+    step_id: m.step_id,
+    created_at: m.created_at,
+    updated_at: m.updated_at,
+  }), userId);
+
   return total;
 }
 
@@ -249,6 +281,7 @@ async function pull(db: SQLiteDatabase, userId: string): Promise<number> {
     { name: 'trip_plans', columns: 'id, trip_id, venue_id, booked, note, planned_on, created_at' },
     { name: 'visits', columns: 'id, venue_id, visited_on, date_exact, rating, would_return, party_size, note, dishes, created_at, updated_at' },
     { name: 'stays', columns: 'id, resort_id, check_in, check_out, rating, room_type, note, created_at, updated_at' },
+    { name: 'challenge_marks', columns: 'id, challenge_id, step_id, created_at, updated_at' },
   ] as const;
 
   for (const { name, columns } of tables) {
@@ -345,6 +378,22 @@ async function insertPulled(
       (r.room_type as string) ?? null, (r.note as string) ?? null,
       String(r.created_at), String(r.updated_at), now,
     );
+  } else if (table === 'challenge_marks') {
+    /**
+     * OR IGNORE does double duty here. It skips a row this device already has
+     * by id, like every other table — and it also skips one that would
+     * collide with the local `UNIQUE (challenge_id, step_id)`, which happens
+     * when two devices ticked the same step before either synced. Both rows
+     * are the same claim, so keeping whichever arrived first is correct and
+     * the loser simply never lands.
+     */
+    await db.runAsync(
+      `INSERT OR IGNORE INTO challenge_marks
+         (id, challenge_id, step_id, created_at, updated_at, synced_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      String(r.id), String(r.challenge_id), String(r.step_id),
+      String(r.created_at), String(r.updated_at), now,
+    );
   }
 }
 
@@ -391,10 +440,11 @@ export async function syncNow(
      * honest.
      */
     const [{ synced }] = await db.getAllAsync<{ synced: number }>(
-      `SELECT (SELECT count(*) FROM visits     WHERE synced_at IS NOT NULL) +
-              (SELECT count(*) FROM stays      WHERE synced_at IS NOT NULL) +
-              (SELECT count(*) FROM trips      WHERE synced_at IS NOT NULL) +
-              (SELECT count(*) FROM trip_plans WHERE synced_at IS NOT NULL) AS synced`,
+      `SELECT (SELECT count(*) FROM visits          WHERE synced_at IS NOT NULL) +
+              (SELECT count(*) FROM stays           WHERE synced_at IS NOT NULL) +
+              (SELECT count(*) FROM trips           WHERE synced_at IS NOT NULL) +
+              (SELECT count(*) FROM trip_plans      WHERE synced_at IS NOT NULL) +
+              (SELECT count(*) FROM challenge_marks WHERE synced_at IS NOT NULL) AS synced`,
     );
     const foreignDevice = owner !== userId && synced > 0;
 
@@ -445,10 +495,11 @@ export async function clearOwner(db: SQLiteDatabase): Promise<void> {
 export async function pendingCount(db: SQLiteDatabase): Promise<number> {
   const rows = await db.getAllAsync<{ n: number }>(
     `SELECT
-       (SELECT count(*) FROM visits     WHERE synced_at IS NULL) +
-       (SELECT count(*) FROM stays      WHERE synced_at IS NULL) +
-       (SELECT count(*) FROM trips      WHERE synced_at IS NULL) +
-       (SELECT count(*) FROM trip_plans WHERE synced_at IS NULL) AS n`,
+       (SELECT count(*) FROM visits          WHERE synced_at IS NULL) +
+       (SELECT count(*) FROM stays           WHERE synced_at IS NULL) +
+       (SELECT count(*) FROM trips           WHERE synced_at IS NULL) +
+       (SELECT count(*) FROM trip_plans      WHERE synced_at IS NULL) +
+       (SELECT count(*) FROM challenge_marks WHERE synced_at IS NULL) AS n`,
   );
   return rows[0]?.n ?? 0;
 }

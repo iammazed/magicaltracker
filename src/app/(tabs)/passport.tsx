@@ -2,7 +2,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useEffect, useRef, useState } from 'react';
 
-import { PassportPage, Stamp } from '@/components/stamp';
+import { PassportPage, Stamp, StampKey } from '@/components/stamp';
 import { SkyHeader, useHeaderCollapse } from '@/components/sky-header';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -115,9 +115,11 @@ export default function PassportScreen() {
             { paddingBottom: bottomInset + Spacing.five },
           ]}
         >
+          <StampKey />
+
           <PassportPage
             title="Food and drink"
-            caption="Set pieces — finish the whole list to earn the stamp."
+            caption="Finish the whole list to earn the stamp."
           >
             {food.map((c) => (
               <Stamp key={c.id} challenge={c} fresh={isFresh(c, fresh)} />
@@ -137,10 +139,13 @@ export default function PassportScreen() {
             ))}
           </PassportPage>
 
-          <PassportPage
-            title="Quests"
-            caption="Where you were, when you were here, and how you got around."
-          >
+          {/* Not "where you were, when you were here, and how you got
+              around", which was accurate and said nothing — four stamps whose
+              only shared trait is that none of them is a meal. Nobody needs
+              that taxonomy explained to them; they need to know there is more
+              in here. These are also the only ones you tick by hand, which
+              the challenge's own screen explains at the point it matters. */}
+          <PassportPage title="Quests" caption="More fun challenges.">
             {quests.map((c) => (
               <Stamp key={c.id} challenge={c} fresh={isFresh(c, fresh)} />
             ))}

@@ -6,6 +6,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { AreaTone, Radius, Spacing, type RampToken } from '@/constants/theme';
 import { useBottomInset } from '@/hooks/use-bottom-inset';
+import { useChallengeMarks } from '@/hooks/use-challenge-marks';
 import {
   TIERS,
   TIER_COLOR,
@@ -15,6 +16,7 @@ import {
   type ChallengeStep,
 } from '@/hooks/use-passport';
 import { useTheme } from '@/hooks/use-theme';
+import { tapPicked, tapSaved } from '@/lib/haptics';
 
 /**
  * What a challenge actually asks of you.
@@ -92,6 +94,21 @@ export default function ChallengeDetailScreen() {
           <ThemedText type="small" themeColor="textFaint">
             {summarise(c)}
           </ThemedText>
+
+          {/*
+            Said once, here, rather than implied by the presence of tappable
+            circles. A checkbox that appears on four screens out of twenty-two
+            needs to explain why it is there, and the honest explanation is
+            that the app cannot see this one — which is also the answer to
+            "why did my park day not count?".
+          */}
+          {c.manual ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              The app can only see what you log, and this one happens away from
+              the table — so tick anything you have done. Tapping a circle
+              marks it; tapping it again takes the mark back.
+            </ThemedText>
+          ) : null}
         </View>
 
         {c.tiered ? <TierLadder challenge={c} /> : null}
@@ -99,7 +116,7 @@ export default function ChallengeDetailScreen() {
         {todo.length ? (
           <Section title={`Still to go · ${todo.length}`}>
             {todo.map((s) => (
-              <StepRow key={s.id} step={s} />
+              <StepRow key={s.id} step={s} challengeId={c.id} />
             ))}
           </Section>
         ) : null}
@@ -107,7 +124,7 @@ export default function ChallengeDetailScreen() {
         {done.length ? (
           <Section title={`Done · ${done.length}`}>
             {done.map((s) => (
-              <StepRow key={s.id} step={s} />
+              <StepRow key={s.id} step={s} challengeId={c.id} />
             ))}
           </Section>
         ) : null}
@@ -198,29 +215,90 @@ function TierLadder({ challenge: c }: { challenge: Challenge }) {
  * Those have nothing to open and no options to offer, which is a different
  * thing from a choice with nothing in it.
  */
-function StepRow({ step }: { step: ChallengeStep }) {
+function StepRow({
+  step,
+  challengeId,
+}: {
+  step: ChallengeStep;
+  /** Needed to write a mark: a step id is only unique within its challenge. */
+  challengeId: string;
+}) {
   const router = useRouter();
   const theme = useTheme();
+  const { toggle } = useChallengeMarks();
   // A stay challenge's steps are resorts, so they open the resort screen.
   const open = (id: string) =>
     step.kind === 'resort'
       ? router.push({ pathname: '/resort/[id]', params: { id } })
       : router.push({ pathname: '/venue/[id]', params: { id } });
 
+  /**
+   * The tick is the mark control; the rest of the row still navigates.
+   *
+   * This split matters on the fireworks challenge, where every step is a real
+   * venue worth opening. Making the whole row toggle would have cost the tap
+   * that goes to the restaurant, and putting the toggle in a swipe or a long
+   * press would hide the only control that explains what the screen is for.
+   *
+   * A step the LOG earned is deliberately not tappable, and that is the
+   * additive rule showing through the interface: there is nothing a tap could
+   * do there that would be honest. Un-ticking it cannot un-log the meal, so
+   * the circle would either lie or bounce back.
+   */
+  const canMark = !!step.manual && (!step.done || !!step.marked);
+
+  const onToggle = async () => {
+    const nowMarked = await toggle(challengeId, step.id);
+    // Two different feelings on purpose: claiming something is an
+    // accomplishment, taking it back is a correction.
+    if (nowMarked) tapSaved();
+    else tapPicked();
+  };
+
+  const tick = (
+    <View
+      style={[
+        styles.tick,
+        step.done
+          ? { backgroundColor: theme.accent }
+          : {
+              borderColor: canMark ? theme.accent : theme.border,
+              // A circle you are invited to tap has to look different from one
+              // that is only reporting. A full-weight accent outline is the
+              // lightest thing that reads as "this is a control".
+              borderWidth: canMark ? 1.5 : StyleSheet.hairlineWidth,
+            },
+      ]}
+    >
+      {step.done ? (
+        <ThemedText style={[styles.tickMark, { color: theme.onAccent }]}>✓</ThemedText>
+      ) : null}
+    </View>
+  );
+
   const body = (
     <>
-      <View
-        style={[
-          styles.tick,
-          step.done
-            ? { backgroundColor: theme.accent }
-            : { borderColor: theme.border, borderWidth: StyleSheet.hairlineWidth },
-        ]}
-      >
-        {step.done ? (
-          <ThemedText style={[styles.tickMark, { color: theme.onAccent }]}>✓</ThemedText>
-        ) : null}
-      </View>
+      {canMark ? (
+        <Pressable
+          onPress={onToggle}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: !!step.done }}
+          accessibilityLabel={
+            step.done
+              ? `${step.label}, marked done by you. Tap to take the mark back.`
+              : `${step.label}, not done. Tap to mark it done.`
+          }
+          // The circle is 20pt and a touch target must not be. The negative
+          // margin keeps the row's own layout exactly as it was while giving
+          // the tap the space Apple asks for.
+          hitSlop={12}
+          style={({ pressed }) => (pressed ? styles.tickPressed : null)}
+        >
+          {tick}
+        </Pressable>
+      ) : (
+        tick
+      )}
       <View style={styles.stepMain}>
         <ThemedText
           type="smallBold"
@@ -232,6 +310,14 @@ function StepRow({ step }: { step: ChallengeStep }) {
         {step.where ? (
           <ThemedText type="small" themeColor="textFaint" numberOfLines={1}>
             {step.where}
+          </ThemedText>
+        ) : null}
+        {/* Only on a step the mark is actually carrying. Saying it under a
+            step the log earned would be false, and saying nothing at all
+            leaves no way to tell which ticks are yours to undo. */}
+        {step.marked ? (
+          <ThemedText type="small" themeColor="textFaint" numberOfLines={1}>
+            Marked by you
           </ThemedText>
         ) : null}
       </View>
@@ -364,6 +450,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tickMark: { fontSize: 12, fontWeight: '700', lineHeight: 16 },
+  tickPressed: { opacity: 0.5 },
   options: {
     flexDirection: 'row',
     flexWrap: 'wrap',

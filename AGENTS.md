@@ -552,6 +552,22 @@ the server's copy of a row that already exists locally would discard an edit mad
 exactly the failure this feature exists to prevent. Real two-way reconciliation needs per-field
 timestamps and a conflict rule, and only earns that complexity once a second device can write.
 
+**Adding a table to sync means SEVEN places, not one.** `challenge_marks` needed: `USER_TABLES`
+(the wipe list), a row type, a `pushTable` call in `push()`, an entry in `pull()`'s table list, a
+branch in `insertPulled`, the `synced > 0` foreign-device test, and `pendingCount`. Miss the last
+two and the backup card lies in both directions — it reports everything uploaded while a row
+waits, and a device that has only ever synced that one table reads as a fresh guest, so another
+account's rows survive a sign-in. The provider also has to be mounted ABOVE `SyncProvider` in
+`_layout.tsx` and refreshed in the pull branch, or pulled rows land in SQLite and stay invisible
+until the next launch.
+
+**`challenge_marks` is the one table whose unique constraint can reject a pulled row**, and
+`INSERT OR IGNORE` is load-bearing for that rather than just defensive. Locally the constraint is
+`UNIQUE (challenge_id, step_id)`; two devices that tick the same step before either syncs mint two
+rows with two different ids, both upsert server-side, and the second one to arrive collides on a
+constraint that is not its primary key. Both rows are the same claim, so keeping whichever landed
+first is correct and the loser simply never inserts.
+
 **The day planner is structured, and capped on purpose.** `trip_days` holds one choice per day
 of a trip plus an optional note, and nothing else. A free-text itinerary was the obvious cheaper
 option — `trips.note` and `trip_plans.note` both already exist and neither is exposed in any
@@ -829,6 +845,46 @@ invert to near-black in light mode and ship an unreadable image.
 **It shows totals and nothing else.** No place, no date, no rating. The card is designed to be
 posted publicly, so what goes on it is a privacy decision rather than a layout one.
 
+### The sharer picks what goes on the card
+
+Nought to three stats, chosen on the share screen with the card visible above the chooser, stored
+as a JSON array of ids in `app_settings` under `share_card_stats`. `src/lib/share-stats.ts` owns
+the list, because three things need it and none of them should own it: the card renders the chosen
+stats, the screen offers the choice, and the stored preference is a list of names that has to
+still mean something next release.
+
+**Three is a property of the layout, not a preference.** The footer is one row on a square image,
+and four stats at that type size start to wrap on a phone-width card — a wrapped footer on an
+image somebody posts is not a bug they report, they just do not post it. The cap is enforced
+where the selection is made, and at the cap a new pick **drops the oldest** rather than refusing:
+a disabled fourth chip means someone who wants Months instead of Resorts has to work out that
+they must deselect something first, and a chip that does nothing when tapped reads as broken.
+
+**Every option is a number that already exists somewhere else in the app.** That is the criterion
+for being on the list at all — a stat invented for the share card is a number nobody can find
+anywhere else, which on an image shared publicly is the beginning of "where did that come from?".
+Order comes from the options list and never from the stored array, so the card reads the same way
+whichever order someone tapped them in, and an id a later release drops is simply not shown
+rather than rendered as a gap.
+
+Why it is on the share screen rather than in Settings: picking numbers for an image you cannot
+see is guesswork, and a preference buried two taps from the thing it affects is a preference
+nobody finds.
+
+### A font size above the inherited line height MUST set its own
+
+This cost a bug report — "the number in the middle of the ring gets cut off, like a block is
+overlapping it". Nothing was overlapping it. `ThemedText` defaults to `type="default"`, which sets
+`lineHeight: 24`, and **a style further down the cascade that sets only `fontSize` leaves that 24
+in place.** A ~48pt numeral was being drawn into a 24pt line box and cropped top and bottom.
+
+So: any `ThemedText` whose font size exceeds 24 has to set `lineHeight` alongside it. The share
+card computes both from the ring diameter for that reason. The footer stats deliberately do NOT
+set one — 17 and 9 are both below the inherited 24, so their line boxes are roomy rather than
+cropped, and adding numbers there would move spacing that is already right.
+
+---
+
 ## Steps
 
 `src/hooks/use-steps.ts` rolls `expo-sensors` into the `step_days` table (schema 9).
@@ -862,6 +918,13 @@ are the thing to preserve.
 **Distance is deliberately absent.** It would have to come from CMPedometer's stride estimate,
 which is guessed from height and wrong by a wide margin for most people. A step count is a number
 someone can trust; "4.2 miles" invites an argument the app cannot win.
+
+**`challenge_marks` (schema 10) is the opposite call, and deliberately so.** Step counts stay on
+the phone because they are health-adjacent and the only reader is the device that generated them.
+A ticked quest step is the same kind of thing as a visit — a fact a person entered about their own
+trip — so losing it to a reinstall would be the same loss, and it gets the same backup. The
+contrast is the useful part: "does this sync?" is answered by who needs to read it and what it
+costs to disclose, not by which table happened to be added first.
 
 **`step_days` is local-only on purpose** — no `synced_at`, no server table. Step counts are
 health-adjacent, so a server copy means a new RLS policy, a new line in the privacy policy and a
@@ -1463,8 +1526,26 @@ complaint that started this was that completing something "can be missed":
 | state | ring | disc | lean | ink | legend |
 |---|---|---|---|---|---|
 | complete | 3px | yes | crooked | `gold` | `EARNED` on an arc |
-| in progress | 1.5px | no | square | tier colour, or `accent` when untiered | `4/26`, straight |
+| in progress | 1.5px | no | square | `accent` | `4/26`, straight |
 | untouched | 1px at 40% opacity | no | square | `textFaint` | `0/26`, straight |
+
+**There are exactly three inks, and `gold` means EARNED and nothing else.** An earlier version
+inked an unfinished tiered stamp in its tier's metal, which was reported as confusing and was:
+`TIER_COLOR.Gold` and `theme.gold` are the same hex, so a stamp three-quarters of the way through
+a long challenge was painted the exact colour of a finished one. "I assumed gold meant complete"
+is the correct reading of the only colour on the page carrying a meaning, and two things cannot
+share it. The medal was not legible even when it did not collide — the tier was shown as a colour
+and NOWHERE as a word, so bronze versus silver was a difference nobody could name, while the
+untiered stamps borrowed `accent` and made the same teal mean "in progress" on one stamp and "no
+tier yet" on its neighbour. Colour on the passport now answers one question, how far along is
+this, with three answers. The tier still exists and is still worth something; it is shown on the
+challenge's own screen as a ladder with the names and counts spelled out, which is the only place
+with room to say what Silver means.
+
+**And the three are labelled.** `StampKey`, above the first page — three miniature stamps
+carrying the ring weight and disc of the state they stand for, so the key teaches the visual
+language and not just the hue. Three unlabelled colours are still three colours someone has to
+guess at, which is how the collision above got as far as a tester in the first place.
 
 It is a **rubber** stamp, not a postage stamp — no serrated edge, no
 perforations, no rectangle with a picture in it. What makes an entry stamp
@@ -1611,6 +1692,64 @@ every stay challenge count from it, so the two cannot disagree about the total.
 | The Transportation Challenge | reaching a resort served by each way of getting around | 5 |
 | Under the Fireworks | every bookable reserved view of a nighttime show, tiered | 11 |
 | All Year Round | a visit or a stay in each calendar month | 12 |
+
+The page is captioned **"More fun challenges."** Not "where you were, when you were here, and
+how you got around", which was accurate and said nothing — four stamps whose only shared trait
+is that none of them is a meal. Nobody needs that taxonomy; they need to know there is more in
+here.
+
+#### These four, and ONLY these four, can be ticked by hand
+
+`MANUAL_CHALLENGE_IDS` in `use-passport.ts`, which is `QUEST_CHALLENGE_IDS`. The reason it is
+exactly the quests is that they are the only challenges **the app cannot observe**, and each one
+fails differently:
+
+- **Four Parks, One Day** is scored off MEALS in four parks on one date. Park hopping is done
+  with your feet; a day in all four parks that involved no sit-down meal counts for nothing.
+- **The Transportation Challenge** infers a mode from a resort you ate or slept at. But the
+  monorail runs between Magic Kingdom and EPCOT, the Skyliner stops at two parks, and the ferry
+  needs no resort at all — so the most obvious way to ride each of them is exactly the one with
+  no resort to infer it from.
+- **Under the Fireworks** counts reserved views, because a dessert party is a catalog row and
+  standing on Main Street is not. **Nobody has to pay to watch fireworks.**
+- **All Year Round** reads dates off the log, which a day trip with no meal and no hotel never
+  leaves behind.
+
+In every case the app is not WRONG about what it saw; it cannot see the thing being asked about.
+Everything else in the passport is derived — a stamp is the shadow of a meal or a night already
+logged, so a checkbox there would be a second, contradictory source of truth for something
+already known. **Do not add a tick to a derived challenge.**
+
+**Marks are additive only, and that is a safety property rather than a storage decision.** A mark
+can ADD a tick the log did not earn; it can never remove one the log did. There is no "not done"
+row and no override — un-ticking is a DELETE, which drops the step back to whatever the log says.
+In code it is one line, `done: st.done || marked`, and it lives in `fromSteps` — the single place
+every challenge passes through — because `earned` is derived from `done` on the next line, and a
+builder that marked its own steps and forgot to recount would show ticked boxes above a count
+that disagreed with them.
+
+Be precise about what the asymmetry promises. It guarantees **nothing the log earned can be taken
+away by a tap**: a step backed by a logged meal is not tappable, so no sequence of taps un-earns a
+stamp the log is holding up. It does NOT mean a stamp can never be lost — un-ticking a mark that
+was carrying a stamp on its own drops that stamp back to incomplete, which is correct, because
+retracting a claim should retract what the claim earned. The celebration does not fire twice on a
+re-tick: `achievements_seen` only ever grows, so the milestone key stays acknowledged.
+
+A step the log earned is deliberately **not tappable**. There is nothing a tap could do there
+that would be honest: un-ticking cannot un-log the meal, so the circle would either lie or bounce
+back. `step.marked` is true only when the mark is doing the work, which is what the "Marked by
+you" line under a row is keyed on — saying it under a step the log earned would be false, and
+saying nothing at all leaves no way to tell which ticks are yours to undo.
+
+**The tick is the control; the rest of the row still navigates.** This matters on Under the
+Fireworks, where every step is a real venue worth opening. A whole-row toggle would cost the tap
+that goes to the restaurant, and hiding the toggle in a swipe or a long press would hide the only
+control that explains what the screen is for.
+
+Marks live in `challenge_marks`, carry NOTHING but the challenge id and step id, and **sync** —
+see Sync and Database. No date, no place, no note: the step id is the whole claim. "I rode the
+Skyliner" is the fact worth keeping; when and from where is a trip diary this is not, and storing
+it would be collecting data no part of the app reads.
 
 **A resort counts as REACHED if you stayed there OR ate there**, because both mean you travelled
 to it — you cannot have dinner at the Polynesian without a monorail, a boat or a bus. What the
@@ -1802,6 +1941,15 @@ frames, so Expo Go does not warn on every launch about a module that was never g
 
 ## Builds
 
+### `challenge_marks` MUST be live in Postgres before the build that ships it
+
+Added 2026-11-05 at local `SCHEMA_VERSION 10` and drizzle `0009_chilly_ironclad.sql`. This is the
+rule below about synced columns, in its sharpest form, and the failure is worse than a missing
+column: `pull()` selects from `challenge_marks` on **every sync, unconditionally**, so if the
+table does not exist the whole cycle throws and every user — including the ones who never tick a
+quest step — gets a sync error instead of a backup. `npm run db:migrate` runs BEFORE the build,
+not after it.
+
 ### The native batch landed on 2026-11-05, and the runtime version moved
 
 `react-native-svg`, `react-native-view-shot` and `expo-sensors` were added together, on purpose.
@@ -1810,6 +1958,21 @@ build; batching them cost one. The hash went from **`d41cd429e25dcb2a8513567d4b7
 (130 sources) to **`bd1bedc58beaa998a1332aaeed19f4eb6894371e`** (133 sources) — the three new
 sources being `node_modules/expo-sensors/ios`, `node_modules/react-native-svg`,
 `node_modules/react-native-view-shot`, plus both autolinking configs rehashing.
+
+**The recorded hash above does not reproduce, and the discrepancy is unexplained.** Re-run on
+2026-11-05 after the quest-marks work, the same command on the same machine reported
+**`5e3f743684cfbce7aa186d72159a3e88cb955b2b` (136 sources)**. Nothing that could account for it had
+changed: `package.json` and `package-lock.json` are untouched since `612aaa5`, the only recently
+installed packages are the three native ones from that commit plus their JS dependencies, and
+**no fingerprint source lives under `src/`** — the non-`node_modules` file sources are exactly
+`.gitignore`, `eas.json` and the two image assets, plus five `contents` entries. So the 133 reading
+was taken against a `node_modules` in some other state, and which of the two is right cannot be
+settled from here.
+
+The practical rule that survives it: **the authoritative fingerprint is the one EAS computes
+during the build**, not one computed on Windows and written down. Read it off the build page and
+record THAT. Treat any hash in this file as a note about history rather than something to compare
+against.
 
 **Builds 4 and 5 are therefore orphaned and cannot be reached over the air again.** Do not publish
 an update until a build carrying the new fingerprint is in TestFlight: `eas update` would succeed,

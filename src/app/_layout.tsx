@@ -23,6 +23,7 @@ import { AuthProvider } from '@/hooks/use-auth';
 import { BrandFontsProvider } from '@/hooks/use-brand-fonts';
 import { CatalogProvider } from '@/hooks/use-catalog';
 import { CatalogFiltersProvider } from '@/hooks/use-catalog-filters';
+import { ChallengeMarksProvider } from '@/hooks/use-challenge-marks';
 import { NearbyProvider } from '@/hooks/use-nearby';
 import { PremiumProvider } from '@/hooks/use-premium';
 import { SyncProvider } from '@/hooks/use-sync';
@@ -98,10 +99,12 @@ function RootLayout() {
       <CatalogProvider>
         <CatalogFiltersProvider>
         <VisitsProvider>
-          {/* Sync is innermost on purpose: it has to be able to refresh BOTH
-              stores after a pull or a wipe. Mounted above TripsProvider it
+          {/* Sync is innermost on purpose: it has to be able to refresh EVERY
+              store after a pull or a wipe. Mounted above TripsProvider it
               could only refresh visits, so pulled trips stayed invisible and
-              a wiped account's trips stayed on screen. */}
+              a wiped account's trips stayed on screen. Manual quest marks
+              sync too, so they sit above it for the same reason. */}
+          <ChallengeMarksProvider>
           <TripsProvider>
             <SyncProvider>
             {/* Inside the catalog and visit stores, because it derives
@@ -204,6 +207,7 @@ function RootLayout() {
             </AchievementsProvider>
             </SyncProvider>
           </TripsProvider>
+          </ChallengeMarksProvider>
         </VisitsProvider>
         </CatalogFiltersProvider>
       </CatalogProvider>

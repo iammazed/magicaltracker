@@ -296,6 +296,70 @@ export const tripDays = pgTable(
   ],
 );
 
+/* ── challenge_marks ──────────────────────────────────────────────────── */
+
+/**
+ * Quest steps ticked by hand, because the app cannot observe them.
+ *
+ * Every other stamp in the passport is derived — the shadow of a meal or a
+ * night already in the log, with nothing to store. The quests are the
+ * exception: four parks in one day is scored off meals, so a day spent only
+ * riding rides counts for nothing; the transportation challenge infers the
+ * monorail from a resort you ate or slept at, so the Magic Kingdom-to-EPCOT
+ * monorail is invisible to it; and the fireworks challenge counts reserved
+ * views because those are the rows the catalog holds, while standing on Main
+ * Street for free is not one of them.
+ *
+ * **Additive only, and that is a rule about meaning, not just storage.** A row
+ * here can add a tick the log did not earn. There is deliberately no "not
+ * done" row, so a mark can never take away a tick the log DID earn, and no
+ * mark can un-earn a stamp that has already been celebrated. Un-ticking is a
+ * delete, which drops the step back to whatever the log says.
+ *
+ * Note what is NOT here: no date, no place, no note. The step id is the whole
+ * claim. "I took the Skyliner" is the fact; when and from where is a trip
+ * diary this table is not, and storing it would be collecting data the app has
+ * no reader for.
+ */
+export const challengeMarks = pgTable(
+  'challenge_marks',
+  {
+    id: uuid('id').primaryKey(),
+    ...owner,
+
+    /**
+     * Both of these are plain text with no foreign key, and that is the
+     * correct shape rather than a shortcut. Challenges and their steps are
+     * defined in TypeScript, in `src/hooks/use-passport.ts` — they are not
+     * catalog rows and there is no table to point at. A step id can be a park
+     * area, a mode of transport, a month, or a venue, depending on the
+     * challenge, so no single reference could cover them.
+     *
+     * The consequence is accepted on purpose: renaming a challenge or a step
+     * id orphans the marks that referenced it, which reads as an un-ticked box
+     * rather than an error. The passport simply ignores a mark whose step it
+     * no longer recognises.
+     */
+    challengeId: text('challenge_id').notNull(),
+    stepId: text('step_id').notNull(),
+
+    ...timestamps,
+  },
+  (t) => [
+    index('challenge_marks_user_idx').on(t.userId),
+    /**
+     * Mirrors the local `UNIQUE (challenge_id, step_id)`, scoped by owner
+     * because this table is shared and the local one is not. Without it two
+     * devices that each tick the same step mint two rows with two ids, both
+     * upsert cleanly, and the step is then claimed twice — which the passport
+     * would survive but `pendingCount` and any future per-step reader would
+     * not.
+     */
+    uniqueIndex('challenge_marks_user_step_key').on(t.userId, t.challengeId, t.stepId),
+    ownRowsOnly('challenge_marks'),
+  ],
+);
+
 /* ── sync bookkeeping ─────────────────────────────────────────────────── */
 
 /**
@@ -327,4 +391,5 @@ export type Stay = typeof stays.$inferSelect;
 export type Trip = typeof trips.$inferSelect;
 export type TripPlan = typeof tripPlans.$inferSelect;
 export type TripDay = typeof tripDays.$inferSelect;
+export type ChallengeMarkRow = typeof challengeMarks.$inferSelect;
 export type SyncState = typeof syncState.$inferSelect;

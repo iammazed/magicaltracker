@@ -22,7 +22,7 @@ import { seedCatalogIfNeeded, syncCatalogSchema } from '@/lib/catalog-db';
 export const DATABASE_NAME = 'magicaltracker.db';
 
 /** Bump when the schema below changes, and add a matching step in migrate(). */
-const SCHEMA_VERSION = 9;
+const SCHEMA_VERSION = 10;
 
 export async function migrate(db: SQLiteDatabase) {
   // WAL keeps reads fast while a write is in flight, which matters when the
@@ -244,6 +244,54 @@ export async function migrate(db: SQLiteDatabase) {
     version = 9;
   }
 
+  if (version < 10) {
+    await db.execAsync(`
+      -- Challenges the app cannot observe, ticked off by hand.
+      --
+      -- Everything else in the passport is DERIVED: a stamp is the shadow of
+      -- a meal or a night someone logged, and there is nothing to store
+      -- because the log already says it. The quests are not like that.
+      --
+      -- Four parks in one day is scored off MEALS, so a day spent riding
+      -- rides in all four parks counts for nothing. The transportation
+      -- challenge infers the monorail from a resort you ate or slept at, so
+      -- the monorail between Magic Kingdom and EPCOT -- which needs no resort
+      -- at all -- is invisible to it. The fireworks challenge counts reserved
+      -- views because paid events are the rows the catalog holds, and
+      -- standing on Main Street for free is not one of them.
+      --
+      -- So this table holds the one thing a log of meals and nights cannot
+      -- imply: a person saying "I did that". One row per step ticked, and the
+      -- absence of a row means nothing has been claimed -- NOT that it was
+      -- denied.
+      --
+      -- **Additive only.** A mark can add a tick the log did not earn; it can
+      -- never remove one the log did. Un-ticking deletes the row, which drops
+      -- back to whatever the log says rather than overriding it, so a mark can
+      -- never un-earn something already celebrated.
+      --
+      -- Unlike step_days this DOES sync. It is the same kind of thing as a
+      -- visit -- a fact a person entered about their own trip -- and losing it
+      -- to a reinstall would be the same loss.
+      CREATE TABLE IF NOT EXISTS challenge_marks (
+        id           TEXT PRIMARY KEY NOT NULL,
+        challenge_id TEXT NOT NULL,
+        step_id      TEXT NOT NULL,
+        created_at   TEXT NOT NULL,
+        updated_at   TEXT NOT NULL,
+        synced_at    TEXT,
+        -- One claim per step, which is what lets the push stay a plain upsert
+        -- on the id and stops a second device minting a second row for a tick
+        -- that already exists.
+        UNIQUE (challenge_id, step_id)
+      );
+
+      CREATE INDEX IF NOT EXISTS challenge_marks_challenge_idx
+        ON challenge_marks (challenge_id);
+    `);
+    version = 10;
+  }
+
   await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
 
   // The catalog tables are NOT governed by the ladder above, and must not be.
@@ -328,6 +376,17 @@ export type Stay = {
 export type StepDay = {
   day: string;
   steps: number;
+};
+
+/** A quest step someone ticked by hand. See the table comment for why these
+ *  exist and why a missing row is not a denial. */
+export type ChallengeMark = {
+  id: string;
+  challenge_id: string;
+  step_id: string;
+  created_at: string;
+  updated_at: string;
+  synced_at: string | null;
 };
 
 export type Visit = {

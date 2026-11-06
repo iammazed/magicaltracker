@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 
 import { useCatalog } from '@/hooks/use-catalog';
+import { markKey, useChallengeMarks } from '@/hooks/use-challenge-marks';
 import { TIER_LABEL, TRANSPORT_LABEL, useResorts } from '@/hooks/use-resorts';
 import { useVenues } from '@/hooks/use-venues';
 import { useVisits } from '@/hooks/use-visits';
@@ -107,6 +108,30 @@ export const QUEST_CHALLENGE_IDS = [
   'all-year-round',
 ];
 
+/**
+ * The challenges whose steps can be ticked by hand.
+ *
+ * Exactly the quests, and the reason they are exactly the quests is that they
+ * are the only ones the app cannot observe. Everything else in the passport is
+ * the shadow of a meal or a night in the log: you cannot have eaten at Space
+ * 220 without logging it, so a checkbox there would be a second, contradictory
+ * source of truth for something already known.
+ *
+ * The quests are different in kind. Four parks in one day is scored off meals,
+ * so a day spent riding rides counts for nothing. The transportation challenge
+ * infers a mode from a resort you ate or slept at, which misses the monorail
+ * between Magic Kingdom and EPCOT, the Skyliner between two parks, and the
+ * ferry entirely. The fireworks challenge counts reserved views because paid
+ * events are the rows the catalog holds, and nobody has to pay to watch
+ * fireworks. All Year Round reads dates off the log, which a day trip with no
+ * meal and no hotel never leaves behind.
+ *
+ * In each case the app is not wrong about what it saw — it cannot see the
+ * thing being asked about. See `src/hooks/use-challenge-marks.tsx` for why a
+ * mark can only ever ADD a tick.
+ */
+export const MANUAL_CHALLENGE_IDS = QUEST_CHALLENGE_IDS;
+
 /** The order the five ways of getting around should be listed in, which is
  *  not alphabetical and is not the order the catalog happens to hold. */
 const TRANSPORT_ORDER = ['monorail', 'skyliner', 'boat', 'bus', 'walk'];
@@ -202,6 +227,23 @@ export type ChallengeStep = {
   where?: string;
   /** Pavilion steps only: the places that would tick this off. */
   options?: { id: string; name: string; done: boolean }[];
+  /**
+   * True when this step can be ticked by hand — see `MANUAL_CHALLENGE_IDS`.
+   * Set per step rather than read off the challenge so a row can render its
+   * own control without being handed its parent.
+   */
+  manual?: boolean;
+  /**
+   * True when the tick came from a manual mark AND the log did not already
+   * earn it.
+   *
+   * The distinction is worth showing. "Done because you logged four meals in
+   * four parks" and "done because you said so" are both done, but only the
+   * second is something a person can take back, and a row that offered to
+   * un-tick a step the log earned would be offering something it cannot
+   * deliver.
+   */
+  marked?: boolean;
 };
 
 export type Challenge = {
@@ -213,6 +255,8 @@ export type Challenge = {
   complete: boolean;
   /** Tiered challenges show a medal and a next step; others are all-or-nothing. */
   tiered: boolean;
+  /** True when its steps can be ticked by hand. See `MANUAL_CHALLENGE_IDS`. */
+  manual: boolean;
   /** Highest tier reached, or null below 25%. */
   tier: Tier | null;
   /** The next tier to aim at, or null once Platinum is earned. */
@@ -267,6 +311,8 @@ export function usePassport() {
   // parks in one day — are scored off the DATES on the log.
   const { byVenue, byResort, visits, stays } = useVisits();
   const { areas } = useCatalog();
+  // The quest steps someone ticked by hand. Additive only — see the hook.
+  const { marks } = useChallengeMarks();
 
   const areaNames = useMemo(
     () => Object.fromEntries(areas.map((a) => [a.id, a.name])),
@@ -448,9 +494,39 @@ export function usePassport() {
       id: string,
       title: string,
       blurb: string,
-      steps: ChallengeStep[],
+      rawSteps: ChallengeStep[],
       tiered = false,
+      manual = false,
     ): Challenge => {
+      /**
+       * Manual marks fold in HERE, in the one place every challenge passes
+       * through, rather than in the four quest builders.
+       *
+       * Doing it per builder was the first shape and it was wrong twice over:
+       * four copies of the same two lines, and — worse — each builder would
+       * have had to remember to recount, because `earned` is derived from
+       * `done` on the line below. A builder that marked its steps and forgot
+       * to recount would show ticked boxes above a count that disagreed with
+       * them.
+       *
+       * `done: st.done || marked` is the additive rule in code. A step the log
+       * already earned stays done no matter what the marks say, so a stale
+       * mark cannot subtract and an un-tick cannot un-earn.
+       */
+      const steps: ChallengeStep[] = manual
+        ? rawSteps.map((st) => {
+            const marked = marks.has(markKey(id, st.id));
+            return {
+              ...st,
+              manual: true,
+              done: st.done || marked,
+              // Only interesting when the mark is doing the work. A step the
+              // log earned is not something the user can take back.
+              marked: marked && !st.done,
+            };
+          })
+        : rawSteps;
+
       const earned = steps.filter((st) => st.done).length;
       if (tiered) {
         return {
@@ -460,6 +536,7 @@ export function usePassport() {
           earned,
           target: steps.length,
           tiered: true,
+          manual,
           steps,
           ...tierProgress(earned, steps.length),
         };
@@ -472,6 +549,7 @@ export function usePassport() {
         target: steps.length,
         complete: steps.length > 0 && earned === steps.length,
         tiered: false,
+        manual,
         tier: null,
         nextTier: null,
         toNext: 0,
@@ -696,6 +774,10 @@ export function usePassport() {
         'All Year Round',
         'Be at Walt Disney World in every month of the year. Not in one year — ever.',
         steps,
+        false,
+        // A day trip with no meal and no hotel leaves no date on the log, so
+        // a month you were genuinely here can read as missed.
+        true,
       );
     };
 
@@ -737,8 +819,13 @@ export function usePassport() {
       return fromSteps(
         'park-hopper',
         'Four Parks, One Day',
-        'Eat in all four theme parks between one sunrise and the next.',
+        'All four theme parks between one sunrise and the next. Logged meals tick a park off automatically; tick the rest yourself.',
         steps,
+        false,
+        // Park hopping is done with your feet. A day in all four parks that
+        // involved no sit-down meal is invisible to the log and is still the
+        // thing this challenge is about.
+        true,
       );
     };
 
@@ -786,8 +873,14 @@ export function usePassport() {
       return fromSteps(
         'transportation',
         'The Transportation Challenge',
-        'Reach a resort served by every way of getting around — monorail, Skyliner, boat, bus and on foot.',
+        'Ride every way of getting around — monorail, Skyliner, boat, bus and on foot. Tick off whatever you have ridden.',
         steps,
+        false,
+        // The monorail runs between Magic Kingdom and EPCOT, the Skyliner
+        // stops at two parks and the ferry needs no resort at all, so the
+        // most obvious way to ride each of them involves no resort to infer
+        // it from.
+        true,
       );
     };
 
@@ -809,8 +902,13 @@ export function usePassport() {
       fromSteps(
         'fireworks',
         'Under the Fireworks',
-        'Dessert parties, dining packages and rooftops — every reserved view of a nighttime show.',
+        'Dessert parties, dining packages and rooftops — plus anywhere else you have watched a show from.',
         venueSteps(withEvents.filter((r) => r.tags?.includes('fireworks'))),
+        true,
+        // Nobody has to pay to watch fireworks. The catalog can only hold the
+        // reserved views because those are the ones that are bookable, so the
+        // free ones have to be claimable by hand or this counts a fraction of
+        // the times someone stood under a show.
         true,
       );
 
@@ -871,6 +969,9 @@ export function usePassport() {
       earned: a.visited,
       target: a.total,
       tiered: true,
+      // Coverage of a place, scored off meals. Nothing to tick by hand: you
+      // cannot have eaten somewhere without logging it.
+      manual: false,
       steps: venueSteps(areaVenues.get(a.id) ?? [], 'area'),
       ...tierProgress(a.visited, a.total),
     }));
@@ -1003,6 +1104,7 @@ export function usePassport() {
     stays,
     areaNames,
     resortNames,
+    marks,
   ]);
 
   return {

@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react';
+import { useSQLiteContext } from 'expo-sqlite';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -8,14 +9,22 @@ import {
   View,
 } from 'react-native';
 
-import { ShareCard, type ShareSummary } from '@/components/share-card';
+import { ShareCard } from '@/components/share-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Radius, Spacing } from '@/constants/theme';
 import { useBottomInset } from '@/hooks/use-bottom-inset';
 import { usePassport } from '@/hooks/use-passport';
 import { useTheme } from '@/hooks/use-theme';
-import { tapSaved } from '@/lib/haptics';
+import { tapPicked, tapSaved } from '@/lib/haptics';
+import { getSetting, setSetting } from '@/lib/local-db';
+import {
+  MAX_SHARE_STATS,
+  SHARE_STATS_KEY,
+  parseShareStats,
+  resolveShareStats,
+  shareStatOptions,
+} from '@/lib/share-stats';
 import { shareViewAsPng } from '@/lib/share-image';
 
 /**
@@ -31,10 +40,19 @@ import { shareViewAsPng } from '@/lib/share-image';
  * Free, permanently, and not gated. The card is the only organic acquisition
  * channel the app has; putting it behind the paywall would mean it is only
  * ever posted by people who already paid.
+ *
+ * ## The chooser
+ *
+ * Which stats go on the card is the sharer's call, taken here, with the card
+ * visible above it so every tap can be seen landing. That is the whole reason
+ * it lives on this screen rather than in Settings: picking numbers for an
+ * image you cannot see is guesswork, and a preference buried two taps from
+ * the thing it affects is a preference nobody finds.
  */
 export default function ShareScreen() {
   const theme = useTheme();
-  const { loading, overall, resortCoverage, challenges } = usePassport();
+  const db = useSQLiteContext();
+  const { loading, overall, resortCoverage, byArea, challenges } = usePassport();
   const bottomInset = useBottomInset();
   const { width } = useWindowDimensions();
 
@@ -42,11 +60,64 @@ export default function ShareScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Null until the stored choice has been read.
+   *
+   * The distinction matters: rendering the default while the real choice is
+   * still in flight would show the wrong card for a frame and then swap it,
+   * which on the screen whose entire job is "look at this before you post it"
+   * is the one flicker worth preventing.
+   */
+  const [chosen, setChosen] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      const raw = await getSetting(db, SHARE_STATS_KEY);
+      if (alive) setChosen(parseShareStats(raw));
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [db]);
+
   // Capped so the card does not become a billboard on an iPad, and inset from
   // both edges so it reads as an object on the page rather than the page.
   const cardWidth = Math.min(width - Spacing.three * 2, 380);
 
-  if (loading) {
+  const options = useMemo(
+    () => shareStatOptions({ overall, resortCoverage, byArea, challenges }),
+    [overall, resortCoverage, byArea, challenges],
+  );
+
+  const toggle = useCallback(
+    (id: string) => {
+      setChosen((prev) => {
+        const list = prev ?? [];
+        const has = list.includes(id);
+        /**
+         * At the cap, a new pick DROPS THE OLDEST rather than refusing.
+         *
+         * A disabled fourth chip is the obvious alternative and it is worse:
+         * someone who wants Months instead of Resorts has to work out that
+         * they must first deselect something, and a chip that does nothing
+         * when tapped reads as broken. Rolling the window means every tap
+         * does what it looks like it does.
+         */
+        const next = has
+          ? list.filter((x) => x !== id)
+          : [...list, id].slice(-MAX_SHARE_STATS);
+
+        void setSetting(db, SHARE_STATS_KEY, JSON.stringify(next));
+        if (has) tapPicked();
+        else tapSaved();
+        return next;
+      });
+    },
+    [db],
+  );
+
+  if (loading || chosen === null) {
     return (
       <ThemedView style={styles.center}>
         <ActivityIndicator color={theme.accent} />
@@ -54,15 +125,7 @@ export default function ShareScreen() {
     );
   }
 
-  const summary: ShareSummary = {
-    pct: overall.pct,
-    visited: overall.visited,
-    total: overall.total,
-    stamps: challenges.filter((c) => c.complete).length,
-    stampTotal: challenges.length,
-    resorts: resortCoverage.visited,
-    resortTotal: resortCoverage.total,
-  };
+  const stats = resolveShareStats(options, chosen);
 
   const onShare = async () => {
     if (busy) return;
@@ -96,7 +159,53 @@ export default function ShareScreen() {
           fails with a null ref that looks like a bug in view-shot.
         */}
         <View ref={cardRef} collapsable={false} style={styles.cardHolder}>
-          <ShareCard width={cardWidth} summary={summary} />
+          <ShareCard width={cardWidth} pct={overall.pct} stats={stats} />
+        </View>
+
+        <View style={styles.chooser}>
+          <View style={styles.chooserHead}>
+            <ThemedText type="smallBold">What goes on it</ThemedText>
+            <ThemedText type="small" themeColor="textFaint">
+              {stats.length === 0
+                ? 'Just the ring'
+                : `${stats.length} of ${MAX_SHARE_STATS}`}
+            </ThemedText>
+          </View>
+
+          <View style={styles.chips}>
+            {options.map((st) => {
+              const on = chosen.includes(st.id);
+              return (
+                <Pressable
+                  key={st.id}
+                  onPress={() => toggle(st.id)}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: on }}
+                  accessibilityLabel={`${st.label.toLowerCase()}, ${st.value}`}
+                  style={({ pressed }) => [
+                    styles.chip,
+                    {
+                      borderColor: on ? theme.accent : theme.border,
+                      backgroundColor: on ? theme.backgroundSelected : theme.backgroundElement,
+                      opacity: pressed ? 0.6 : 1,
+                    },
+                  ]}
+                >
+                  <ThemedText
+                    type="small"
+                    style={{ color: on ? theme.accent : theme.textSecondary }}
+                  >
+                    {/* The value, not just the name. Someone choosing between
+                        Places and Months is choosing between 48 and 9 of 12,
+                        and the chip that hides the number makes them pick it,
+                        look at the card, and come back. */}
+                    {on ? '✓ ' : ''}
+                    {title(st.label)} · {st.value}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
 
         <Pressable
@@ -129,11 +238,18 @@ export default function ShareScreen() {
 
         <ThemedText type="small" themeColor="textFaint" style={styles.note}>
           The image is made on your phone and is not uploaded anywhere. It
-          shows only the totals above — never a place, a date or a rating.
+          shows only the totals you picked — never a place, a date or a rating.
         </ThemedText>
       </ScrollView>
     </ThemedView>
   );
+}
+
+/** "OF THE WORLD" → "Of the world". The card wants all caps and a chip in a
+ *  sentence does not. */
+function title(label: string): string {
+  const lower = label.toLowerCase();
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
 }
 
 const styles = StyleSheet.create({
@@ -146,6 +262,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cardHolder: { borderRadius: Radius.large, overflow: 'hidden' },
+  chooser: { alignSelf: 'stretch', gap: Spacing.two },
+  chooserHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  chip: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one + 3,
+    borderRadius: Radius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
   button: {
     alignSelf: 'stretch',
     alignItems: 'center',

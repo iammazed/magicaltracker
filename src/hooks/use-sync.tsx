@@ -11,6 +11,7 @@ import {
 } from 'react';
 
 import { useAuth } from '@/hooks/use-auth';
+import { useChallengeMarks } from '@/hooks/use-challenge-marks';
 import { useTrips } from '@/hooks/use-trips';
 import { useVisits } from '@/hooks/use-visits';
 import { getSetting, setSetting } from '@/lib/local-db';
@@ -76,6 +77,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   const { status: authStatus, user } = useAuth();
   const { visits, refresh: refreshVisits } = useVisits();
   const { trips, refresh: refreshTrips } = useTrips();
+  const { marks, refresh: refreshMarks } = useChallengeMarks();
 
   const [status, setStatus] = useState<SyncStatus>('idle');
   const [pending, setPending] = useState(0);
@@ -128,7 +130,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         setLastSyncedAt(now);
       }
       /**
-       * Both stores, always — not just when rows came down.
+       * Every store, always — not just when rows came down.
        *
        * A wipe deletes from SQLite and changes nothing in memory, so without
        * this the previous account's trips stayed on screen under the new
@@ -138,13 +140,22 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
        * database was in fact correct.
        */
       if (result.pulled > 0 || result.switchedUser) {
-        await Promise.all([refreshVisits(), refreshTrips()]);
+        await Promise.all([refreshVisits(), refreshTrips(), refreshMarks()]);
       }
       await refreshPending();
     } finally {
       inFlight.current = false;
     }
-  }, [active, authStatus, user?.id, db, refreshVisits, refreshTrips, refreshPending]);
+  }, [
+    active,
+    authStatus,
+    user?.id,
+    db,
+    refreshVisits,
+    refreshTrips,
+    refreshMarks,
+    refreshPending,
+  ]);
 
   /** On sign-in. Not on every render, and not on a timer. */
   useEffect(() => {
@@ -176,12 +187,15 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   /**
    * Keep the pending count honest as things are logged.
    *
-   * `visits` and `trips` change whenever either store writes, which is the
-   * cheapest signal available that something now needs uploading.
+   * `visits`, `trips` and `marks` change whenever one of those stores
+   * writes, which is the cheapest signal available that something now needs
+   * uploading. Marks are in the list because ticking a quest step is a row
+   * like any other, and leaving it out meant the backup card said everything
+   * was uploaded while a tick sat waiting.
    */
   useEffect(() => {
     void refreshPending();
-  }, [visits, trips, refreshPending]);
+  }, [visits, trips, marks, refreshPending]);
 
   /**
    * Flush before signing out.

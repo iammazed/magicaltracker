@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-nativ
 
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
-import { TIER_COLOR, type Challenge } from '@/hooks/use-passport';
+import { type Challenge } from '@/hooks/use-passport';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -27,14 +27,36 @@ import { useTheme } from '@/hooks/use-theme';
  * Three states, and the distance between them is the point — the complaint
  * that started this was that finishing something "can be missed":
  *
- *   | state       | ring  | disc | lean    | ink        | legend     |
- *   |-------------|-------|------|---------|------------|------------|
- *   | complete    | 3px   | yes  | crooked | gold       | arc        |
- *   | in progress | 1.5px | no   | square  | tier/area  | straight   |
- *   | untouched   | 1px   | no   | square  | faint      | straight   |
+ *   | state       | ring  | disc | lean    | ink   | legend   |
+ *   |-------------|-------|------|---------|-------|----------|
+ *   | complete    | 3px   | yes  | crooked | gold  | arc      |
+ *   | in progress | 1.5px | no   | square  | teal  | straight |
+ *   | untouched   | 1px   | no   | square  | faint | straight |
  *
  * Only an earned stamp leans. A page of upright outlines with two crooked
  * inked stamps in it reads instantly, at arm's length, with no text.
+ *
+ * ## There are exactly three colours, and gold means earned
+ *
+ * An earlier version inked an unfinished tiered stamp in its TIER's metal —
+ * bronze at 25%, silver at 50%, gold at 75%. It was reported as confusing and
+ * it was: `TIER_COLOR.Gold` and `theme.gold` are the same hex, so a stamp
+ * three-quarters of the way through a long challenge was painted the exact
+ * colour of a finished one. "I assumed gold meant complete" is the correct
+ * reading of the only colour on the page that carries a meaning, and two
+ * things cannot share it.
+ *
+ * Nor was the medal legible even when it did not collide. The tier was shown
+ * as a colour and NOWHERE as a word, so bronze versus silver was a difference
+ * nobody could name — and the two stamps that are not tiered at all borrowed
+ * the accent, which made the same teal mean "in progress" on one stamp and
+ * "no tier yet" on its neighbour.
+ *
+ * So colour on this page answers one question — how far along is this? — with
+ * three answers and a key printed above them. The medal still exists and is
+ * still worth something; it is shown on the challenge's own screen, as a
+ * ladder with the names and the counts spelled out, which is the one place
+ * there is room to say what Silver actually means.
  *
  * **Everything inside is sized from the measured diameter, not in points.**
  * One stamp is ~99pt wide in the passport grid and 84pt in the home strip,
@@ -241,15 +263,14 @@ export function Stamp({
   };
 
   const started = c.earned > 0;
-  // A tiered challenge inks in its tier's metal; an all-or-nothing one has no
-  // tier to show, so it borrows the accent until it is finished and gold.
-  const ink = c.complete
-    ? theme.gold
-    : c.tier
-      ? TIER_COLOR[c.tier.name]
-      : started
-        ? theme.accent
-        : theme.textFaint;
+  /**
+   * Gold is earned, teal is started, faint is untouched. Nothing else.
+   *
+   * The tier is deliberately NOT a colour here — see the note above the
+   * component. `theme.gold` has exactly one meaning on this page and it is the
+   * one everybody already guessed.
+   */
+  const ink = c.complete ? theme.gold : started ? theme.accent : theme.textFaint;
 
   // The proportions. Measured against the grid cell (~99pt) and the home
   // strip (84pt), which are the only two sizes this is used at.
@@ -388,6 +409,60 @@ export function Stamp({
 }
 
 /**
+ * What the three inks mean, printed once above the pages.
+ *
+ * Added because the question was asked out loud: gold was read as "earned",
+ * correctly, and then a gold-ish stamp turned out to be unfinished — so the
+ * colours were carrying a meaning nobody had been told. Fixing the collision
+ * was the first half of the answer (see `Stamp`); saying what is left is the
+ * second, because three unlabelled colours are still three colours someone
+ * has to guess at.
+ *
+ * A key rather than a legend per page: the colours mean the same thing on all
+ * four pages, and repeating it four times would be four times the furniture
+ * for one fact.
+ *
+ * The swatches are miniature stamps rather than plain dots, and that is the
+ * point of them — each one carries the ring weight and the disc of the state
+ * it stands for, so the key teaches the whole visual language and not just
+ * the hue. It is why they are not simply three coloured circles.
+ */
+export function StampKey() {
+  const theme = useTheme();
+  const states = [
+    { ink: theme.gold, label: 'Earned', filled: true, width: 3 },
+    { ink: theme.accent, label: 'Started', filled: false, width: 1.5 },
+    { ink: theme.textFaint, label: 'Not yet', filled: false, width: 1 },
+  ];
+
+  return (
+    <View
+      style={styles.key}
+      accessible
+      accessibilityLabel="Key: gold means earned, teal means started, grey means not started yet."
+    >
+      {states.map((st) => (
+        <View key={st.label} style={styles.keyItem}>
+          <View
+            style={[
+              styles.keySwatch,
+              { borderColor: st.ink, borderWidth: st.width, opacity: st.filled ? 0.9 : 0.6 },
+            ]}
+          >
+            {st.filled ? (
+              <View style={[styles.keyDisc, { backgroundColor: st.ink, opacity: 0.22 }]} />
+            ) : null}
+          </View>
+          <ThemedText type="small" themeColor="textSecondary" style={styles.keyLabel}>
+            {st.label}
+          </ThemedText>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/**
  * A page of the passport.
  *
  * The aged panel is doing the same job the lean does — saying "keepsake"
@@ -468,6 +543,24 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   label: { fontSize: 10, lineHeight: 13, textAlign: 'center' },
+  key: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    columnGap: Spacing.four,
+    rowGap: Spacing.two,
+    flexWrap: 'wrap',
+  },
+  keyItem: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one + 2 },
+  keySwatch: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  keyDisc: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, borderRadius: 8 },
+  keyLabel: { fontSize: 11 },
   page: {
     padding: Spacing.three,
     borderRadius: Radius.large,
