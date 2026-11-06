@@ -1736,7 +1736,7 @@ every stay challenge count from it, so the two cannot disagree about the total.
 |---|---|---|
 | Four Parks, One Day | the four parks on your best single day | 4 |
 | The Transportation Challenge | reaching a resort served by each way of getting around | 5 |
-| Under the Fireworks | every bookable reserved view of a nighttime show, tiered | 11 |
+| Under the Fireworks | the four free nighttime shows, hand-ticked only | 4 |
 | All Year Round | a visit or a stay in each calendar month | 12 |
 
 The page is captioned **"More fun challenges."** Not "where you were, when you were here, and
@@ -1773,10 +1773,39 @@ fails differently:
   monorail runs between Magic Kingdom and EPCOT, the Skyliner stops at two parks, and the ferry
   needs no resort at all — so the most obvious way to ride each of them is exactly the one with
   no resort to infer it from.
-- **Under the Fireworks** counts reserved views, because a dessert party is a catalog row and
-  standing on Main Street is not. **Nobody has to pay to watch fireworks.**
+- **Under the Fireworks** has nothing whatsoever to score from — see below. It is the only
+  challenge in the passport the log can never move.
 - **All Year Round** reads dates off the log, which a day trip with no meal and no hotel never
   leaves behind.
+
+#### Under the Fireworks counts SHOWS, and they are hardcoded
+
+`NIGHTTIME_SHOWS` in `use-passport.ts`, beside `TRANSPORT_ORDER`. Four steps: Happily Ever After,
+Luminous, Fantasmic! and Fantasy in the Sky.
+
+**Everything in it is free with park admission, and that is the rule for editing it.** Until
+2026-11-06 the challenge was scored off the fifteen catalog rows tagged `fireworks`, and every
+one of them is a BOOKING — California Grill, the Rose & Crown and Spice Road dining packages, the
+three Magic Kingdom dessert parties, the Not-So-Spooky and Minnie's Christmastime parties. Jake's
+wife put it plainly: it should not be the fireworks you pay for, nor the restaurants near them.
+She is right, and the mislabelling was worse than the undercount — a tick on "Rose & Crown
+Fireworks Dining Package" claims you attended THAT, so somebody who watched the show from a bench
+had no honest way to record it.
+
+The Halloween and Christmas party fireworks stay out because they need a separate party ticket.
+Fantasy in the Sky is in because New Year's Eve needs nothing but admission.
+
+**A show is not a catalog row and must not become one.** It has no menu, no price tier and no
+reservation, and giving it a `catalog_venues` row would put a thing you cannot eat at into every
+list that reads from that table. The list is also volatile — Luminous replaced Harmonious,
+Happily Ever After replaced Enchantment — so expect to edit it, and re-check the
+park-admission rule each time rather than adding whatever is newest.
+
+**This is the only challenge the log can never score.** Every step is `done: false` at birth and
+stays there until someone ticks it, because standing in a crowd leaves no row behind. The other
+three quests are at least partly observable — four parks from meals, a transport mode from a
+resort reached — which makes this the purest case for `MANUAL_CHALLENGE_IDS` rather than an
+exception to it. Not tiered: four steps is a ladder you can read at a glance.
 
 In every case the app is not WRONG about what it saw; it cannot see the thing being asked about.
 Everything else in the passport is derived — a stamp is the shadow of a meal or a night already
@@ -1815,12 +1844,15 @@ no way to discover that a 20pt circle was the only live part of a full-width row
 markable row — `borderWidth: 1.5` in `theme.accent` against a hairline `theme.border` — but it now
 says "this row is a checkbox" rather than "aim here".
 
-Under the Fireworks is the one manual challenge whose steps are real venues, and it keeps its
-navigation on an explicit `›` at the trailing edge. That is the ordinary trade — the row does the
-main thing, a small button does the secondary thing — and marking is unambiguously the main thing
-on a screen that exists BECAUSE the app cannot observe the achievement. The chevron renders only
-when `canMark && venueId`; on every other row the row itself navigates and a chevron would point
-at the thing already under your thumb.
+The chevron renders only when `canMark && venueId`; on every other row the row itself navigates
+and a chevron would point at the thing already under your thumb. It is the ordinary trade — the
+row does the main thing, a small button does the secondary thing — and marking is unambiguously
+the main thing on a screen that exists BECAUSE the app cannot observe the achievement.
+
+**It was built for Under the Fireworks, which no longer needs it, so right now it is dormant:**
+no manual challenge has steps with a `venueId` any more. Keep it. The condition is self-checking
+and the alternative is that the next manual challenge with venue steps silently loses its
+navigation, which is the bug this whole section is about.
 
 Marks live in `challenge_marks`, carry NOTHING but the challenge id and step id, and **sync** —
 see Sync and Database. No date, no place, no note: the step id is the whole claim. "I rode the
@@ -1842,10 +1874,13 @@ Signature Dining bug was a New Year's Eve party standing between every user and 
 challenge. It is wrong for a GROUPED challenge, where an event can only add a way in. Routing
 the pavilions through `eligible` quietly stopped six real ways in from counting: La Cava, the
 Rose & Crown and Shiki-Sai fireworks packages, and the three festival packages at the American
-Adventure. `data/README.md` had said so all along. Under the Fireworks is counted from
-`withEvents` for the same reason in reverse: every row in it is an event, the challenge is
-visibly about seasonal parties, and it is tiered so that two Halloween-only and two
-Christmas-only parties do not mean three trips before the first sign of progress.
+Adventure. `data/README.md` had said so all along.
+
+**Under the Fireworks used to be the other half of this note, and no longer is.** It was counted
+from `withEvents` because every row it matched was an event — a dessert party, a dining package,
+a rooftop reception — and it was tiered so that two Halloween-only and two Christmas-only parties
+did not mean three trips before the first sign of progress. It now reads no catalog rows at all;
+see the section on it below.
 
 **Every challenge counts from `eligible`, never from the raw catalog.** This
 was a live bug: Signature Dining counted from all rows, and "The Magic of New

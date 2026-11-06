@@ -137,6 +137,42 @@ export const MANUAL_CHALLENGE_IDS = QUEST_CHALLENGE_IDS;
 const TRANSPORT_ORDER = ['monorail', 'skyliner', 'boat', 'bus', 'walk'];
 
 /**
+ * The nighttime shows, for Under the Fireworks.
+ *
+ * **A hardcoded list, deliberately, and NOT catalog data.** The catalog holds
+ * places you can book a table at; a show is not one, has no menu, no price
+ * tier and no reservation, and giving it a `catalog_venues` row to hang this
+ * challenge on would put a thing you cannot eat at into every list that reads
+ * from that table.
+ *
+ * **Everything here is free with park admission.** That is the whole point of
+ * the list and the rule for editing it. The challenge used to be scored off
+ * fifteen catalog rows tagged `fireworks` — California Grill, the Rose & Crown
+ * dining package, the Magic Kingdom dessert parties — every one of which is a
+ * BOOKING. Nobody has to pay to watch fireworks, so the old version counted a
+ * fraction of the times somebody stood under a show, and ticking a dessert
+ * party you never attended would have been a claim about the wrong thing.
+ *
+ * The Halloween and Christmas party fireworks are missing on purpose: they
+ * need a separate party ticket, so they fail the free test. Fantasy in the Sky
+ * passes, needing nothing but admission on the nights it runs.
+ *
+ * Lineups change — Luminous replaced Harmonious, Happily Ever After replaced
+ * Enchantment — so expect to edit this, and check the park-admission rule each
+ * time rather than adding whatever is newest.
+ */
+const NIGHTTIME_SHOWS: { id: string; label: string; where: string }[] = [
+  { id: 'happily-ever-after', label: 'Happily Ever After', where: 'Magic Kingdom' },
+  { id: 'luminous', label: 'Luminous: The Symphony of Us', where: 'EPCOT' },
+  { id: 'fantasmic', label: 'Fantasmic!', where: 'Hollywood Studios' },
+  {
+    id: 'fantasy-in-the-sky',
+    label: 'Fantasy in the Sky',
+    where: "Magic Kingdom · New Year's Eve",
+  },
+];
+
+/**
  * "Disney's Polynesian Village Resort" → "Polynesian Village Resort".
  *
  * The possessive is on nearly every row and distinguishes nothing, and these
@@ -885,30 +921,37 @@ export function usePassport() {
     };
 
     /**
-     * Fireworks, from the places that sell you a view of them.
+     * The nighttime shows, watched from anywhere at all.
      *
-     * Counted from `withEvents`, because every one of these IS an event — a
-     * dessert party, a dining package, a cocktail reception on a top floor.
-     * The rule that keeps events out of a denominator exists so a seasonal
-     * party cannot make a park uncompletable; it has nothing to say about a
-     * challenge that is deliberately and visibly about seasonal parties, and
-     * nobody opens this one expecting to finish it in a week.
+     * **The only challenge in the passport that the log can never score.**
+     * Every step starts `done: false` and stays there until somebody ticks
+     * it, because standing in a crowd leaves no row behind — no meal, no
+     * night, no reservation. The others are at least partly observable;
+     * four parks in one day can be inferred from meals, a transport mode from
+     * a resort you reached. This one has nothing to infer from.
      *
-     * Tiered for that reason. Two of these run only at Halloween and two only
-     * at Christmas, so all-or-nothing would mean three trips in three seasons
-     * before the first sign of progress.
+     * That makes it the purest case for `MANUAL_CHALLENGE_IDS` rather than an
+     * exception to it. A challenge the app cannot see at all is still worth
+     * having — watching all four is a real thing people do — but only if the
+     * person can say so, which is what the marks are for.
+     *
+     * Not tiered. Four steps is a short enough ladder that bronze/silver/gold
+     * would be three badges for a list you can read at a glance; the previous
+     * version was tiered because it had fifteen steps, half of them seasonal.
      */
     const fireworksChallenge = (): Challenge =>
       fromSteps(
         'fireworks',
         'Under the Fireworks',
-        'Dessert parties, dining packages and rooftops — plus anywhere else you have watched a show from.',
-        venueSteps(withEvents.filter((r) => r.tags?.includes('fireworks'))),
-        true,
-        // Nobody has to pay to watch fireworks. The catalog can only hold the
-        // reserved views because those are the ones that are bookable, so the
-        // free ones have to be claimable by hand or this counts a fraction of
-        // the times someone stood under a show.
+        'Watch every nighttime show — from a dessert party, a bench on Main Street or anywhere else you found a spot.',
+        NIGHTTIME_SHOWS.map((show) => ({
+          id: show.id,
+          label: show.label,
+          where: show.where,
+          done: false,
+          venueId: null,
+        })),
+        false,
         true,
       );
 
