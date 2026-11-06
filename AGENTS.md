@@ -1941,43 +1941,54 @@ frames, so Expo Go does not warn on every launch about a module that was never g
 
 ## Builds
 
-### `challenge_marks` MUST be live in Postgres before the build that ships it
+### `challenge_marks` MUST be live in Postgres before the code that reads it SHIPS
 
 Added 2026-11-05 at local `SCHEMA_VERSION 10` and drizzle `0009_chilly_ironclad.sql`. This is the
-rule below about synced columns, in its sharpest form, and the failure is worse than a missing
+rule below about synced columns in its sharpest form, and the failure is worse than a missing
 column: `pull()` selects from `challenge_marks` on **every sync, unconditionally**, so if the
 table does not exist the whole cycle throws and every user — including the ones who never tick a
-quest step — gets a sync error instead of a backup. `npm run db:migrate` runs BEFORE the build,
-not after it.
+quest step — gets a sync error instead of a backup.
+
+**"Ships" means the binary OR the over-the-air update, whichever carries the code.** The rule is
+easy to mis-state as "before the build", which is wrong in the common case: this work was pure JS
+on an unchanged fingerprint, so it reached build 6 through `npm run update:prod` and never saw a
+build at all. The gate is the moment the new `sync.ts` starts running on somebody's phone.
+`npm run db:migrate` comes first either way.
+
+Build 6 itself was cut from `6e23f26`, which predates `challenge_marks`, so a phone sitting on the
+shipped bundle queries nothing that does not exist. That is the only reason there was no window
+of broken syncs between the commit and the migration.
 
 ### The native batch landed on 2026-11-05, and the runtime version moved
 
 `react-native-svg`, `react-native-view-shot` and `expo-sensors` were added together, on purpose.
 Each one is a native dependency, so each one alone would have moved the fingerprint and cost a
 build; batching them cost one. The hash went from **`d41cd429e25dcb2a8513567d4b7617f6a1a7e7fa`**
-(130 sources) to **`bd1bedc58beaa998a1332aaeed19f4eb6894371e`** (133 sources) — the three new
-sources being `node_modules/expo-sensors/ios`, `node_modules/react-native-svg`,
+(130 sources, build 5) to **`5e3f743684cfbce7aa186d72159a3e88cb955b2b`** (136 sources, build 6) —
+among the new sources being `node_modules/expo-sensors/ios`, `node_modules/react-native-svg` and
 `node_modules/react-native-view-shot`, plus both autolinking configs rehashing.
 
-**The recorded hash above does not reproduce, and the discrepancy is unexplained.** Re-run on
-2026-11-05 after the quest-marks work, the same command on the same machine reported
-**`5e3f743684cfbce7aa186d72159a3e88cb955b2b` (136 sources)**. Nothing that could account for it had
-changed: `package.json` and `package-lock.json` are untouched since `612aaa5`, the only recently
-installed packages are the three native ones from that commit plus their JS dependencies, and
-**no fingerprint source lives under `src/`** — the non-`node_modules` file sources are exactly
-`.gitignore`, `eas.json` and the two image assets, plus five `contents` entries. So the 133 reading
-was taken against a `node_modules` in some other state, and which of the two is right cannot be
-settled from here.
+**`bd1bedc58beaa998a1332aaeed19f4eb6894371e` (133 sources) was recorded here earlier and is
+wrong.** It never corresponded to a build. `eas build:list` reports build 6's Fingerprint as
+`5e3f7436…`, which is exactly what `expo-updates fingerprint:generate` returns on this machine,
+so the two agree and the 133 reading was simply bad. Corrected 2026-11-05.
 
-The practical rule that survives it: **the authoritative fingerprint is the one EAS computes
-during the build**, not one computed on Windows and written down. Read it off the build page and
-record THAT. Treat any hash in this file as a note about history rather than something to compare
-against.
+The lesson is the procedural one and it is worth more than the hash: **a fingerprint written down
+by hand is a claim; `eas build:list --platform ios` is the evidence.** Comparing the local
+fingerprint against a number in a file risks concluding "the binary is orphaned, cut a new build"
+when nothing of the kind is true — which is a wasted build, a wasted TestFlight round, and an
+install your testers did not need.
 
-**Builds 4 and 5 are therefore orphaned and cannot be reached over the air again.** Do not publish
-an update until a build carrying the new fingerprint is in TestFlight: `eas update` would succeed,
-report a healthy update group, and reach nobody — which is exactly the trap documented under
-Over-the-air updates. The testers must install the new build; there is no OTA path to it.
+**Builds 4 and 5 are therefore orphaned and cannot be reached over the air again.** An
+`eas update` published while they were the newest thing installed would succeed, report a healthy
+update group, and reach nobody — exactly the trap documented under Over-the-air updates. There
+was no OTA path to the new fingerprint; the testers had to install the binary.
+
+**That window closed on 2026-11-05: build 6 (`5e3f7436…`) is in TestFlight and OTA works again.**
+Anything that does not move the fingerprint now reaches build-6 phones through
+`npm run update:prod` with no build at all. Before reaching for a build, check whether the change
+actually touches a fingerprint source — nothing under `src/` does, so the honest answer for most
+work is no.
 
 Still unanswered, and it matters before `expo-widgets` is added: **whether widget JS is reachable
 over the air at all.** A widget component compiles into a separate bundle inside the extension,
