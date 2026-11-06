@@ -56,33 +56,6 @@ export function tripStatus(t: Trip): TripStatus {
   return 'current';
 }
 
-/**
- * Every date from `start` to `end`, inclusive.
- *
- * `Date.UTC` throughout, like everything else that does date arithmetic here:
- * `new Date('2027-04-03')` parses as midnight UTC and renders in local time,
- * so west of Greenwich every day would come out as the one before.
- */
-export function datesBetween(start: string, end: string): string[] {
-  const out: string[] = [];
-  const [ys, ms, ds] = start.split('-').map(Number);
-  const [ye, me, de] = end.split('-').map(Number);
-  let t = Date.UTC(ys, ms - 1, ds);
-  const last = Date.UTC(ye, me - 1, de);
-  // A guard, not an optimisation: a trip whose dates got swapped would
-  // otherwise spin until the tab crashed.
-  while (t <= last && out.length < 400) {
-    const d = new Date(t);
-    out.push(
-      `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(
-        d.getUTCDate(),
-      ).padStart(2, '0')}`,
-    );
-    t += 86_400_000;
-  }
-  return out;
-}
-
 function useTripsStore() {
   const db = useSQLiteContext();
   const [trips, setTrips] = useState<Trip[]>([]);

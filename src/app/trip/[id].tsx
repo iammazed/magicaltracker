@@ -9,10 +9,10 @@ import { ThemedView } from '@/components/themed-view';
 import { AreaTone, Radius, Spacing, TierTone } from '@/constants/theme';
 import { TIER_LABEL, useResorts } from '@/hooks/use-resorts';
 import { useTheme } from '@/hooks/use-theme';
-import { datesBetween, daysUntil, tripStatus, useTrips } from '@/hooks/use-trips';
+import { daysUntil, tripStatus, useTrips } from '@/hooks/use-trips';
 import { useVenues } from '@/hooks/use-venues';
 import { useVisits } from '@/hooks/use-visits';
-import { formatRange } from '@/lib/calendar';
+import { datesBetween, formatRange } from '@/lib/calendar';
 import { formatCuisine } from '@/lib/labels';
 
 export default function TripScreen() {
@@ -68,7 +68,28 @@ export default function TripScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <Stack.Screen options={{ title: trip.name }} />
+      <Stack.Screen
+        options={{
+          title: trip.name,
+          /* In the header rather than down beside "Delete trip", which is
+             where it would have been buried. Sharing a plan is something
+             people do repeatedly while a trip is being organised, and the
+             bottom of a long scroll is where one-off destructive actions
+             go. */
+          headerRight: () => (
+            <Pressable
+              onPress={() => router.push({ pathname: '/trip-share', params: { id: trip.id } })}
+              accessibilityRole="button"
+              accessibilityLabel="Share this trip"
+              hitSlop={12}
+            >
+              <ThemedText type="smallBold" style={{ color: theme.accent }}>
+                Share
+              </ThemedText>
+            </Pressable>
+          ),
+        }}
+      />
       <ScrollView contentContainerStyle={styles.scroll}>
         <SkyCard style={styles.hero}>
           <Stars />

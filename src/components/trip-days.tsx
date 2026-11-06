@@ -6,8 +6,9 @@ import { PremiumGate } from '@/components/premium-gate';
 import { ThemedText } from '@/components/themed-text';
 import { AreaTone, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { datesBetween, useTrips } from '@/hooks/use-trips';
+import { useTrips } from '@/hooks/use-trips';
 import { useAreas, useVenues } from '@/hooks/use-venues';
+import { datesBetween } from '@/lib/calendar';
 import type { DayKind, Trip, TripPlan } from '@/lib/local-db';
 
 /**

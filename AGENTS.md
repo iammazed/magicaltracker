@@ -877,6 +877,58 @@ invert to near-black in light mode and ship an unreadable image.
 **It shows totals and nothing else.** No place, no date, no rating. The card is designed to be
 posted publicly, so what goes on it is a privacy decision rather than a layout one.
 
+## Sharing a trip
+
+`src/app/trip-share.tsx`, reached from a **Share** button in the trip screen's header. Two
+outputs: the poster (`src/components/itinerary-card.tsx`) and plain text. Also free and ungated,
+for the same reason the passport card is.
+
+**One `Itinerary`, two formatters.** `src/lib/trip-share.ts` turns the trip tables into a single
+shape and both outputs read it. Two formatters going at the tables directly would drift the first
+time a rule changed — "a meal planned outside the trip's own dates counts as unplaced" is exactly
+the sort of rule that gets fixed in one and not the other, and the drift is invisible because one
+of the two is a picture.
+
+**Both, rather than one, because they carry different messages.** The poster is "look where we are
+going": sky gradient, wordmark, the acquisition channel. The text is "here is the plan" — it
+pastes into the group chat where the trip is actually being organised, a recipient who has never
+heard of the app can read it, and a restaurant name can be copied straight out of it to go and
+book. Shipping only the image would have been the prettier choice and the wrong one, because an
+itinerary's job is to be acted on.
+
+**`Share` from react-native, not `expo-sharing`.** expo-sharing shares a FILE and there is no file
+in the text case. The two share paths on this screen genuinely use different APIs.
+
+**The text is plain, never Markdown.** It lands in Messages, WhatsApp and Mail, none of which
+render it — `**EPCOT**` would arrive with the asterisks. Two leading spaces and a bullet survive
+everywhere.
+
+**Spacing differs between the two text shapes, deliberately.** With the dining list on, each day
+is a block and a blank line separates the blocks. With it off, every day is one line and the same
+blank lines would double the length of the message for nothing. The right spacing depends on what
+is being spaced.
+
+**An undecided day keeps its row** and reads "Nothing planned yet" in both outputs. Dropping it
+would make a seven-night trip look like five, and `—` leaves a recipient guessing whether it
+means a rest day or an oversight.
+
+**The poster is not square.** The passport card is 1:1 because it is one number going into a feed;
+this is a list, and a list forced into a square either sets the week in type too small to read or
+crops it. It grows with the trip, caps at `MAX_DAYS` 14 days and 3 meals a day, and is sent in a
+message where a tall image scrolls fine. Everything else about capture — on-screen,
+`collapsable={false}`, literal colours — is identical to the passport card above.
+
+**Meals within a day sort alphabetically**, because `trip_plans` has no time column. Breakfast-to-
+dinner order would be better and is not available; alphabetical is at least stable.
+
+### `datesBetween` lives in `calendar.ts`, not `use-trips`
+
+Moved 2026-11-06. It is pure date arithmetic with no state and no React in it, and while it sat in
+a hooks module **importing it pulled React Native in** — which is what stopped `trip-share.ts`
+being a plain transform runnable outside the app. It is now testable with `npx tsx` against a
+made-up trip, which is how the text output above was checked before it shipped. Keep pure helpers
+out of `.tsx` hook files for this reason.
+
 ### The sharer picks what goes on the card
 
 Nought to three stats, chosen on the share screen with the card visible above the chooser, stored

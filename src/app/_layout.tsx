@@ -165,6 +165,15 @@ function RootLayout() {
                 name="share"
                 options={{ title: 'Share', presentation: 'modal' }}
               />
+              {/* A separate route from "share" rather than a mode of it. The
+                  passport card is one number about you and this is a list
+                  about one trip; they have different props, different shapes
+                  and different buttons, and the only thing they share is the
+                  capture helper. */}
+              <Stack.Screen
+                name="trip-share"
+                options={{ title: 'Share', presentation: 'modal' }}
+              />
               <Stack.Screen name="settings" options={{ title: 'Settings' }} />
               <Stack.Screen
                 name="sign-in"

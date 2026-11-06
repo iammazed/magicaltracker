@@ -130,6 +130,38 @@ export function monthGrid({ year, month }: YearMonth): DayCell[][] {
 }
 
 /** Nights, not days. Arriving Friday and leaving Sunday is two nights. */
+/**
+ * Every date from `start` to `end`, inclusive.
+ *
+ * `Date.UTC` throughout, like everything else that does date arithmetic here:
+ * `new Date('2027-04-03')` parses as midnight UTC and renders in local time,
+ * so west of Greenwich every day would come out as the one before.
+ */
+export function datesBetween(start: string, end: string): string[] {
+  const out: string[] = [];
+  const [ys, ms, ds] = start.split('-').map(Number);
+  const [ye, me, de] = end.split('-').map(Number);
+  let t = Date.UTC(ys, ms - 1, ds);
+  const last = Date.UTC(ye, me - 1, de);
+  // A guard, not an optimisation: a trip whose dates got swapped would
+  // otherwise spin until the tab crashed.
+  while (t <= last && out.length < 400) {
+    const d = new Date(t);
+    out.push(
+      `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(
+        d.getUTCDate(),
+      ).padStart(2, '0')}`,
+    );
+    t += 86_400_000;
+  }
+  return out;
+}
+
+/* Moved here from `use-trips.tsx` on 2026-11-06. It is pure date arithmetic
+   with no state and no React in it, and living in a hooks module meant that
+   importing it pulled React Native in — which is what stopped `trip-share.ts`
+   from being a plain transform that can be run outside the app. */
+
 export function nightsBetween(startISO: string, endISO: string): number {
   const a = parseISO(startISO);
   const b = parseISO(endISO);
