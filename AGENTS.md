@@ -754,6 +754,32 @@ the Dining screen, `planDay` also changes what tapping an already-planned venue 
 it onto that day rather than removing it from the trip, since the day is the thing being edited
 and removing from there would be a trap.
 
+**A day with a park on it opens the dining list filtered to that park.** On an EPCOT day the
+answer to "where am I eating" is one of about sixty-five places and the list was opening on all
+394, so every trip began with the same two taps on a filter the app already knew the answer to.
+
+Three things make this safe to do automatically rather than annoying:
+
+- **It goes through the normal shared filter state**, so the chip row shows EPCOT selected and
+  "All" is one tap away. A filter the user can neither see nor undo is the bug this is modelled
+  on avoiding — `CollapsibleChips` exists to keep the active filter on screen for that reason.
+- **It is scoped to the task.** The filter state is app-wide and sticky, so leaving it set would
+  mean opening the Dining tab days later still filtered to a park with nothing on screen to
+  explain why. The effect's cleanup restores whatever was there before, and it runs on all three
+  exits: Done, walking away to another tab, and unmount.
+- **It does not apply to an area with nothing to eat in it.** Two areas have zero venues today
+  (`boardwalk` and `typhoon-lagoon` — the BoardWalk rows are a known catalog gap), and defaulting
+  to one would open an empty list, which reads as a broken screen rather than as a filter doing
+  its job. If those rows land later the default starts applying there on its own.
+
+The day's `area_id` is read from the trip store rather than passed as a route param. The call
+site already navigates with the date, and a second param carrying the area could disagree with
+the row it was copied from.
+
+`dayArea` is null for the first render or two while the trip store and the catalog hydrate, so
+the effect no-ops rather than saving a value — it captures the previous area at the moment it
+actually applies one. Saving on mount would record a filter state that had not loaded yet.
+
 **Day rows are written lazily and the day LIST is derived**, never stored. An untouched trip
 holds zero rows rather than one per night, and moving a trip's dates cannot strand a row outside
 the range it now covers. `datesBetween` builds the list from the trip's own start and end with

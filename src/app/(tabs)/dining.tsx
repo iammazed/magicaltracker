@@ -5,7 +5,7 @@ import {
   useRoute,
   useRouter,
 } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -85,7 +85,7 @@ export default function CatalogScreen() {
     addToTrip?: string;
     planDay?: string;
   }>();
-  const { trips, plansFor, addPlan, removePlan } = useTrips();
+  const { trips, plansFor, daysFor, addPlan, removePlan } = useTrips();
   /**
    * The trip being added to, unless the user has walked away from the task.
    *
@@ -129,6 +129,66 @@ export default function CatalogScreen() {
   const { data: areas } = useAreas();
   const { filters, set, clear } = useCatalogFilters();
   const bottomInset = useBottomInset();
+
+  /**
+   * Arriving from a day that has a park on it opens the list filtered to
+   * that park.
+   *
+   * On an EPCOT day the answer to "where am I eating" is one of 65 places,
+   * and the list was opening on all 394 — so every single trip started with
+   * the same two taps, on a filter the app already knew the answer to. The
+   * day's `area_id` is read from the trip store rather than
+   * passed as a route param: the call site already navigates with the date,
+   * and a second param could disagree with the row it was copied from.
+   *
+   * Null unless all three hold — there is a day, it has an area, and that
+   * area has somewhere to eat. The last one matters because a water park
+   * day would otherwise open an empty list, and an empty list reads as a
+   * broken screen rather than as a filter doing its job.
+   */
+  const dayArea = useMemo(() => {
+    if (!planning || !planDay) return null;
+    const area = daysFor(planning.id).get(planDay)?.area_id ?? null;
+    if (!area) return null;
+    return venues.some((v) => v.area_id === area) ? area : null;
+  }, [planning, planDay, daysFor, venues]);
+
+  /**
+   * The filter is a DEFAULT and it is scoped to the task.
+   *
+   * It goes through the normal shared filter state, so the chip row shows
+   * EPCOT as selected and "All" is one tap away — a filter the user cannot
+   * see or undo would be the bug this is modelled on avoiding. But that
+   * state is app-wide and sticky, so leaving it set would mean opening the
+   * Dining tab days later still filtered to a park, with nothing left on
+   * screen to explain why. The cleanup puts back whatever was there before.
+   *
+   * `dayArea` is null on the first render or two while the trip store and
+   * the catalog hydrate, which is why the effect no-ops rather than saving a
+   * value: it saves the previous area at the moment it actually applies one.
+   */
+  const previousArea = useRef(filters.areaId);
+  useEffect(() => {
+    if (!dayArea) return;
+    const restore = previousArea.current;
+    set('areaId', dayArea);
+    return () => set('areaId', restore);
+  }, [dayArea, set]);
+
+  /**
+   * Keeps the ref above fed, and is declared AFTER it on purpose: effects in
+   * one component run in declaration order, so on the render that applies a
+   * default the ref still holds the area from before it. (Assigning the ref
+   * during render would be a render-phase side effect, which is the thing
+   * that breaks first under a concurrent re-render.)
+   *
+   * It stops tracking once a default is in play, which is also what makes
+   * changing the chip mid-task safe: the value restored at the end is the
+   * one from before the task, never one this effect wrote.
+   */
+  useEffect(() => {
+    if (!dayArea) previousArea.current = filters.areaId;
+  }, [dayArea, filters.areaId]);
 
   /**
    * Switching tabs abandons the add-to-trip task.
