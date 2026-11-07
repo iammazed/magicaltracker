@@ -15,7 +15,7 @@ import {
 import { PhotoStrip } from '@/components/photo-viewer';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Radius, Spacing } from '@/constants/theme';
+import { AreaTone, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { menuLinks, useVenue } from '@/hooks/use-venue';
 import { useVenueVisits } from '@/hooks/use-visits';
@@ -61,6 +61,9 @@ export default function VenueDetailScreen() {
   }
 
   const menus = menuLinks(venue);
+  /** The same park colour the list row carried, and the map pin, and the
+   *  passport stamp. See the AreaTone note in constants/theme.ts. */
+  const tone = theme[AreaTone[venue.area_id] ?? 'brandTeal'];
   const price = '$'.repeat(Math.max(1, Math.min(4, venue.price_tier)));
   const service = venue.service_type.map((s) => SERVICE_LABEL[s] ?? s).join(', ');
   const character =
@@ -96,30 +99,49 @@ export default function VenueDetailScreen() {
     <ThemedView style={styles.container}>
       <Stack.Screen options={{ title: venue.name }} />
       <ScrollView contentContainerStyle={styles.scroll}>
-        {/* ── Heading ─────────────────────────────────────────────── */}
-        <View style={styles.block}>
-          <ThemedText type="subtitle" style={styles.title}>
-            {venue.name}
-          </ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {[context.resortName ?? context.areaName,
-              venue.sub_area ? formatSubArea(venue.sub_area) : null]
-              .filter(Boolean)
-              .join(' · ')}
-          </ThemedText>
+        {/* ── Heading ─────────────────────────────────────────────────
+            Built like the row that was tapped to get here: the park's colour
+            as a stripe and a wash behind the name. The list was the only
+            place in the app that said which park a restaurant belongs to in
+            COLOUR, so opening one dropped that colour and the screen behind
+            it was a white page of facts.
 
-          <View style={styles.badges}>
-            {venue.is_signature ? <Badge label="Signature" tone="gold" /> : null}
-            {character ? <Badge label="Character dining" tone="gold" /> : null}
-            {venue.reservations_recommended ? (
-              <Badge label="Reservations recommended" tone="accent" />
-            ) : null}
-            {venue.status !== 'open' ? (
-              <Badge
-                label={venue.status === 'seasonal' ? 'Seasonal' : 'Closed'}
-                tone="warning"
-              />
-            ) : null}
+            A filled chip in the tone was the first attempt and was dropped:
+            it needs `onAccent` ink, which lands at 4.2:1 on dark-mode
+            indigo. A wash takes no ink of its own, so the heading keeps the
+            13:1 it already had in both schemes. */}
+        <View
+          style={[
+            styles.head,
+            { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+          ]}
+        >
+          <View style={[styles.headWash, { backgroundColor: tone, opacity: 0.1 }]} />
+          <View style={[styles.headStripe, { backgroundColor: tone }]} />
+          <View style={styles.headInner}>
+            <ThemedText type="subtitle" style={styles.title}>
+              {venue.name}
+            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              {[context.resortName ?? context.areaName,
+                venue.sub_area ? formatSubArea(venue.sub_area) : null]
+                .filter(Boolean)
+                .join(' · ')}
+            </ThemedText>
+
+            <View style={styles.badges}>
+              {venue.is_signature ? <Badge label="Signature" tone="gold" /> : null}
+              {character ? <Badge label="Character dining" tone="gold" /> : null}
+              {venue.reservations_recommended ? (
+                <Badge label="Reservations recommended" tone="accent" />
+              ) : null}
+              {venue.status !== 'open' ? (
+                <Badge
+                  label={venue.status === 'seasonal' ? 'Seasonal' : 'Closed'}
+                  tone="warning"
+                />
+              ) : null}
+            </View>
           </View>
         </View>
 
@@ -184,7 +206,7 @@ export default function VenueDetailScreen() {
                       accessibilityLabel={`Edit visit on ${formatDate(v.visited_on)}`}
                       hitSlop={8}
                     >
-                      <ThemedText type="small" style={{ color: theme.accent }}>
+                      <ThemedText type="small" style={{ color: theme.accentText }}>
                         Edit
                       </ThemedText>
                     </Pressable>
@@ -284,7 +306,7 @@ export default function VenueDetailScreen() {
                 style={[styles.linkRow, { borderColor: theme.border }]}
               >
                 <ThemedText type="small">{label}</ThemedText>
-                <ThemedText type="small" style={{ color: theme.accent }}>
+                <ThemedText type="small" style={{ color: theme.accentText }}>
                   Open ↗
                 </ThemedText>
               </Pressable>
@@ -306,7 +328,7 @@ export default function VenueDetailScreen() {
                 { borderColor: theme.border },
               ]}
             >
-              <ThemedText type="small" style={{ color: theme.accent }}>
+              <ThemedText type="small" style={{ color: theme.accentText }}>
                 Show on map
               </ThemedText>
             </Pressable>
@@ -319,7 +341,7 @@ export default function VenueDetailScreen() {
                 { borderColor: theme.border },
               ]}
             >
-              <ThemedText type="small" style={{ color: theme.accent }}>
+              <ThemedText type="small" style={{ color: theme.accentText }}>
                 Directions ↗
               </ThemedText>
             </Pressable>
@@ -367,12 +389,21 @@ function Fact({
   );
 }
 
+/**
+ * An outlined pill.
+ *
+ * The edge takes the fill colour and the LABEL takes the ink colour, which
+ * are different tokens — a 3:1 edge and 4.5:1 type. Set in one colour, the
+ * gold badge was 3.4:1 on its own gold surface.
+ */
 function Badge({ label, tone }: { label: string; tone: 'gold' | 'accent' | 'warning' }) {
   const theme = useTheme();
   const bg = tone === 'gold' ? theme.goldSurface : theme.backgroundElement;
-  const fg = tone === 'gold' ? theme.gold : tone === 'warning' ? theme.warning : theme.accent;
+  const edge = tone === 'gold' ? theme.gold : tone === 'warning' ? theme.warning : theme.accent;
+  const fg =
+    tone === 'gold' ? theme.goldText : tone === 'warning' ? theme.warning : theme.accentText;
   return (
-    <View style={[styles.badge, { backgroundColor: bg, borderColor: fg }]}>
+    <View style={[styles.badge, { backgroundColor: bg, borderColor: edge }]}>
       <ThemedText type="small" style={{ color: fg, fontSize: 11 }}>
         {label}
       </ThemedText>
@@ -386,6 +417,16 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.two, padding: Spacing.four },
   centerText: { textAlign: 'center' },
   block: { gap: Spacing.two },
+  head: {
+    flexDirection: 'row',
+    borderRadius: Radius.large,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+  },
+  headWash: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
+  /** The same 5pt as a list row's stripe, deliberately. */
+  headStripe: { width: 5, alignSelf: 'stretch' },
+  headInner: { flex: 1, padding: Spacing.three, gap: Spacing.two },
   title: { fontSize: 26, lineHeight: 32 },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two, marginTop: Spacing.one },
   badge: {

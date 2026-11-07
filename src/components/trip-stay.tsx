@@ -89,7 +89,7 @@ export function TripStay({ trip }: { trip: Trip }) {
           accessibilityRole="button"
           style={[styles.dashed, { borderColor: theme.border }]}
         >
-          <ThemedText type="small" style={{ color: theme.accent }}>
+          <ThemedText type="small" style={{ color: theme.accentText }}>
             Choose a resort
           </ThemedText>
         </Pressable>
@@ -216,7 +216,7 @@ function ResortCard({
           resort — that is what it looks like it does — so changing it needs
           its own word rather than stealing the obvious tap. */}
       <Pressable onPress={onChange} accessibilityRole="button" hitSlop={10} style={styles.change}>
-        <ThemedText type="small" style={{ color: theme.accent }}>
+        <ThemedText type="small" style={{ color: theme.accentText }}>
           Change
         </ThemedText>
       </Pressable>
@@ -258,7 +258,7 @@ function ResortSheet({
           <View style={styles.sheetHead}>
             <ThemedText type="smallBold">{title}</ThemedText>
             <Pressable onPress={onClose} accessibilityRole="button" hitSlop={10}>
-              <ThemedText type="small" style={{ color: theme.accent }}>
+              <ThemedText type="small" style={{ color: theme.accentText }}>
                 Close
               </ThemedText>
             </Pressable>

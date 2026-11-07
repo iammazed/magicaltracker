@@ -175,7 +175,7 @@ export default function SettingsScreen() {
                   : 'Optional. Everything works without one — signing in is what makes it survive a reinstall.'}
               </ThemedText>
             </View>
-            <ThemedText type="small" style={{ color: theme.accent }}>
+            <ThemedText type="small" style={{ color: theme.accentText }}>
               {status === 'signed-in' ? 'Manage' : 'Sign in'}
             </ThemedText>
           </Pressable>
@@ -209,7 +209,7 @@ export default function SettingsScreen() {
                   : 'Notes, dishes, photos, unlimited trips, near me and export.'}
               </ThemedText>
             </View>
-            <ThemedText type="small" style={{ color: theme.accent }}>
+            <ThemedText type="small" style={{ color: theme.accentText }}>
               {isPremium ? 'Manage' : 'See plans'}
             </ThemedText>
           </Pressable>
@@ -415,7 +415,7 @@ function Row({
           </ThemedText>
         ) : null}
       </View>
-      <ThemedText type="small" style={{ color: theme.accent }}>
+      <ThemedText type="small" style={{ color: theme.accentText }}>
         {action}
       </ThemedText>
     </Pressable>

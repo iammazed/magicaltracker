@@ -13,7 +13,7 @@ import {
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, TierTone } from '@/constants/theme';
 import { TIER_LABEL, TRANSPORT_LABEL, useResort } from '@/hooks/use-resorts';
 import { useTheme } from '@/hooks/use-theme';
 import { formatDate, formatRange } from '@/lib/calendar';
@@ -45,6 +45,10 @@ export default function ResortDetailScreen() {
     );
   }
 
+  /** The tier colour the resorts list gave this row. Resorts are ordered
+   *  by price rather than by park, so they have their own scale. */
+  const tone = theme[TierTone[resort.tier] ?? 'brandTeal'];
+
   /** The app's own map, where the pins know what you have already done and
    *  what else is in walking distance. See `show-on-map`. */
   const showOnMap = () =>
@@ -75,16 +79,27 @@ export default function ResortDetailScreen() {
     <ThemedView style={styles.container}>
       <Stack.Screen options={{ title: resort.name }} />
       <ScrollView contentContainerStyle={styles.scroll}>
-        <View style={styles.block}>
-          <ThemedText type="subtitle" style={styles.title}>
-            {resort.name}
-          </ThemedText>
-          <View style={styles.badges}>
-            <Badge label={TIER_LABEL[resort.tier] ?? resort.tier} tone="accent" />
-            {resort.ownership === 'partner' ? (
-              <Badge label="Partner hotel" tone="warning" />
-            ) : null}
-            {resort.status !== 'open' ? <Badge label="Closed" tone="warning" /> : null}
+        {/* Built like the row that was tapped to get here — see the longer
+            note on the matching block in venue/[id].tsx. */}
+        <View
+          style={[
+            styles.head,
+            { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+          ]}
+        >
+          <View style={[styles.headWash, { backgroundColor: tone, opacity: 0.1 }]} />
+          <View style={[styles.headStripe, { backgroundColor: tone }]} />
+          <View style={styles.headInner}>
+            <ThemedText type="subtitle" style={styles.title}>
+              {resort.name}
+            </ThemedText>
+            <View style={styles.badges}>
+              <Badge label={TIER_LABEL[resort.tier] ?? resort.tier} tone="accent" />
+              {resort.ownership === 'partner' ? (
+                <Badge label="Partner hotel" tone="warning" />
+              ) : null}
+              {resort.status !== 'open' ? <Badge label="Closed" tone="warning" /> : null}
+            </View>
           </View>
         </View>
 
@@ -124,7 +139,7 @@ export default function ResortDetailScreen() {
                       accessibilityLabel={`Edit stay from ${formatDate(s.check_in)}`}
                       hitSlop={8}
                     >
-                      <ThemedText type="small" style={{ color: theme.accent }}>
+                      <ThemedText type="small" style={{ color: theme.accentText }}>
                         Edit
                       </ThemedText>
                     </Pressable>
@@ -194,7 +209,7 @@ export default function ResortDetailScreen() {
             accessibilityRole="link"
             style={[styles.secondary, { borderColor: theme.border }]}
           >
-            <ThemedText type="small" style={{ color: theme.accent }}>
+            <ThemedText type="small" style={{ color: theme.accentText }}>
               View on disneyworld.com ↗
             </ThemedText>
           </Pressable>
@@ -211,7 +226,7 @@ export default function ResortDetailScreen() {
                 { borderColor: theme.border },
               ]}
             >
-              <ThemedText type="small" style={{ color: theme.accent }}>
+              <ThemedText type="small" style={{ color: theme.accentText }}>
                 Show on map
               </ThemedText>
             </Pressable>
@@ -224,7 +239,7 @@ export default function ResortDetailScreen() {
                 { borderColor: theme.border },
               ]}
             >
-              <ThemedText type="small" style={{ color: theme.accent }}>
+              <ThemedText type="small" style={{ color: theme.accentText }}>
                 Directions ↗
               </ThemedText>
             </Pressable>
@@ -246,12 +261,20 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+/** Edge and label are separate tokens, for the reason given on the twin of
+ *  this function in venue/[id].tsx: 3:1 for an edge, 4.5:1 for type. */
 function Badge({ label, tone }: { label: string; tone: 'accent' | 'warning' | 'plain' }) {
   const theme = useTheme();
-  const fg =
+  const edge =
     tone === 'warning' ? theme.warning : tone === 'accent' ? theme.accent : theme.textSecondary;
+  const fg =
+    tone === 'warning'
+      ? theme.warning
+      : tone === 'accent'
+        ? theme.accentText
+        : theme.textSecondary;
   return (
-    <View style={[styles.badge, { borderColor: fg, backgroundColor: theme.backgroundElement }]}>
+    <View style={[styles.badge, { borderColor: edge, backgroundColor: theme.backgroundElement }]}>
       <ThemedText type="small" style={{ color: fg, fontSize: 11 }}>
         {label}
       </ThemedText>
@@ -265,6 +288,15 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.two, padding: Spacing.four },
   centerText: { textAlign: 'center' },
   block: { gap: Spacing.two },
+  head: {
+    flexDirection: 'row',
+    borderRadius: Radius.large,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+  },
+  headWash: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
+  headStripe: { width: 5, alignSelf: 'stretch' },
+  headInner: { flex: 1, padding: Spacing.three, gap: Spacing.two },
   title: { fontSize: 24, lineHeight: 30 },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   badge: {

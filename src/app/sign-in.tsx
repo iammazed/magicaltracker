@@ -193,7 +193,7 @@ export default function SignInScreen() {
                   accessibilityRole="button"
                   hitSlop={8}
                 >
-                  <ThemedText type="small" style={{ color: theme.accent }}>
+                  <ThemedText type="small" style={{ color: theme.accentText }}>
                     {syncStatus === 'syncing' ? 'Syncing…' : 'Sync now'}
                   </ThemedText>
                 </Pressable>
@@ -250,7 +250,7 @@ export default function SignInScreen() {
                 Visits and stays as a spreadsheet
               </ThemedText>
             </View>
-            <ThemedText type="small" style={{ color: theme.accent }}>
+            <ThemedText type="small" style={{ color: theme.accentText }}>
               Settings
             </ThemedText>
           </Pressable>
@@ -260,7 +260,7 @@ export default function SignInScreen() {
             accessibilityRole="button"
             style={[styles.secondary, { borderColor: theme.border }]}
           >
-            <ThemedText type="small" style={{ color: theme.accent }}>
+            <ThemedText type="small" style={{ color: theme.accentText }}>
               Sign out
             </ThemedText>
           </Pressable>
@@ -305,7 +305,7 @@ export default function SignInScreen() {
             accessibilityRole="button"
             style={[styles.secondary, { borderColor: theme.border }]}
           >
-            <ThemedText type="small" style={{ color: theme.accent }}>
+            <ThemedText type="small" style={{ color: theme.accentText }}>
               Use a different address
             </ThemedText>
           </Pressable>

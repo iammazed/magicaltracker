@@ -198,7 +198,7 @@ export function TripDays({ trip }: { trip: Trip }) {
                     </ThemedText>
                   ) : null}
                 </View>
-                <ThemedText type="small" style={{ color: theme.accent }}>
+                <ThemedText type="small" style={{ color: theme.accentText }}>
                   {decided ? 'Change' : 'Choose'}
                 </ThemedText>
               </Pressable>
@@ -265,7 +265,7 @@ export function TripDays({ trip }: { trip: Trip }) {
                   accessibilityRole="button"
                   style={styles.addMeal}
                 >
-                  <ThemedText type="small" style={{ color: theme.accent }}>
+                  <ThemedText type="small" style={{ color: theme.accentText }}>
                     {meals.length ? '+ Add another restaurant' : '+ Add a restaurant'}
                   </ThemedText>
                 </Pressable>
@@ -326,7 +326,7 @@ export function PlaceOnDay({ trip, plan }: { trip: Trip; plan: TripPlan }) {
         accessibilityLabel="Put this on a day"
         hitSlop={6}
       >
-        <ThemedText type="small" style={{ color: theme.accent, fontSize: 11 }}>
+        <ThemedText type="small" style={{ color: theme.accentText, fontSize: 11 }}>
           Place
         </ThemedText>
       </Pressable>
@@ -553,7 +553,7 @@ function AreaOption({
         {label}
       </ThemedText>
       {selected ? (
-        <ThemedText type="small" style={{ color: theme.accent }}>
+        <ThemedText type="small" style={{ color: theme.accentText }}>
           ✓
         </ThemedText>
       ) : null}

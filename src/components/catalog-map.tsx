@@ -321,7 +321,7 @@ export function CatalogMap({
                 .join('  ·  ')}
             </ThemedText>
           </View>
-          <ThemedText type="small" style={{ color: theme.accent }}>
+          <ThemedText type="small" style={{ color: theme.accentText }}>
             Open
           </ThemedText>
         </Pressable>

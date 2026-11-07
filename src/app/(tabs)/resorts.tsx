@@ -196,11 +196,14 @@ function ResortRow({
         },
       ]}
     >
-      {/* Same wash as the dining rows: a resort you have stayed at carries its
-          tier colour, so progress is visible scrolling 35 rows. */}
-      {stayed ? (
-        <View style={[styles.wash, { backgroundColor: tone, opacity: 0.1 }]} />
-      ) : null}
+      {/* Same wash as the dining rows, and it has to stay the same: every
+          row carries its tier colour at 0.05, a stayed-at one at 0.10. See
+          the longer note in venue-row.tsx for why it is no longer gated on
+          having stayed somewhere. These two screens diverged once before and
+          it took a while to notice. */}
+      <View
+        style={[styles.wash, { backgroundColor: tone, opacity: stayed ? 0.1 : 0.05 }]}
+      />
       <View style={[styles.stripe, { backgroundColor: tone }]} />
       <View style={styles.rowMain}>
         <View style={styles.titleLine}>

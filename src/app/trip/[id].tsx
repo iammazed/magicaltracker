@@ -83,7 +83,7 @@ export default function TripScreen() {
               accessibilityLabel="Share this trip"
               hitSlop={12}
             >
-              <ThemedText type="smallBold" style={{ color: theme.accent }}>
+              <ThemedText type="smallBold" style={{ color: theme.accentText }}>
                 Share
               </ThemedText>
             </Pressable>
@@ -139,7 +139,7 @@ export default function TripScreen() {
               accessibilityRole="button"
               style={[styles.dashed, { borderColor: theme.border }]}
             >
-              <ThemedText type="small" style={{ color: theme.accent }}>
+              <ThemedText type="small" style={{ color: theme.accentText }}>
                 + Add restaurants to this trip
               </ThemedText>
             </Pressable>

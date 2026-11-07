@@ -211,7 +211,7 @@ function CalendarSheet({
           <View style={styles.cardHead}>
             <ThemedText type="smallBold">{title}</ThemedText>
             <Pressable onPress={onClose} accessibilityRole="button" hitSlop={10}>
-              <ThemedText type="small" style={{ color: theme.accent }}>
+              <ThemedText type="small" style={{ color: theme.accentText }}>
                 Close
               </ThemedText>
             </Pressable>
@@ -227,7 +227,7 @@ function CalendarSheet({
                 hitSlop={8}
                 style={[styles.nav, { opacity: atMin ? 0.25 : 1 }]}
               >
-                <ThemedText style={[styles.navMark, { color: theme.accent }]}>‹</ThemedText>
+                <ThemedText style={[styles.navMark, { color: theme.accentText }]}>‹</ThemedText>
               </Pressable>
               {/* The month name is the way up a level, which is where iOS and
                   Android both put it, so the caret is the only hint needed. */}
@@ -239,7 +239,7 @@ function CalendarSheet({
                 style={styles.monthButton}
               >
                 <ThemedText type="small">{monthLabel(view)}</ThemedText>
-                <ThemedText style={[styles.caret, { color: theme.accent }]}>▾</ThemedText>
+                <ThemedText style={[styles.caret, { color: theme.accentText }]}>▾</ThemedText>
               </Pressable>
               <Pressable
                 onPress={() => setView(addMonths(view, 1))}
@@ -249,7 +249,7 @@ function CalendarSheet({
                 hitSlop={8}
                 style={[styles.nav, { opacity: atMax ? 0.25 : 1 }]}
               >
-                <ThemedText style={[styles.navMark, { color: theme.accent }]}>›</ThemedText>
+                <ThemedText style={[styles.navMark, { color: theme.accentText }]}>›</ThemedText>
               </Pressable>
             </View>
           ) : null}
@@ -387,7 +387,7 @@ function MonthPicker({
           hitSlop={8}
           style={[styles.nav, { opacity: year <= minYear ? 0.25 : 1 }]}
         >
-          <ThemedText style={[styles.navMark, { color: theme.accent }]}>‹</ThemedText>
+          <ThemedText style={[styles.navMark, { color: theme.accentText }]}>‹</ThemedText>
         </Pressable>
         <ThemedText type="smallBold">{year}</ThemedText>
         <Pressable
@@ -398,7 +398,7 @@ function MonthPicker({
           hitSlop={8}
           style={[styles.nav, { opacity: year >= maxYear ? 0.25 : 1 }]}
         >
-          <ThemedText style={[styles.navMark, { color: theme.accent }]}>›</ThemedText>
+          <ThemedText style={[styles.navMark, { color: theme.accentText }]}>›</ThemedText>
         </Pressable>
       </View>
 

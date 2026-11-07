@@ -60,13 +60,22 @@ export function VenueRow({
         },
       ]}
     >
-      {/* A wash of the area's colour on rows you have eaten at, so progress
-          is legible while scrolling rather than only in the tick. Kept to
-          0.10 because 366 tinted rows would be a wall — only the visited ones
-          get it, which is the minority for a long time. */}
-      {visited ? (
-        <View style={[styles.wash, { backgroundColor: tone, opacity: 0.1 }]} />
-      ) : null}
+      {/* A wash of the area's colour, on EVERY row rather than only the
+          visited ones.
+
+          The first version washed the visited rows alone, on the grounds
+          that 366 tinted rows would be a wall. What that actually produced
+          was a list with no colour in it at all until you had eaten
+          somewhere — and a long list of restaurants is most of what this app
+          shows anybody on their first run, so most of the app was white.
+
+          Two opacities rather than one, so the wash still says something:
+          0.05 is a tint you read as "this is an EPCOT row" without noticing
+          that you read it, and 0.10 keeps a visited row the same distance
+          ahead of its neighbours that it had over a bare card before. */}
+      <View
+        style={[styles.wash, { backgroundColor: tone, opacity: visited ? 0.1 : 0.05 }]}
+      />
       <View style={[styles.stripe, { backgroundColor: tone }]} />
       <View style={styles.main}>
         <View style={styles.titleLine}>
@@ -114,7 +123,7 @@ export function VenueRow({
         </ThemedText>
 
         {distance ? (
-          <ThemedText type="small" style={{ color: theme.accent, fontSize: 12 }}>
+          <ThemedText type="small" style={{ color: theme.accentText, fontSize: 12 }}>
             {distance} away
           </ThemedText>
         ) : null}

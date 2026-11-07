@@ -32,6 +32,7 @@ const MAP = {
   accent: 'accent',
   'accent-pressed': 'accentPressed',
   'on-accent': 'onAccent',
+  'accent-text': 'accentText',
   gold: 'gold',
   'gold-surface': 'goldSurface',
   'on-gold': 'onGold',

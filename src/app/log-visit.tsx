@@ -380,7 +380,7 @@ export default function LogVisitScreen() {
                   {importing ? (
                     <ActivityIndicator color={theme.accent} />
                   ) : (
-                    <ThemedText style={{ color: theme.accent, fontSize: 22 }}>+</ThemedText>
+                    <ThemedText style={{ color: theme.accentText, fontSize: 22 }}>+</ThemedText>
                   )}
                 </Pressable>
               ) : null}

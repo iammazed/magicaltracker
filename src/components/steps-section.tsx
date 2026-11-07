@@ -48,7 +48,7 @@ export function StepsSection() {
     <Section title="Steps">
       <View style={styles.wrap}>
         <View style={styles.todayRow}>
-          <ThemedText style={[styles.todayValue, { color: theme.accent }]}>
+          <ThemedText style={[styles.todayValue, { color: theme.accentText }]}>
             {today === null ? '—' : today.toLocaleString()}
           </ThemedText>
           <ThemedText type="small" themeColor="textFaint">

@@ -301,7 +301,7 @@ export default function PaywallScreen() {
           accessibilityRole="button"
           style={[styles.restore, { borderColor: theme.border }]}
         >
-          <ThemedText type="small" style={{ color: theme.accent }}>
+          <ThemedText type="small" style={{ color: theme.accentText }}>
             Restore purchases
           </ThemedText>
         </Pressable>
@@ -318,7 +318,7 @@ export default function PaywallScreen() {
               accessibilityRole="link"
               hitSlop={8}
             >
-              <ThemedText type="small" style={{ color: theme.accent }}>
+              <ThemedText type="small" style={{ color: theme.accentText }}>
                 Terms
               </ThemedText>
             </Pressable>
@@ -330,7 +330,7 @@ export default function PaywallScreen() {
               accessibilityRole="link"
               hitSlop={8}
             >
-              <ThemedText type="small" style={{ color: theme.accent }}>
+              <ThemedText type="small" style={{ color: theme.accentText }}>
                 Privacy
               </ThemedText>
             </Pressable>

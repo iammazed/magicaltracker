@@ -51,7 +51,8 @@ invisible to `/theme`, so nobody catches it until a user does.
 | `text` / `textSecondary` / `textFaint` | Copy hierarchy | Decoration |
 | `background` / `backgroundElement` / `backgroundSelected` | Screen ground, cards, pressed rows | Text |
 | `border` / `borderSoft` | Container edges / internal rules | Anything filled |
-| `accent` / `accentPressed` / `onAccent` | Primary actions, links | Decoration, large fills |
+| `accent` / `accentPressed` / `onAccent` | Primary action FILLS, borders, icons | Text |
+| `accentText` | Any teal that is a WORD | Fills, borders, icons |
 | `gold` / `goldSurface` / `onGold` / `goldText` | **Achievement unlocks, premium, and the wordmark** | General emphasis |
 | `success` / `warning` / `danger` | State and outcomes | Branding |
 | `brandTeal` … `brandViolet` | Sequential/categorical things | Body text, semantic state |
@@ -65,9 +66,23 @@ exists to prevent, and it shipped anyway because nobody opened those screens in 
 **`gold` is a fill, `goldText` is ink, and they are not interchangeable.**
 Light-mode `gold` (`#B07818`) is 3.79:1 on white — fine behind a 9px uppercase badge or under a
 button label, below the 4.5:1 that 14px body text needs. `goldText` is the darkened, saturated
-variant (`#9A6A0F`, 4.73:1) for gold *text on a background*; in dark mode both are `#E5B45F`,
-which is already 8.06:1, so the distinction only bites in light mode and is therefore easy to
-miss. Visited dining rows and stayed-at resort rows name themselves in `goldText`.
+variant for gold *text on a background*; in dark mode both are `#E5B45F`, which is already
+8.06:1, so the distinction only bites in light mode and is therefore easy to miss. Visited dining
+rows and stayed-at resort rows name themselves in `goldText`.
+
+`goldText` has now been darkened **twice** (`#9A6A0F` → `#865B0D`), and the second time is the
+instructive one. The first value was picked against a bare card and cleared 4.5:1 there. It is
+never on a bare card: a visited row's name sits on that row's area wash, which took it to 3.9:1.
+**Check a colour against the surface it actually lands on, not the surface the token is named
+after.** It now holds 4.81:1 over the heaviest wash.
+
+**`accent` is a fill and `accentText` is ink, for exactly the same reason.** This pair is newer
+and covers the much more common case: 41 sites were setting type in `accent`. White on an
+`accent` fill is 4.78:1 and was left alone; `accent` AS type is 3.94:1 on the ground, so every
+one of those 41 now reads `accentText`. `accent` stays the ramp's first stop, so a primary
+button, a row stripe and an EPCOT chip remain the same teal — the deeper one appears only where
+the teal has to be read as a word. A lowercase `color:` is the giveaway; `tintColor`,
+`borderColor` and `backgroundColor` all want the fill and all need 3:1, not 4.5:1.
 
 **`gold` is load-bearing.** It marks reward. If it starts appearing as a general highlight, an
 unlocked achievement stops feeling like anything. Guard it.
@@ -128,6 +143,83 @@ the detail screen shipped and nothing said so, so the feature was reported missi
 people looking straight at the control that opens it. There is now a `See all 10 ›` row on the
 card. When a feature is reported missing and the code is demonstrably correct, suspect the
 affordance before suspecting delivery.
+
+### Light mode is tinted paper, and the numbers were the argument
+
+Reported as "it looks good, however it needs a lot more color, it has a lot of white", which was
+measurable rather than a matter of taste. The old light scheme was a ground of `#F4F7F7` under
+cards of pure `#FFFFFF`:
+
+| | ground → card separation | ground chroma |
+|---|---|---|
+| light, before | **3.0 L\*** | **1.0** |
+| dark | 8.8 L\* | 7.7 (card) |
+| light, now | 6.1 L\* | 6.5 |
+
+Two separate faults, and the first one explains the complaint better than the second. At 3.0 L\*
+of separation **the cards did not read as cards** — ground and card were one white field with
+hairlines on it, so "a lot of white" was the accurate description of a surface system that had
+collapsed into a single surface. And at 1.0 chroma not one surface in the scheme carried any hue
+at all, while dark mode's card is a visibly teal-navy `#18272E`. Only one of the two schemes ever
+looked like this app, and it was not the one anybody had been checking.
+
+**The fix was anchored to dark mode's numbers rather than to "warmer".** The ground is now
+`#DBEDEA` — teal paper at hue 185, matching the brand rather than a grey that happens to be
+green — and cards are `#F6FCFB`, a 98.5 L\* near-white, which keeps the contrast of white without
+being white. `backgroundSelected` went deeper too (5.8 L\* below the ground): a pressed state on
+tinted paper has to travel further than one on white before a thumb notices it.
+
+**A surface change silently breaks colours that never moved.** Re-anchoring the ground put
+`success` at 4.37:1 and `warning` at 4.27:1 — both had cleared 4.5:1 on the old ground, and
+neither value had been touched. The paper under them moved. `borderSoft` landed at 1.03:1 on the
+new ground, which is a hairline nobody can see, and the collapsed filter bar draws one straight
+onto it. All three were adjusted. `textFaint` went the other way and ended up BETTER than before
+(3.83:1 on a card against 3.32:1 on white), because it was re-anchored deliberately instead of
+inherited.
+
+So: **after changing any surface token, re-measure every ink token against it.** There is a
+contrast harness in the scratchpad notes of the commit that did this; the cheap version is the
+`/theme` screen in both schemes, which catches collapse but not a 4.37.
+
+Two gaps are known and were left alone:
+
+- **`onGold` on a `gold` fill is 3.82:1 in light mode and cannot be fixed from the ink side.**
+  White is 3.82:1 and dark mode's violet ink is 4.23:1 on the same gold, because light-mode gold
+  sits mid-range. The way out is to move `gold`, which is a brand colour, mirrored to the
+  website, carrying "earned". Not something to change while fixing something else. The affected
+  text is a tick and two 9pt badges. The comment in `theme.ts` claimed 4.75:1 for years; it was
+  wrong, and it is now corrected in place.
+- **Dark `borderSoft` is 1.07:1 on the dark card.** Pre-existing, in the scheme nobody has
+  complained about.
+
+### Colour has to be there before the user has done anything
+
+The second half of the same report, and the more interesting half. Almost every colour in the app
+was gated on state: the area wash appeared on *visited* rows, gold appeared on *earned* stamps,
+the ramp appeared in *progress* fills. A new user has no state, so a new user saw grey.
+
+**Washes are no longer gated.** Every dining row and every resort row carries its park or tier
+colour at `opacity: 0.05`, with `0.10` for a visited one — so a list reads as EPCOT-teal and
+Magic-Kingdom-blue from the first launch, and the visited rows keep the same margin over their
+neighbours they had over a bare card. The comment this replaced said 366 tinted rows would be a
+wall; what gating it actually produced was a wall of white, and a long list of restaurants is
+most of what the app shows anybody on day one. `venue-row.tsx` and `resorts.tsx` must stay in
+step on this — they diverged once before and it took a while to notice.
+
+**Section headings are teal.** `Section` is on nearly every screen, two or three times, so one
+token there puts the brand on Stats, a trip, Settings, a venue and a resort at once. A heading is
+also the right thing to colour: the colour then says "heading" alongside the capitals and the
+tracking rather than instead of them.
+
+**A detail screen echoes the row that opened it.** `venue/[id]` and `resort/[id]` now head their
+title block with the same 5pt stripe and 10% wash the list row had. The list was the only place
+in the app that said in COLOUR which park a restaurant belongs to, so tapping one dropped that
+colour and landed on a white page of facts.
+
+A filled chip in the area's tone was the first attempt at that and was dropped: a fill needs
+`onAccent` ink, which is 4.21:1 on dark-mode indigo. **A wash takes no ink of its own**, so the
+heading keeps the 13:1 it already had, in both schemes. Prefer a wash to a fill when the thing
+being coloured already contains type.
 
 ## Brand
 

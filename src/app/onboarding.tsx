@@ -190,9 +190,9 @@ function Payoff({ added, onContinue }: { added: number; onContinue: () => void }
           <ThemedText type="small" themeColor="textFaint" style={styles.payoffEyebrow}>
             {added} {added === 1 ? 'PLACE' : 'PLACES'} ADDED
           </ThemedText>
-          <ThemedText style={[styles.payoffPct, { color: theme.accent }]}>
+          <ThemedText style={[styles.payoffPct, { color: theme.accentText }]}>
             {Math.round(overall.pct * 100)}
-            <ThemedText style={[styles.payoffSign, { color: theme.accent }]}>%</ThemedText>
+            <ThemedText style={[styles.payoffSign, { color: theme.accentText }]}>%</ThemedText>
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary" style={styles.payoffCaption}>
             of Walt Disney World dining, already eaten through

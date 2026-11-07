@@ -9,20 +9,25 @@
    ────────────────────────────────────────────────────────────────────── */
 
 :root {
-  --ground: #f4f7f7;
-  --surface: #ffffff;
-  --surface-alt: #e4eded;
+  /* Tinted paper, not white. The old pair separated the ground and the card
+     by 3.0 L* at 1.0 chroma, against dark mode's 8.8 at 7.7 — see the long
+     note in src/constants/theme.ts, which is the source of truth. */
+  --ground: #dbedea;
+  --surface: #f6fcfb;
+  --surface-alt: #c5dedb;
 
   --ink: #12212a;
   --ink-soft: #52666f;
-  --ink-faint: #7d9099;
+  --ink-faint: #6e838b;
 
-  --line: #d9e3e3;
-  --line-soft: #e8efef;
+  --line: #c1d7d4;
+  --line-soft: #cee2df;
 
   --accent: #00807e;
   --accent-pressed: #0b7078;
   --on-accent: #ffffff;
+  /* Teal as ink. The accent is 3.93:1 on the ground, so it cannot set type. */
+  --accent-text: #0a6e6b;
 
   /* Reward — achievements and premium only. */
   --gold: #b07818;
@@ -54,6 +59,7 @@
     --accent: #2fb5af;
     --accent-pressed: #24a0a6;
     --on-accent: #052322;
+    --accent-text: #2fb5af;
 
     --gold: #e5b45f;
     --gold-surface: #2a2313;
@@ -82,6 +88,7 @@
   --color-accent: var(--accent);
   --color-accent-pressed: var(--accent-pressed);
   --color-on-accent: var(--on-accent);
+  --color-accent-text: var(--accent-text);
   --color-gold: var(--gold);
   --color-gold-surface: var(--gold-surface);
   --color-on-gold: var(--on-gold);

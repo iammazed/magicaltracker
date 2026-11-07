@@ -127,7 +127,7 @@ export default function FiltersScreen() {
           headerRight: () =>
             active > 0 ? (
               <Pressable onPress={clear} accessibilityRole="button" hitSlop={8}>
-                <ThemedText type="small" style={{ color: theme.accent }}>
+                <ThemedText type="small" style={{ color: theme.accentText }}>
                   Clear all
                 </ThemedText>
               </Pressable>

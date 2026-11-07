@@ -501,7 +501,7 @@ function Section({
         </ThemedText>
         {action && onAction ? (
           <Pressable onPress={onAction} accessibilityRole="button" hitSlop={8}>
-            <ThemedText type="small" style={{ color: theme.accent }}>{action}</ThemedText>
+            <ThemedText type="small" style={{ color: theme.accentText }}>{action}</ThemedText>
           </Pressable>
         ) : null}
       </View>

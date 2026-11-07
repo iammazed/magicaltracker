@@ -43,14 +43,17 @@ const GROUPS: Group[] = [
   },
   {
     title: 'Action',
-    note: 'Primary buttons and links. Text on accent uses onAccent.',
-    tokens: ['accent', 'accentPressed', 'onAccent'],
+    note: 'accent fills, accentText sets type. Text ON an accent fill uses onAccent.',
+    tokens: ['accent', 'accentPressed', 'onAccent', 'accentText'],
     sampleOn: 'onAccent',
   },
   {
     title: 'Reward',
-    note: 'Achievement unlocks and premium. The warm note the ramp lacks.',
-    tokens: ['gold', 'goldSurface', 'onGold'],
+    // goldText was missing from this list, so it showed up in the ungrouped
+    // warning block rather than beside the fill it has to be told apart from
+    // — which is the one place the difference is visible at a glance.
+    note: 'Achievement unlocks and premium. gold fills, goldText sets type.',
+    tokens: ['gold', 'goldSurface', 'onGold', 'goldText'],
     sampleOn: 'onGold',
   },
   {

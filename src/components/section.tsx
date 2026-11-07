@@ -2,6 +2,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 /**
  * A titled group of rows.
@@ -22,9 +23,20 @@ export function Section({
   caption?: string;
   children: React.ReactNode;
 }) {
+  const theme = useTheme();
   return (
     <View style={styles.section}>
-      <ThemedText type="small" themeColor="textFaint" style={styles.sectionTitle}>
+      {/* Teal rather than the faintest text tier.
+       *
+       * This is the cheapest colour in the app: every list screen carries two
+       * or three of these headings, so one token here puts the brand on
+       * Stats, a trip, Settings, a venue and a resort at once — and a heading
+       * is the right thing to colour, because the colour then says "heading"
+       * alongside the capitals and the tracking rather than instead of them.
+       *
+       * `accentText`, not `accent`: the accent is 3.93:1 on the ground and
+       * this is 11pt type. */}
+      <ThemedText type="small" style={[styles.sectionTitle, { color: theme.accentText }]}>
         {title.toUpperCase()}
       </ThemedText>
       {caption ? (
