@@ -127,7 +127,7 @@ export default function PassportScreen() {
 
           <PassportPage
             title="Food and drink"
-            caption="Earn stamps for the places you eat and drink."
+            caption="Earn stamps for the places you eat and drink"
           >
             {[...food, ...areas].map((c) => (
               <Stamp key={c.id} challenge={c} fresh={isFresh(c, fresh)} />
@@ -140,7 +140,7 @@ export default function PassportScreen() {
               would read as more of the same. */}
           <PassportPage
             title="Resort stays"
-            caption="Earn stamps for the resorts you stay at."
+            caption="Earn stamps for the resorts you stay at"
           >
             {stays.map((c) => (
               <Stamp key={c.id} challenge={c} fresh={isFresh(c, fresh)} />
@@ -153,7 +153,7 @@ export default function PassportScreen() {
               that taxonomy explained to them; they need to know there is more
               in here. These are also the only ones you tick by hand, which
               the challenge's own screen explains at the point it matters. */}
-          <PassportPage title="Quests" caption="More fun challenges.">
+          <PassportPage title="Quests" caption="More fun challenges">
             {quests.map((c) => (
               <Stamp key={c.id} challenge={c} fresh={isFresh(c, fresh)} />
             ))}

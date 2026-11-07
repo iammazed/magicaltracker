@@ -273,6 +273,18 @@ no Disney logos — in the app, on the site, or in App Store screenshots.
 The non-affiliation disclaimer appears in the app's About screen, the App Store
 description, and the site footer. It is not optional.
 
+### A caption under a heading takes no full stop
+
+The `caption` prop on `Section` and `PassportPage` is a label, not prose — one line sitting
+directly under a title, read as part of the heading rather than as a sentence. All four of them
+ended in a full stop and it was reported as unnecessary, which it is: the mark is there to
+separate sentences and there is no second sentence coming.
+
+This does NOT extend to `Challenge.blurb`, which is body copy on the challenge screen and is
+often two sentences. "Be at Walt Disney World in every month of the year. Not in one year —
+ever" without the final stop reads as truncated rather than as a caption. The dividing line is
+whether the text is a label or a paragraph, not where it appears.
+
 ---
 
 ## Spacing and radius

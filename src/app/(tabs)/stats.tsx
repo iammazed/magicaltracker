@@ -90,7 +90,7 @@ export default function StatsScreen() {
             </ThemedText>
           ) : null}
 
-          <Section title="Where you have eaten" caption="Tap an area for its checklist.">
+          <Section title="Where you have eaten" caption="Tap an area for its checklist">
             <View style={styles.areaGrid}>
               {byArea.map((a) => (
                 <AreaTile key={a.id} area={a} />
