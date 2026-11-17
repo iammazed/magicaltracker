@@ -1594,7 +1594,83 @@ in the wipe once a second account on one phone is a real scenario rather than a 
 **The map is Apple Maps via `PROVIDER_DEFAULT`, and that is a choice, not a placeholder.** It
 needs no API key and runs in Expo Go, so it works before the Apple Developer Program clears.
 Styled Google Maps needs a key through a config plugin, which needs a development build, which
-needs the paid account.
+needs the paid account. That last constraint has since lifted — the account cleared — but the
+trade has not: `customMapStyle` is Google-only, so full control of the map's own colours still
+means a provider swap, an API key, a Google Cloud billing account and a new binary.
+
+### The default layer is aerial, and the old one was mostly unlabelled
+
+Reported as "very bland/washed out, hard to tell which buildings you are looking at", in both
+schemes. The cause was one prop: `showsPointsOfInterests={false}`, which suppresses **every**
+label Apple draws — building names, the lands, the lagoons, parking, transport. With `mapType`
+unset it defaulted to `standard`, so the map was Apple's plain vector tiles with all names
+stripped.
+
+That is especially bad here. Walt Disney World is private land, so Apple's vector data carries
+few named building footprints inside it; at park zoom the standard map is a handful of beige and
+green polygons with road lines through them, and the thing that would normally say "that is the
+Contemporary" is exactly the POI label that was off. **No reason for it was recorded anywhere** —
+not beside it, not here — which in a file commented as heavily as `catalog-map.tsx` is its own
+evidence that it was a default somebody turned off rather than a decision.
+
+`mapType` is now `hybrid` by default: aerial photography with Apple's label layer over it. From
+the air the parks are unmistakable, which is the actual question somebody has when they open a
+map of a resort they are standing in. `standard` stays one tap away behind a two-option control,
+because imagery is heavier to fetch on park wifi and the vector map is the better one for reading
+road layout.
+
+**The preference is stored in `app_settings` under `map_layer`.** The map unmounts every time you
+switch to the list and back, so a choice held only in component state would have to be made again
+on every visit — which is how a control gets reported as not working. It renders on `imagery`
+immediately and corrects a frame later if the stored value disagrees, rather than showing a blank
+rectangle until the read lands.
+
+**`pointsOfInterestFilter` replaces the boolean, because the boolean's two settings are both
+wrong.** All categories on means Apple labels all 392 restaurants underneath the 392 pins this map
+draws itself — the same name twice, in two typefaces, a few points apart. The filter keeps
+everything that helps you place yourself (`amusementPark`, `hotel`, `parking`, `publicTransport`,
+`stadium`, `marina`, the park and water categories) and drops everything that competes with a pin
+(`restaurant`, `cafe`, `bakery`, `brewery`, `nightlife`, `store`).
+
+Two things about that prop. It **takes precedence** over `showsPointsOfInterests`, so passing both
+is pointless. And it works at this app's 15.1 floor: on iOS 16+ it goes through
+`MKMapConfiguration`, and below that the library falls back to setting `pointOfInterestFilter`
+straight on the `MKMapView`, which has existed since iOS 13. It is the **boolean** that is
+iOS 16-only.
+
+**`showsBuildings` is not a lever on iOS.** The typings say "@platform iOS: Not supported", so
+there is no extruded-building switch for Apple Maps; `hybridFlyover` is the only route to massing.
+Apple's `emphasisStyle` and `elevationStyle` are not exposed by `react-native-maps` 1.27.2 at all.
+
+### Over imagery a marker cannot read a theme token
+
+Aerial photography is the **same picture in both schemes**, so the share card's rule applies
+exactly: a token exists to invert with the scheme, and this ground does not invert. The pins used
+`theme.background` as the rim that separates them from what they stand on, which gives a
+near-white rim in light mode and a near-black one in dark mode over the same tree canopy — and the
+dark one disappears. `IMAGERY` in `catalog-map.tsx` holds fixed values instead: white rims, and a
+near-black label chip with white ink, which are the two that hold against both a sunlit car park
+and a canopy. Literals there are sanctioned for this reason, like the share card's.
+
+A not-yet pin gets a **bullseye** over imagery — white inside the tone and white outside it —
+which is why the rim is a wrapper view rather than a thicker border. Its total width must stay
+inside `PIN_HIT`: `LABELLED_ANCHOR` is computed from `PIN_HIT`, so a pin that outgrew its box
+would drag every marker off its coordinate. 18 + 2 + 2 = 22, and 30 selected, against 34.
+
+**Switching layers repaints the pins through the marker KEY, never through `tracksViewChanges`.**
+Adding the layer to that prop is the obvious move and is a regression: tracking is not a
+one-frame request, it stays on, and a tracking marker redraws continuously — the documented cause
+of this map stuttering, two paragraphs down. A key change remounts the marker once, draws it in
+the new colours, and leaves it not tracking. Switching layers is a rare deliberate tap, so one
+remount of the pins on screen is the right thing to spend.
+
+**The two floating chips are one centred column, not two positioned boxes.** The count badge was
+centred and the layer control was first written hard against the right edge, which collides:
+"Visited 48 of 392" and "Satellite / Map" are each around half a phone wide, so on a 393pt screen
+their boxes meet in the middle. Two overlays whose widths both depend on their text is a layout
+that works until a longer word arrives, and `doneLabel` is a prop while the counts grow a digit at
+100. A column cannot overlap itself. The container needs `pointerEvents="box-none"` or it eats
+taps meant for the map.
 
 Two things about markers are load-bearing. `tracksViewChanges` must be `false` on any marker with
 custom children, or the map re-renders every one of them continuously and visibly stutters — it
