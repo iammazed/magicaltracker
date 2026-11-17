@@ -111,9 +111,14 @@ export default function StatsScreen() {
               total={resortCoverage.total}
               tone="brandViolet"
             />
+            {/* The bar above is labelled "Disney-owned resorts stayed at", so
+                the exclusion only has to be named, not explained — it sits
+                directly under the label that already says which rows count.
+                The long version listed the Swan and Dolphin by name and spent
+                a line on the distinction between tracked and counted, which
+                is a footnote's worth of nuance under a progress bar. */}
             <ThemedText type="small" themeColor="textFaint">
-              Partner hotels like the Swan and Dolphin are tracked but do not
-              count toward this.
+              Partner hotels are not included.
             </ThemedText>
           </Section>
 

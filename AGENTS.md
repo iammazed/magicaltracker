@@ -285,6 +285,39 @@ often two sentences. "Be at Walt Disney World in every month of the year. Not in
 ever" without the final stop reads as truncated rather than as a caption. The dividing line is
 whether the text is a label or a paragraph, not where it appears.
 
+### Do not spend a UI string explaining the reasoning behind the UI
+
+Eight copy fixes on 2026-11-16, and seven of them were the same fault: a string that had been
+written to justify a decision rather than to tell somebody what to do. The worst was the manual
+challenge footer, forty words of why the app cannot observe a firework display, printed above a
+list of rows that each already carried a tappable circle. It is now `manualHint()` in
+`challenge/[id].tsx` — "Tap a row to mark it done; tap it again to undo."
+
+**The reasoning belongs in a comment, and most of it was already in one.** `use-passport.ts`
+carries several hundred words on exactly why these six challenges cannot be derived from the log;
+none of that needed to reach the screen, and putting it there pushed the checkboxes it was
+describing below the fold. Same shape in three blurbs — "Tick off whatever you have ridden",
+"Tick off the ones you have walked" — which repeated the instruction that sits two lines beneath
+them, and in the Stats partner-hotel note, which spent a line on the distinction between a hotel
+being *tracked* and *counted* under a bar already labelled "Disney-owned resorts stayed at".
+
+**A hint keyed by id beats one string for six screens.** `MANUAL_HINT` overrides the default for
+All Year Round alone, because a month is not a row you went to — "tap a row" omits the only fact
+that makes the tick mean anything. One override, not six.
+
+### A count reads verb-first
+
+`SkyHeader`'s progress bar said "48 of 392 eaten at", which is the right words in an order
+nobody speaks. It takes `prefix` and `label` now: `prefix` leads the count, `label` trails it,
+and a caller passes one or the other. The distinction is not stylistic — "Eaten at 48 of 392"
+and "Stayed at 12 of 35" are verbs and lead naturally, while "on this trip" is a qualifier and
+cannot move without becoming worse than what it replaced.
+
+`progressText` is shared because the collapsed and expanded headers are duplicated JSX that has
+drifted before. `CatalogMap`'s badge was reordered to match, since it prints the same count on
+the same two screens — it upper-cases `doneLabel` at the badge and leaves it alone in
+"Already visited", which still reads correctly as a suffix.
+
 ---
 
 ## Spacing and radius

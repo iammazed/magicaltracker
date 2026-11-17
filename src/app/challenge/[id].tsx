@@ -19,6 +19,27 @@ import { useTheme } from '@/hooks/use-theme';
 import { tapPicked, tapSaved } from '@/lib/haptics';
 
 /**
+ * What the tappable circles are, on the six challenges that have them.
+ *
+ * This used to explain WHY the app cannot observe these — "the app can only
+ * see what you log, and this one happens away from the table" — which is true,
+ * is the reasoning recorded in `use-passport.ts`, and is not what somebody
+ * looking at a checkbox needs. They need to know it is a checkbox. The
+ * explanation was three lines of prose above a list of rows that each already
+ * carry a circle, so it pushed the thing it was describing off the screen.
+ *
+ * Keyed by id because one of the six asks for something more specific than a
+ * row: a month is not a place you went, so "tap a row" leaves out the only
+ * fact that makes the tick meaningful.
+ */
+const MANUAL_HINT: Record<string, string> = {
+  'all-year-round': 'Tap any month you have been to Walt Disney World.',
+};
+
+const manualHint = (id: string): string =>
+  MANUAL_HINT[id] ?? 'Tap a row to mark it done; tap it again to undo.';
+
+/**
  * What a challenge actually asks of you.
  *
  * The Passport's cards say how far along you are and nothing about what is
@@ -95,18 +116,9 @@ export default function ChallengeDetailScreen() {
             {summarise(c)}
           </ThemedText>
 
-          {/*
-            Said once, here, rather than implied by the presence of tappable
-            circles. A checkbox that appears on six challenge screens and not
-            the rest needs to explain why it is there, and the honest explanation is
-            that the app cannot see this one — which is also the answer to
-            "why did my park day not count?".
-          */}
           {c.manual ? (
             <ThemedText type="small" themeColor="textSecondary">
-              The app can only see what you log, and this one happens away from
-              the table — so tick anything you have done. Tap a row to mark it;
-              tap it again to take the mark back.
+              {manualHint(c.id)}
             </ThemedText>
           ) : null}
         </View>

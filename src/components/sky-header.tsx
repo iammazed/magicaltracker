@@ -88,6 +88,19 @@ export function useHeaderCollapse() {
  * gradient is dark in both themes, so theme text tokens invert underneath it
  * and vanish in light mode.
  */
+
+/** Joins whichever of the two label slots was given to the count. Shared so
+ *  the collapsed and expanded headers cannot phrase the same number two
+ *  different ways — they are duplicated JSX and have drifted before. */
+function progressText(p: {
+  done: number;
+  total: number;
+  label?: string;
+  prefix?: string;
+}): string {
+  return [p.prefix, `${p.done} of ${p.total}`, p.label].filter(Boolean).join(' ');
+}
+
 export function SkyHeader({
   eyebrow,
   title,
@@ -99,8 +112,15 @@ export function SkyHeader({
   eyebrow?: string;
   title: string;
   /** A slim coverage bar. The question "how much of this have I done?" is the
-   *  one both these screens exist to answer. */
-  progress?: { done: number; total: number; label: string };
+   *  one both these screens exist to answer.
+   *
+   *  `prefix` leads the count and `label` trails it, because the two are
+   *  different kinds of phrase and only one of them can lead. A verb reads
+   *  naturally in front — "Eaten at 48 of 392" is how somebody would say it
+   *  out loud, where "48 of 392 eaten at" is the same words in an order
+   *  nobody uses. A qualifier cannot move: "On this trip 12 of 392" is worse
+   *  than what it replaced. Pass one or the other, not both. */
+  progress?: { done: number; total: number; label?: string; prefix?: string };
   /** A top-right escape. The tab screens are under `headerShown: false`, so a
    *  screen in a temporary mode — adding dining to a trip — has no navigation
    *  bar and no back button, and its only way out was a footer that turned
@@ -211,7 +231,7 @@ export function SkyHeader({
                 />
               </View>
               <ThemedText style={styles.progressLabel}>
-                {progress.done} of {progress.total} {progress.label}
+                {progressText(progress)}
               </ThemedText>
             </View>
           ) : null}
@@ -253,7 +273,7 @@ export function SkyHeader({
                 />
               </View>
               <ThemedText style={styles.progressLabel}>
-                {progress.done} of {progress.total} {progress.label}
+                {progressText(progress)}
               </ThemedText>
             </View>
           ) : null}

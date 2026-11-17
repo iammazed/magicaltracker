@@ -336,7 +336,7 @@ export default function CatalogScreen() {
           progress={
             planning
               ? { done: plannedIds.size, total: venues.length, label: 'on this trip' }
-              : { done: visitedCount, total: venues.length, label: 'eaten at' }
+              : { done: visitedCount, total: venues.length, prefix: 'Eaten at' }
           }
           action={planning ? { label: 'Done', onPress: finish } : undefined}
           collapsed={collapsed}

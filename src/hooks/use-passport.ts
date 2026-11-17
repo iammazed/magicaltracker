@@ -961,7 +961,10 @@ export function usePassport() {
       return fromSteps(
         'transportation',
         'The Transportation Challenge',
-        'Ride every way of getting around — monorail, Skyliner, boat, bus and on foot. Tick off whatever you have ridden.',
+        // No "tick off whatever you have ridden" — the challenge screen says
+        // what the circles are directly under this, so a blurb repeating it
+        // spends its one line on the instruction instead of the challenge.
+        'Ride every way of getting around — monorail, Skyliner, boat, bus and on foot.',
         steps,
         false,
         // The monorail runs between Magic Kingdom and EPCOT, the Skyliner
@@ -987,7 +990,7 @@ export function usePassport() {
       fromSteps(
         'epcot-festivals',
         'The EPCOT Festivals',
-        'All four festivals — the park changes completely for each one. Tick off the ones you have walked.',
+        'All four festivals that change seasonally.',
         EPCOT_FESTIVALS.map((f) => ({
           id: f.id,
           label: f.label,
@@ -1011,7 +1014,10 @@ export function usePassport() {
       fromSteps(
         'holiday-parties',
         'The Holiday Parties',
-        'Halloween, Christmas and Jollywood Nights — three separate tickets, three completely different parks after dark.',
+        // Jollywood Nights is a Christmas-season party, so "Halloween and
+        // Christmas" covers all three without naming them — the three rows
+        // below name themselves, and each one carries its own park.
+        'Halloween and Christmas ticketed events in the parks.',
         HOLIDAY_PARTIES.map((party) => ({
           id: party.id,
           label: party.label,

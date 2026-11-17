@@ -67,7 +67,7 @@ export default function ResortsScreen() {
         <SkyHeader
           eyebrow="WALT DISNEY WORLD"
           title="Resorts"
-          progress={{ done: stayedCount, total: resorts.length, label: 'stayed at' }}
+          progress={{ done: stayedCount, total: resorts.length, prefix: 'Stayed at' }}
           collapsed={collapsed}
         >
           <TextInput
