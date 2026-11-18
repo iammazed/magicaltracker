@@ -273,6 +273,49 @@ no Disney logos — in the app, on the site, or in App Store screenshots.
 The non-affiliation disclaimer appears in the app's About screen, the App Store
 description, and the site footer. It is not optional.
 
+### The splash is two splashes, and the second one was Expo's for a year
+
+iOS draws the `expo-splash-screen` image from `app.json` — the gold `M` on `#00807E` — before a
+line of JavaScript runs, and keeps drawing it until something calls `SplashScreen.hideAsync()`.
+`AnimatedSplashOverlay` in `src/components/animated-icon.tsx` is what takes over at that moment.
+
+**That file was the Expo starter's, untouched from the initial commit until 2026-11-17.** It
+painted the whole screen Expo blue, `#208AEF`, with `expo-logo.png` in the middle, on top of our
+own teal splash, on every single launch. Nobody reads a 600ms flash as a bug — it looks like the
+app blinking — which is exactly why it survived six builds and a round of TestFlight. If you are
+ever auditing what the app looks like in its first second, open the file rather than the config:
+the config was always right.
+
+It now draws **the same mark at the same size on the same teal**, so the handover from native to
+JS changes nothing on screen, and then fades the tagline up underneath it:
+
+> Every meal, every stay, every memory
+
+No full stop, for the same reason a caption under a heading takes none. It is set in the system
+face, never a brand face — Pacifico and Berkshire Swash are for the wordmark, and the brand faces
+are loaded at runtime by `BrandFontsProvider`, so at splash time they may not exist yet and the
+line would silently render in a substitute at the wrong width.
+
+**Three constants must agree with `app.json` and there is nothing that checks them.** `TEAL`
+against the `expo-splash-screen` plugin's `backgroundColor`, `MARK` against its `imageWidth`, and
+the `require` against its `image`. Change one side only and the flash comes back in a new colour.
+
+The colours are literals, which is sanctioned here for the same reason as the share card and the
+map pins: the surface is one fixed colour in both schemes, because the PNG it continues cannot
+know the scheme. A theme token would invert and leave a gold mark on white.
+
+**Both render passes are load-bearing.** `hideAsync` is called from `onLayout`, after this view
+has actually been laid out, because calling it earlier leaves a frame between the native splash
+going and this one arriving — and that frame is a white flash. The first pass draws the mark and
+hides the native splash; the second replays it as an animation. The tagline is rendered only in
+the second, so it fades rather than pops.
+
+`pointerEvents="none"` is not decoration. The overlay is `absoluteFill` at `zIndex: 1000` and
+outlives its own fade by a few hundred milliseconds, so without it the first tap of the session
+lands on nothing. The starter had this bug too.
+
+`DURATION` is the only dial worth turning. The percentages in `splashKeyframe` scale with it.
+
 ### A caption under a heading takes no full stop
 
 The `caption` prop on `Section` and `PassportPage` is a label, not prose — one line sitting
