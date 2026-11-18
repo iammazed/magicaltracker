@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ProgressBar } from '@/components/progress-bar';
@@ -15,6 +16,7 @@ import { AreaTone, Radius, Spacing } from '@/constants/theme';
 import { useBottomInset } from '@/hooks/use-bottom-inset';
 import { useOnboarding } from '@/hooks/use-onboarding';
 import { usePassport } from '@/hooks/use-passport';
+import { useProfile } from '@/hooks/use-profile';
 import { useResorts } from '@/hooks/use-resorts';
 import { useScrollToTopOnTabPress } from '@/hooks/use-scroll-to-top';
 import { useTheme } from '@/hooks/use-theme';
@@ -23,6 +25,7 @@ import type { Trip } from '@/lib/local-db';
 import { formatRange } from '@/lib/calendar';
 import { useVenues } from '@/hooks/use-venues';
 import { useVisits } from '@/hooks/use-visits';
+import { useWelcomeBack } from '@/hooks/use-welcome-back';
 
 /**
  * Home leads with the trip, not with statistics.
@@ -40,7 +43,24 @@ export default function HomeScreen() {
   const { activeTrip, trips, plansFor, loading: tripsLoading } = useTrips();
   const { loading, overall, byArea, resortCoverage, challenges } = usePassport();
   const { done: onboarded, loading: onboardingLoading } = useOnboarding();
+  const { name } = useProfile();
   const bottomInset = useBottomInset();
+
+  /**
+   * "Welcome back" belongs here and nowhere else.
+   *
+   * Not a floating banner: `AchievementBanner` owns the top of the screen
+   * over every route, and `UpdateBanner` was pushed to the bottom
+   * specifically so the two could not meet. A third thing in that space
+   * collides on exactly the launch this one is for — the first of the day,
+   * which is also when a sync lands the medals earned on another device.
+   *
+   * It stays out of the countdown's way too. The trip card eight lines below
+   * already sets "47 / days to go" at 60pt, so repeating the number up here
+   * would be the app telling you the same thing twice before you had
+   * finished reading it once.
+   */
+  const welcomeBack = useWelcomeBack();
 
   /**
    * Tapping Home while already on Home returns to the top.
@@ -169,18 +189,31 @@ export default function HomeScreen() {
           ]}
         >
           {/* ── Wordmark ─────────────────────────────────────────── */}
-          <View style={styles.masthead}>
-            <Wordmark size="md" />
-            <Pressable
-              onPress={() => router.push('/settings')}
-              accessibilityRole="button"
-              accessibilityLabel="Settings"
-              hitSlop={10}
-            >
-              <ThemedText type="small" themeColor="textFaint">
-                Settings
-              </ThemedText>
-            </Pressable>
+          <View style={styles.mastheadBlock}>
+            <View style={styles.masthead}>
+              <Wordmark size="md" />
+              <Pressable
+                onPress={() => router.push('/settings')}
+                accessibilityRole="button"
+                accessibilityLabel="Settings"
+                hitSlop={10}
+              >
+                <ThemedText type="small" themeColor="textFaint">
+                  Settings
+                </ThemedText>
+              </Pressable>
+            </View>
+            {welcomeBack ? (
+              // Faded in rather than simply present, because it arrives a
+              // beat after the screen does — the day check is a database
+              // read — and a line that blinks into existence at full
+              // strength reads as a glitch.
+              <Animated.View entering={FadeIn.duration(400)}>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {name ? `Welcome back, ${name}` : 'Welcome back'}
+                </ThemedText>
+              </Animated.View>
+            ) : null}
           </View>
 
           {/* ── The trip, or the absence of one ──────────────────── */}
@@ -513,9 +546,13 @@ function Section({
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safe: { flex: 1 },
+  // The negative margin lives on the block, not the row, so the greeting
+  // tucks under the wordmark instead of being pushed a full scroll gap away
+  // from it. With no greeting the block renders exactly as the row used to.
+  mastheadBlock: { gap: Spacing.one, marginBottom: -Spacing.two },
   masthead: {
     flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between', marginBottom: -Spacing.two,
+    justifyContent: 'space-between',
   },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: {

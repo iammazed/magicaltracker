@@ -26,6 +26,7 @@ import { CatalogFiltersProvider } from '@/hooks/use-catalog-filters';
 import { ChallengeMarksProvider } from '@/hooks/use-challenge-marks';
 import { NearbyProvider } from '@/hooks/use-nearby';
 import { PremiumProvider } from '@/hooks/use-premium';
+import { ProfileProvider } from '@/hooks/use-profile';
 import { SyncProvider } from '@/hooks/use-sync';
 import { TripsProvider } from '@/hooks/use-trips';
 import { VisitsProvider } from '@/hooks/use-visits';
@@ -94,6 +95,10 @@ function RootLayout() {
     >
       <BrandFontsProvider>
       <AuthProvider>
+      {/* Above everything that greets by name, and outside the catalog and
+          visit stores because it depends on neither — it is one settings
+          row, read once. */}
+      <ProfileProvider>
       <PremiumProvider>
       <NearbyProvider>
       <CatalogProvider>
@@ -222,6 +227,7 @@ function RootLayout() {
       </CatalogProvider>
       </NearbyProvider>
       </PremiumProvider>
+      </ProfileProvider>
       </AuthProvider>
       </BrandFontsProvider>
     </SQLiteProvider>

@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SkyCard, Stars } from '@/components/sky-card';
@@ -10,6 +10,7 @@ import { Wordmark } from '@/components/wordmark';
 import { AreaTone, Radius, Spacing } from '@/constants/theme';
 import { useCatalog } from '@/hooks/use-catalog';
 import { useOnboarding } from '@/hooks/use-onboarding';
+import { useProfile } from '@/hooks/use-profile';
 import { usePassport } from '@/hooks/use-passport';
 import { useTheme } from '@/hooks/use-theme';
 import { useVenues } from '@/hooks/use-venues';
@@ -35,8 +36,10 @@ export default function OnboardingScreen() {
   const { areas } = useCatalog();
   const { addVisitsBulk } = useVisits();
   const { complete } = useOnboarding();
+  const { save: saveName } = useProfile();
 
   const [chosen, setChosen] = useState<Set<string>>(new Set());
+  const [name, setName] = useState('');
   const [stage, setStage] = useState<'pick' | 'done'>('pick');
   const [saving, setSaving] = useState(false);
   const [added, setAdded] = useState(0);
@@ -58,6 +61,11 @@ export default function OnboardingScreen() {
   const finish = async (ids: string[]) => {
     if (saving) return;
     setSaving(true);
+    // Saved on the way out rather than on every keystroke: one write instead
+    // of twenty, and a name typed then deleted never reaches the database.
+    // It survives "Skip for now" too, because skipping the picks is not the
+    // same as declining to be called anything.
+    if (name.trim()) await saveName(name);
     const count = ids.length ? await addVisitsBulk(ids, { dateExact: false }) : 0;
     setAdded(count);
     await complete();
@@ -74,9 +82,55 @@ export default function OnboardingScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView edges={['top', 'bottom']} style={styles.safe}>
-        <ScrollView contentContainerStyle={styles.scroll}>
+        <ScrollView
+          // The name field sits above a grid of 24 tappable cards. Without
+          // these two, the keyboard covers the thing you are meant to tap
+          // next and the first tap only dismisses it.
+          automaticallyAdjustKeyboardInsets
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.scroll}
+        >
           <View style={styles.masthead}>
             <Wordmark size="lg" />
+          </View>
+
+          {/*
+            Asked here, before the task, because it is a greeting and a
+            greeting comes first — and asked at all because nothing else in
+            the app knows a name. Apple gives one up on the first
+            authorization only, a magic link never carries one, and guest
+            mode has no account to read. See `use-profile`.
+
+            One line, optional, and never in the way: there is no validation,
+            no error state and no required marker, and leaving it blank costs
+            nothing but the greeting.
+          */}
+          <View style={styles.nameField}>
+            <View style={styles.nameLabel}>
+              <ThemedText type="smallBold">What should we call you?</ThemedText>
+              <ThemedText type="small" themeColor="textFaint">
+                Optional
+              </ThemedText>
+            </View>
+            <TextInput
+              value={name}
+              onChangeText={setName}
+              placeholder="First name"
+              placeholderTextColor={theme.textFaint}
+              autoCapitalize="words"
+              autoCorrect={false}
+              returnKeyType="done"
+              maxLength={24}
+              textContentType="givenName"
+              style={[
+                styles.nameInput,
+                {
+                  backgroundColor: theme.backgroundElement,
+                  borderColor: theme.border,
+                  color: theme.text,
+                },
+              ]}
+            />
           </View>
 
           <SkyCard style={styles.hero}>
@@ -244,6 +298,19 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   masthead: { alignItems: 'center', paddingVertical: Spacing.two },
+  nameField: { gap: Spacing.two },
+  nameLabel: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+  },
+  nameInput: {
+    paddingHorizontal: Spacing.three,
+    height: 50,
+    borderRadius: Radius.medium,
+    borderWidth: StyleSheet.hairlineWidth,
+    fontSize: 16,
+  },
   hero: { minHeight: 120 },
   heroInner: { padding: Spacing.four, gap: Spacing.two },
   heroTitle: { color: '#ffffff', fontSize: 22, lineHeight: 28, fontWeight: '700' },

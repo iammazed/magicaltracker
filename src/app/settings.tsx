@@ -2,8 +2,17 @@ import * as Sentry from '@sentry/react-native';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import * as Updates from 'expo-updates';
-import { useMemo, useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Alert,
+  Linking,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { PremiumBadge } from '@/components/premium-gate';
 import { ThemedText } from '@/components/themed-text';
@@ -14,6 +23,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useCatalog } from '@/hooks/use-catalog';
 import { useOnboarding } from '@/hooks/use-onboarding';
 import { usePremium } from '@/hooks/use-premium';
+import { useProfile } from '@/hooks/use-profile';
 import { useSync } from '@/hooks/use-sync';
 import { useTheme } from '@/hooks/use-theme';
 import { useVisits } from '@/hooks/use-visits';
@@ -36,9 +46,28 @@ export default function SettingsScreen() {
   const { status, user } = useAuth();
   const { active: syncActive, devEnabled, setDevEnabled, pending } = useSync();
   const { reset } = useOnboarding();
+  const { name, loading: nameLoading, save: saveName } = useProfile();
   const [busy, setBusy] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const [updateNote, setUpdateNote] = useState<string | null>(null);
+
+  /**
+   * A draft, because the field is edited and the store is authoritative.
+   *
+   * Seeded once the first read lands — binding the input straight to `name`
+   * would make it uneditable the moment you cleared it, since `save` turns
+   * an empty string back into `null`. Re-running when `name` changes is what
+   * pulls the trimmed, clipped version back into the box after a save.
+   */
+  const [nameDraft, setNameDraft] = useState('');
+  useEffect(() => {
+    if (!nameLoading) setNameDraft(name ?? '');
+  }, [nameLoading, name]);
+
+  const commitName = () => {
+    if (nameDraft.trim() === (name ?? '')) return;
+    void saveName(nameDraft);
+  };
 
   // Both reads come from the binary rather than the manifest, deliberately:
   // `platform.ios.buildNumber` is the embedded Info.plist value and
@@ -157,6 +186,41 @@ export default function SettingsScreen() {
       <ScrollView contentContainerStyle={styles.scroll}>
         {/* ── Account ──────────────────────────────────────────────── */}
         <Section title="Account">
+          {/* Above the sign-in row, not below it, because it is the only
+              thing in this section that works without an account — and it
+              is the only place the name can be changed once onboarding is
+              behind you. Committed on blur rather than with a Save button:
+              there is nothing to validate and nothing to undo. */}
+          <View
+            style={[
+              styles.row,
+              styles.nameRow,
+              { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+            ]}
+          >
+            <View style={styles.nameRowMain}>
+              <ThemedText type="smallBold">What we call you</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                Used in the greeting on Home. Stays on this phone.
+              </ThemedText>
+            </View>
+            <TextInput
+              value={nameDraft}
+              onChangeText={setNameDraft}
+              onBlur={commitName}
+              onSubmitEditing={commitName}
+              placeholder="First name"
+              placeholderTextColor={theme.textFaint}
+              autoCapitalize="words"
+              autoCorrect={false}
+              returnKeyType="done"
+              maxLength={24}
+              textContentType="givenName"
+              accessibilityLabel="What we call you"
+              style={[styles.nameInput, { borderColor: theme.border, color: theme.text }]}
+            />
+          </View>
+
           <Pressable
             onPress={() => router.push('/sign-in')}
             accessibilityRole="button"
@@ -448,6 +512,19 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
   },
   rowMain: { flex: 1, gap: 2 },
+  // Stacked rather than side by side: the explanation runs to two lines, and
+  // a 50pt input next to it left the text squeezed into a third.
+  nameRow: { flexDirection: 'column', alignItems: 'stretch', gap: Spacing.two },
+  // Not `rowMain`: that carries `flex: 1`, which means nothing in a column
+  // of auto height and would start stretching the moment one got a height.
+  nameRowMain: { gap: 2 },
+  nameInput: {
+    paddingHorizontal: Spacing.three,
+    height: 44,
+    borderRadius: Radius.medium,
+    borderWidth: StyleSheet.hairlineWidth,
+    fontSize: 16,
+  },
   rowTitle: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   about: {
     padding: Spacing.three,

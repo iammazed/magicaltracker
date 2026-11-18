@@ -1496,6 +1496,53 @@ because no bar would ever be tagged in Refreshment Outpost.
 **Pavilion challenges count pavilions covered, not venues visited.** A drink at either Mexico bar
 completes Mexico. `require: all` over the tagged venues would demand all 47 bars.
 
+### There is no name unless you ask for one
+
+"Welcome back, Jake" looks like a one-line change and is not, because **the app does not know a
+name**. Three sources were considered and all three fail for most people:
+
+- **Guest mode is the default and first-class.** No account, so no name, and that is the majority.
+- **A magic link carries an email and nothing else.** Supabase never learns a name from one.
+- **Apple hands over a name on the FIRST authorization only** (see Auth). Later sign-ins return
+  null, so it is saved then or never.
+
+So it is asked for, once, in onboarding, and it is optional. `use-profile` holds it in
+`app_settings` under `display_name`, and `null` is a **permanent, normal state** — every caller
+renders something sensible for it rather than treating it as a loading flicker. Do not reach for
+`user_metadata.full_name` here; it would personalise the greeting for a small minority and show a
+blank to everyone else.
+
+**It is a provider, not a bare hook like `useOnboarding`.** Home and Settings are mounted at the
+same time, so editing the name in Settings has to reach the Home tab sitting behind it. Two
+independent `getSetting` reads would leave Home showing the old name until something remounted it.
+
+It is **local and does not sync**: `app_settings` is not in `USER_TABLES`, so the nickname does
+not follow an account switch and is not wiped by one. That is the right call — the phone knows who
+is holding it.
+
+#### The greeting fires once a day, and not on a floating banner
+
+`use-welcome-back` gates on a **calendar day**, not a launch. Somebody checking a restaurant three
+times in a queue does not want welcoming back twice more; a greeting on every open is wallpaper by
+the third one. `welcome_last_day` is written on the first check of the day whether or not anything
+is shown, so the answer is stable for the rest of that day.
+
+**Cold start alone is most of the feature missing.** iOS keeps the JS context alive across a
+backgrounded app, so Home does not remount when you return to it — which is far more common than
+the app being killed. The `AppState` listener is what makes it fire at all in normal use.
+
+**It renders inline under the wordmark, deliberately not as a banner.** `AchievementBanner` owns
+the top of the screen over every route and `UpdateBanner` was pushed to the bottom specifically so
+the two could not meet; a third thing in that space collides on exactly the launch this is for —
+the first of the day, which is also when a sync lands the medals earned on another device.
+
+**It does not repeat the countdown.** The trip card eight lines below already sets "47 / days to
+go" at 60pt. Pairing the greeting with the same number was the first draft and it was the app
+saying one thing twice before you had finished reading it once.
+
+The negative margin that tucks the greeting under the wordmark lives on `mastheadBlock`, not on
+`masthead`. With no greeting the block renders exactly as the bare row used to.
+
 ### Celebrating an achievement: a badge and a banner are different things
 
 `use-achievements` splits them deliberately, and conflating them is the bug waiting to happen.
