@@ -1744,8 +1744,9 @@ and a canopy. Literals there are sanctioned for this reason, like the share card
 
 A not-yet pin gets a **bullseye** over imagery — white inside the tone and white outside it —
 which is why the rim is a wrapper view rather than a thicker border. Its total width must stay
-inside `PIN_HIT`: `LABELLED_ANCHOR` is computed from `PIN_HIT`, so a pin that outgrew its box
-would drag every marker off its coordinate. 18 + 2 + 2 = 22, and 30 selected, against 34.
+inside `PIN_HIT`: every anchor in `map-labels.ts` is computed from `PIN_HIT`, so a pin that
+outgrew its box would drag every marker off its coordinate. 18 + 2 + 2 = 22, and 30 selected,
+against 34.
 
 **Switching layers repaints the pins through the marker KEY, never through `tracksViewChanges`.**
 Adding the layer to that prop is the obvious move and is a regression: tracking is not a
@@ -1785,22 +1786,84 @@ tick and backs off if a marker claimed the same tap. Deferring rather than readi
 synchronously is deliberate: the observed order on one device is not a contract, and a guard
 that depends on it is a guard that breaks on the next iOS release.
 
-**Pin names appear below `LABEL_MAX` individual pins on screen, and not above it.** Labelling
-all 366 is the version nobody can read: at the default framing the dots already touch, so a name
-on each would be a grey smear across the resort. Counted from the pins on screen rather than from
-`places`, so it follows the zoom rather than the size of the catalog. Clusters are never
-labelled — a cluster is several places and has no one name.
+### Apple will not name these places, so we do — `src/lib/map-labels.ts`
 
-**A labelled marker needs a DIFFERENT anchor, and that is the whole reason the label's box is
-fixed.** A marker is anchored as a fraction of its own view, so anything below the dot moves the
-dot off its coordinate unless the anchor moves too — `LABELLED_ANCHOR` is the dot's centre over
-the total height. Hence one line, a fixed `LABEL_H`, and `allowFontScaling={false}`: a label that
-grew with the system font size would silently drag every pin north of where it belongs. The dot
-keeps its own 34pt box either way, so the hit area never depends on the name under it.
+**There is no prop for when Apple draws a POI's NAME.** `react-native-maps` 1.27.2 exposes
+`showsPointsOfInterests` and `pointsOfInterestFilter`, and both choose which CATEGORIES are
+drawn. Whether a name appears beside the icon is Apple's own label engine, it takes no input from
+us, and on private land with few named footprints it mostly declines. So "the map is showing
+coloured dots and icons with no words" — reported twice — is not a setting anybody turned down.
+Do not go looking for the lever; it does not exist. The only thing that can name a dot here is
+this app.
 
-`showLabels` is also in `tracksViewChanges`, which is not optional. Markers with custom children
-keep the snapshot they were first drawn with, so without it a name appears only when something
-else happens to force a redraw.
+**Names are placed, not rationed.** The rule was one count, `LABEL_MAX`: every name appeared
+below 28 individual pins on screen and none above it. Raising the number did not fix the report,
+because a count is the wrong measure — whether two names collide depends on where those two pins
+are, not how many are on screen, so no threshold both names a park and keeps World Showcase
+readable. `pickLabels` tests the boxes instead and returns which SIDE of each dot its name goes
+on.
+
+**Four positions, and that is most of the value.** Below, above, right, left. A first version
+tried only below and was measurably WORSE than the count it replaced — two names out of
+seventeen pins at EPCOT park zoom. `clusterPins` buckets on `latitudeDelta / 7`, so at park zoom
+the cluster badges land on a lattice roughly 88pt apart and a chip up to 96pt wide cannot be
+threaded between them in one fixed direction.
+
+**A name over another NAME is a veto; a name over a MARK is a cost.** Two chips on top of each
+other leave neither readable. A chip clipping a dot or a cluster's number is a real loss and the
+smaller one — an anonymous dot is worse. So each pin takes the side that covers fewest marks and
+only goes unnamed if every side is off the edge of the map or under another name. Measured on a
+393×620 map against the real catalog: every on-screen pin named at most framings, four fifths in
+the densest, and **100% below 450m across, where the count rule showed nothing at all** — 33 to
+50 pins is past 28, so the one zoom that answers "which building is it" was the one zoom with no
+words on it.
+
+Clusters are obstacles, never candidates: a cluster is several places and has no one name.
+Priority is centre-of-screen outward, so a dropped name is one at the edge, and `focusId` jumps
+the queue. It is deliberately NOT keyed on the SELECTION — giving the selected pin priority
+re-places every label the instant anybody taps one, and since the side is part of the marker key,
+remounts every marker on screen including the one under the finger. The card at the bottom names
+the selection anyway.
+
+**A labelled marker needs a DIFFERENT anchor, and that is why the label's box is computed rather
+than measured.** A marker is anchored as a fraction of its own view, so anything beside the dot
+moves the dot off its coordinate unless the anchor moves too. For a name above or below, only the
+height matters and the horizontal anchor stays 0.5 at any width; for one to the left or right the
+WIDTH is in the anchor. So `labelWidth` is authoritative — the chip is GIVEN that width, which
+makes the number used by the collision test, the anchor and the tap target the number that
+renders. Measuring text would cost a layout pass per label and guessing would put the dot a few
+points off its coordinate. `anchorFor` and the flex layout in `PlacePin` are one decision in two
+files and must move together; the probe in the commit that added this derives one from the other
+and asserts they agree.
+
+Hence also one line, a fixed `LABEL_H`, and `allowFontScaling={false}`: a label that grew with the
+system font size would drag every pin off the map.
+
+**The label's side is in the marker KEY, and `tracksViewChanges` is not how this is done.**
+Markers with custom children keep the snapshot they were first drawn with, so a name appearing,
+disappearing or changing side has to remount the marker. The previous code put `showLabels` in
+`tracksViewChanges` instead, which is a worse trade than it looks: tracking is not a one-frame
+request, it stays on, so every named marker was redrawing continuously — the documented cause of
+this map stuttering, and a plausible part of why taps were reported as needing to be really
+accurate, since an annotation being rebuilt under a finger is one that can drop it. Labels are
+recomputed on `onRegionChangeComplete`, which is once per gesture, so a key change costs one
+remount at the end of a pan.
+
+**A marker's frame is its hit area, so it must not be wider than its chip.** `pinWithLabel`
+carried a hard `width: 96`, on the belief that the fixed box was what centred the dot. It is not
+— `alignItems: 'center'` does, at any width. What the 96 actually did was give a short name like
+Tiffins 60pt of invisible, tappable nothing that overlapped the pins either side of it and could
+answer taps aimed at them.
+
+**A cluster tap must claim the tap too.** Only `selectPlace` stamped `markerTapAt`, so the map
+press arriving alongside a cluster tap was never recognised as part of it: the cluster zoomed,
+and a tick later the near-miss search ran against the pins and viewport as they were BEFORE the
+camera moved and raised a card for whatever was within `TAP_SLOP` of the badge. One tap, two
+unrelated outcomes. `openCluster` is the fix.
+
+**The name is a tap target, not just the dot.** People aim at the word. `nearestTo` resolves a
+tap inside a chip's box to that chip's pin, and containment beats proximity — a near-miss on a
+neighbouring dot does not outrank landing inside a name.
 
 **The pin's hit area is a transparent 34pt box around an 18pt dot.** Apple asks for 44pt and an
 18pt marker is less than half of that, but 44 has neighbouring pins overlapping each other's hit

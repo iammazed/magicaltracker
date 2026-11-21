@@ -21,6 +21,19 @@ import {
 } from '@/lib/cluster';
 import { tapPicked } from '@/lib/haptics';
 import { getSetting, setSetting } from '@/lib/local-db';
+import {
+  LABEL_GAP,
+  LABEL_H,
+  PIN_HIT,
+  anchorFor,
+  contains,
+  labelRect,
+  labelWidth,
+  pickLabels,
+  project,
+  type LabelPin,
+  type LabelSide,
+} from '@/lib/map-labels';
 
 /**
  * The map view of the catalog — venues or resorts.
@@ -166,12 +179,6 @@ const STATIC_MARKERS = false;
  */
 const SAME_TAP_MS = 100;
 
-/** A transparent 34pt box around an 18pt dot. Apple asks for 44pt targets and
- *  an 18pt pin is less than half that, but 44 would have neighbouring pins
- *  overlapping each other's hit areas at the closest zoom. `TAP_SLOP` is how
- *  that gets solved instead. */
-const PIN_HIT = 34;
-
 /**
  * How far from a pin's centre a tap still counts as hitting it, in points.
  *
@@ -182,60 +189,32 @@ const PIN_HIT = 34;
  * each other's taps, so the dots would have to be spread out or the map
  * zoomed further in.
  *
- * So the map resolves near-misses itself. 22pt is Apple's 44pt target as a
- * radius, and because this picks the NEAREST pin rather than the first one
- * whose box contains the point, overlapping tolerances are not ambiguous —
- * two pins 10pt apart each own the half of the gap nearer to them.
+ * So the map resolves near-misses itself, and because this picks the NEAREST
+ * pin rather than the first one whose box contains the point, overlapping
+ * tolerances are not ambiguous — two pins 10pt apart each own the half of the
+ * gap nearer to them.
+ *
+ * It was 22, which is Apple's 44pt target expressed as a radius, and it was
+ * still reported as needing a really accurate tap. 30 is the dial being turned
+ * rather than a measurement: the only thing a bigger radius costs is that a
+ * tap on bare map within 30pt of a pin selects it instead of dismissing the
+ * card, and bare map near a pin is not somewhere people aim.
+ *
+ * Two other things in this file were almost certainly doing more damage than
+ * this number: a labelled marker was 96pt wide whatever its name, so
+ * neighbouring frames overlapped and could answer each other's taps, and
+ * labelled markers were left permanently tracking view changes, which redraws
+ * an annotation continuously under the finger. Both are fixed. If taps are
+ * still awkward after that, this is the number to move.
  *
  * This only runs after the marker's own handler has declined the tap, so a
  * direct hit still takes the fast path.
  */
-const TAP_SLOP = 22;
+const TAP_SLOP = 30;
 
-/**
- * Above this many individual pins on screen, names are hidden.
- *
- * Labelling all 366 is the version of this that nobody can read: at the
- * default framing the dots already touch, and a name on each would be a grey
- * smear across the whole resort.
- *
- * It was fourteen, which was too strict. The reason is POI_FILTER: this map
- * deliberately withholds `.restaurant` from Apple so the same name is not
- * drawn twice, and on `hybrid` Apple names almost nothing inside Walt Disney
- * World anyway — it is private land. So below this threshold the aerial view
- * is photography and unlabelled dots, and the only thing that can say what a
- * dot is, is us. Twenty-eight roughly doubles the zoom range over which names
- * are available, at the cost of some crowding in the densest corners of a
- * park, which is the better trade when the alternative is an anonymous dot.
- *
- * It is a judgement, not a measurement — collisions depend on how the pins
- * happen to be spread, not on how many there are. If it reads as cluttered,
- * this one number is the dial.
- *
- * Clusters are not counted, and are never labelled — a cluster is several
- * places and has no one name.
- */
-const LABEL_MAX = 28;
-
-/**
- * The label's box, fixed, because the marker's ANCHOR is computed from it.
- *
- * A marker is anchored as a fraction of its own view, so adding anything
- * below the dot moves the dot off the coordinate unless the anchor moves with
- * it. Both numbers therefore have to be known up front, which is also why the
- * text is one line with `allowFontScaling` off: a label that grew with the
- * system font size would silently drag every pin north of where it belongs.
- */
-const LABEL_H = 15;
-const LABEL_GAP = 1;
-const LABEL_W = 96;
-
-/** Centre of the dot, as a fraction of the whole marker view. */
-const LABELLED_ANCHOR = {
-  x: 0.5,
-  y: PIN_HIT / 2 / (PIN_HIT + LABEL_GAP + LABEL_H),
-};
-const PLAIN_ANCHOR = { x: 0.5, y: 0.5 };
+/** How much of the tap tolerance is extended around the label chip too. A
+ *  name is a target people aim at, and before this only the dot was one. */
+const LABEL_SLOP = 4;
 
 export function CatalogMap({
   places,
@@ -352,13 +331,57 @@ export function CatalogMap({
     setSelectedId(id);
   }, []);
 
-  /** Names appear only once there are few enough to read. Counted from the
-   *  pins actually on screen rather than from `places`, so it follows the
-   *  zoom rather than the size of the catalog. */
-  const showLabels = useMemo(() => {
-    const n = pins.reduce((a, p) => a + (p.kind === 'pin' ? 1 : 0), 0);
-    return n > 0 && n <= LABEL_MAX;
-  }, [pins]);
+  /**
+   * Which pins show their name.
+   *
+   * It used to be one boolean for the whole map, flipped by a count — below 28
+   * individual pins every name appeared and above it none did. The count was
+   * raised once already and the report came back the same: coloured dots, no
+   * words. A count is the wrong measure, because whether two names collide
+   * depends on where those two pins happen to be and not on how many are on
+   * screen, so there is no threshold that both names a park and keeps World
+   * Showcase readable.
+   *
+   * `pickLabels` decides it per pin instead, by testing the boxes against each
+   * other, and returns which SIDE of the dot each name goes on. A name is
+   * withheld only where every side is off the edge of the map or already under
+   * another name. The selected pin goes first and therefore keeps its name
+   * even in a crowd.
+   *
+   * Measured against the real catalog on a 393×620 map: every on-screen pin
+   * gets named at most framings and four fifths of them in the densest, where
+   * the count rule showed NOTHING at all below 450 m across — 33 to 50 pins is
+   * past 28, so the zoom that answers "which building is it" was the one zoom
+   * with no words on it.
+   *
+   * A cluster is passed in as an obstacle rather than a candidate: it is
+   * several places and has no one name, and its 30pt badge must not be
+   * covered by a neighbour's label.
+   *
+   * Deliberately NOT keyed on the selection, which the first version was. A
+   * name is given priority by `first`, and handing that to the selected pin
+   * means every label on the map is re-placed the moment anybody taps one —
+   * names jumping from one side of their dot to the other, and, because the
+   * side is part of the marker key, every marker on screen remounting,
+   * including the one under the finger that caused it. The selected place is
+   * named on the card at the bottom of the screen in any case. `focusId` gets
+   * the priority instead: it is the whole reason the focused map was opened,
+   * and it is a prop, so it cannot change under a gesture.
+   */
+  const labelPins = useMemo<LabelPin[]>(
+    () =>
+      pins.map((pin) =>
+        pin.kind === 'cluster'
+          ? { id: pin.key, name: null, lat: pin.lat, lng: pin.lng, half: 15 }
+          : { id: pin.item.id, name: pin.item.name, lat: pin.lat, lng: pin.lng, half: 11 },
+      ),
+    [pins],
+  );
+
+  const labelled = useMemo(
+    () => pickLabels(labelPins, viewport, mapSize, focusId),
+    [labelPins, viewport, mapSize, focusId],
+  );
 
   const selected = useMemo(
     () => places.find((p) => p.id === selectedId) ?? null,
@@ -378,6 +401,24 @@ export function CatalogMap({
   );
 
   /**
+   * A cluster tap has to claim the tap as well, and did not.
+   *
+   * Only `selectPlace` was stamping `markerTapAt`, so the map press that
+   * arrives alongside a cluster tap was never recognised as part of it: the
+   * cluster zoomed, and a tick later the deferred handler ran the near-miss
+   * search against the pins and viewport as they were BEFORE the camera moved
+   * and raised a card for whatever happened to be within 30pt of the badge.
+   * One tap, two unrelated outcomes.
+   */
+  const openCluster = useCallback(
+    (lat: number, lng: number) => {
+      markerTapAt.current = Date.now();
+      zoom(lat, lng);
+    },
+    [zoom],
+  );
+
+  /**
    * The pin nearest a tapped coordinate, if one is within `TAP_SLOP`.
    *
    * Degrees are converted to points using the viewport and the map's measured
@@ -392,23 +433,39 @@ export function CatalogMap({
   const nearestTo = useCallback(
     (tap: { latitude: number; longitude: number }) => {
       if (!mapSize.width || !mapSize.height) return null;
-      const perLng = mapSize.width / viewport.longitudeDelta;
-      const perLat = mapSize.height / viewport.latitudeDelta;
+      const { at } = project(viewport, mapSize);
+      const point = at(tap.latitude, tap.longitude);
 
       let best: (typeof pins)[number] | null = null;
       let bestDistance = TAP_SLOP;
+      /** A tap inside a name chip, which beats any near-miss on a dot. */
+      let onName: (typeof pins)[number] | null = null;
+      let onNameDistance = Infinity;
+
       for (const pin of pins) {
-        const dx = (pin.lng - tap.longitude) * perLng;
-        const dy = (pin.lat - tap.latitude) * perLat;
-        const distance = Math.hypot(dx, dy);
+        const spot = at(pin.lat, pin.lng);
+        const distance = Math.hypot(point.x - spot.x, point.y - spot.y);
+
+        if (pin.kind === 'pin' && distance < onNameDistance) {
+          const side = labelled.get(pin.item.id);
+          if (side && contains(labelRect(side, spot.x, spot.y, pin.item.name), point, LABEL_SLOP)) {
+            onNameDistance = distance;
+            onName = pin;
+          }
+        }
+
         if (distance < bestDistance) {
           bestDistance = distance;
           best = pin;
         }
       }
-      return best;
+
+      // Landing INSIDE a name is a stronger claim than being near a dot, so a
+      // chip wins. Where two chips overlap — which only happens because a chip
+      // may sit over another pin's mark — the nearer dot takes it.
+      return onName ?? best;
     },
-    [pins, viewport, mapSize],
+    [pins, viewport, mapSize, labelled],
   );
 
   const onMapPress = useCallback(
@@ -479,7 +536,7 @@ export function CatalogMap({
             <Marker
               key={`${pin.key}-${layer}`}
               coordinate={{ latitude: pin.lat, longitude: pin.lng }}
-              onPress={() => zoom(pin.lat, pin.lng)}
+              onPress={() => openCluster(pin.lat, pin.lng)}
               tracksViewChanges={STATIC_MARKERS}
               anchor={{ x: 0.5, y: 0.5 }}
             >
@@ -499,26 +556,42 @@ export function CatalogMap({
             </Marker>
           ) : (
             <Marker
-              key={`${pin.key}-${layer}`}
+              // Whether this pin carries its name is part of the key, for the
+              // same reason the layer is: a marker with custom children keeps
+              // the snapshot it was first drawn with, so a name appearing or
+              // disappearing has to remount it. The alternative was
+              // `tracksViewChanges={labelled}`, which is what this used to do
+              // and is a worse trade than it looks — tracking is not a
+              // one-frame request, it stays on, so every named marker was
+              // redrawing continuously. That is the documented cause of this
+              // map stuttering, and an annotation being rebuilt under a finger
+              // is a plausible part of why taps were reported as needing to be
+              // really accurate. Labels are recomputed on
+              // `onRegionChangeComplete`, which is once per gesture, so this
+              // costs one remount at the end of a pan.
+              //
+              // The SIDE is in the key too, not just whether there is a label:
+              // moving a name from under a dot to the left of it changes the
+              // marker view and its anchor together, and a stale snapshot
+              // there would draw the name in one place while the dot claims to
+              // be in another.
+              key={`${pin.key}-${layer}-${labelled.get(pin.item.id) ?? ''}`}
               coordinate={{ latitude: pin.lat, longitude: pin.lng }}
               onPress={() => selectPlace(pin.item.id)}
               // Keeps this press from also arriving at the map's `onPress` as
               // a React bubble. Apple Maps only, which is the provider here;
               // Android never propagates marker presses.
               stopPropagation
-              // The selected pin grows, so it needs one more render pass. A
-              // label appearing or disappearing changes the view too, which is
-              // why `showLabels` is in here as well — without it the marker
-              // keeps the snapshot it was first drawn with and the name never
-              // turns up until something else redraws it.
-              tracksViewChanges={pin.item.id === selectedId || showLabels}
-              anchor={showLabels ? LABELLED_ANCHOR : PLAIN_ANCHOR}
+              // The selected pin grows, so it genuinely needs one more render
+              // pass. Nothing else does, now that the key carries the label.
+              tracksViewChanges={pin.item.id === selectedId}
+              anchor={anchorFor(labelled.get(pin.item.id), pin.item.name)}
             >
               <PlacePin
                 place={pin.item}
                 done={doneIds.has(pin.item.id)}
                 selected={pin.item.id === selectedId}
-                labelled={showLabels}
+                side={labelled.get(pin.item.id)}
                 onImagery={onImagery}
               />
             </Marker>
@@ -648,13 +721,16 @@ function PlacePin({
   place,
   done,
   selected,
-  labelled,
+  side,
   onImagery,
 }: {
   place: MapPlace;
   done: boolean;
   selected: boolean;
-  labelled: boolean;
+  /** Which side of the dot this pin's name goes on, or undefined for a pin
+   *  that did not get one. Decided by `pickLabels`, and the layout below has
+   *  to match the fractions `anchorFor` returns for the same side. */
+  side?: LabelSide;
   /** Aerial photography underneath, so the pin needs a rim of its own rather
    *  than borrowing the scheme's ground colour. */
   onImagery: boolean;
@@ -670,75 +746,107 @@ function PlacePin({
   // colour. Shape carries the state as well as colour does, so it still reads
   // for anyone who cannot tell the two hues apart.
   // The dot sits inside a transparent box, so the tap target is a finger
-  // rather than 18 points. The marker is anchored at its centre either way.
-  // The dot keeps its own fixed 34pt box whether or not there is a label, so
-  // the pin's size and hit area never depend on the name under it.
-  return (
-    <View style={labelled ? styles.pinWithLabel : undefined}>
-      <View style={styles.pinHit}>
-        {/* Over imagery the dot gets a second, outer rim, so the park colour
-            has something to read against instead of sitting straight on a
-            tree canopy. It is a wrapper rather than a thicker border because
-            a not-yet pin needs white OUTSIDE the tone and white inside it —
-            a bullseye, which is what holds over photography.
+  // rather than 18 points. The dot keeps that fixed 34pt box wherever the name
+  // goes, so the pin's size and hit area never depend on its label.
+  const dot = (
+    <View style={styles.pinHit}>
+      {/* Over imagery the dot gets a second, outer rim, so the park colour
+          has something to read against instead of sitting straight on a
+          tree canopy. It is a wrapper rather than a thicker border because
+          a not-yet pin needs white OUTSIDE the tone and white inside it —
+          a bullseye, which is what holds over photography.
 
-            Its total width is 18 + 2 + 2 = 22, and 30 when selected. Both
-            stay inside PIN_HIT, which is load-bearing: LABELLED_ANCHOR is
-            computed from PIN_HIT, so a pin that outgrew its box would drag
-            every marker off its coordinate. */}
+          Its total width is 18 + 2 + 2 = 22, and 30 when selected. Both
+          stay inside PIN_HIT, which is load-bearing: every anchor in
+          `map-labels.ts` is computed from PIN_HIT, so a pin that outgrew its
+          box would drag every marker off its coordinate. */}
+      <View
+        style={[onImagery && styles.pinHalo, onImagery && { backgroundColor: IMAGERY.halo }]}
+      >
         <View
           style={[
-            onImagery && styles.pinHalo,
-            onImagery && { backgroundColor: IMAGERY.halo },
+            styles.pin,
+            selected && styles.pinSelected,
+            done
+              ? { backgroundColor: tone, borderColor: rim }
+              : { backgroundColor: rim, borderColor: tone },
           ]}
         >
-          <View
-            style={[
-              styles.pin,
-              selected && styles.pinSelected,
-              done
-                ? { backgroundColor: tone, borderColor: rim }
-                : { backgroundColor: rim, borderColor: tone },
-            ]}
-          >
-            {done ? (
-              <ThemedText style={[styles.pinMark, { color: theme.onAccent }]}>✓</ThemedText>
-            ) : null}
-          </View>
+          {done ? (
+            <ThemedText style={[styles.pinMark, { color: theme.onAccent }]}>✓</ThemedText>
+          ) : null}
         </View>
       </View>
-      {labelled ? (
-        <View
-          style={[
-            styles.label,
-            onImagery
-              ? { backgroundColor: IMAGERY.chip, borderColor: IMAGERY.chip }
-              : { backgroundColor: theme.backgroundElement, borderColor: theme.border },
-          ]}
-        >
-          {/* A chip rather than bare text: a map's imagery is light in some
-              places and dark in others, and plain type over it is legible in
-              only one of them. Over aerial the chip goes dark in BOTH schemes
-              — a near-white chip is legible on photography but disappears
-              into pavement and rooftops, which is most of what this map is
-              of. */}
-          <ThemedText
-            allowFontScaling={false}
-            numberOfLines={1}
-            style={[styles.labelText, { color: onImagery ? IMAGERY.chipInk : theme.text }]}
-          >
-            {place.name}
-          </ThemedText>
-        </View>
-      ) : null}
+    </View>
+  );
+
+  if (!side) return dot;
+
+  const chip = (
+    <View
+      style={[
+        styles.label,
+        GAP[side],
+        // Given the width `labelWidth` reports rather than sized to its text.
+        // That number is already what the collision test, the anchor and the
+        // tap target are computed from, so making it the rendered width too is
+        // what keeps all four honest — see the note in `map-labels.ts`.
+        { width: labelWidth(place.name) },
+        onImagery
+          ? { backgroundColor: IMAGERY.chip, borderColor: IMAGERY.chip }
+          : { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+      ]}
+    >
+      {/* A chip rather than bare text: a map's imagery is light in some
+          places and dark in others, and plain type over it is legible in
+          only one of them. Over aerial the chip goes dark in BOTH schemes
+          — a near-white chip is legible on photography but disappears
+          into pavement and rooftops, which is most of what this map is
+          of. */}
+      <ThemedText
+        allowFontScaling={false}
+        numberOfLines={1}
+        style={[styles.labelText, { color: onImagery ? IMAGERY.chipInk : theme.text }]}
+      >
+        {place.name}
+      </ThemedText>
+    </View>
+  );
+
+  // Above and left put the name first in the flow; the anchor fractions in
+  // `anchorFor` assume exactly this ordering and these two flex directions.
+  const leads = side === 'above' || side === 'left';
+  return (
+    <View style={side === 'below' || side === 'above' ? styles.stack : styles.beside}>
+      {leads ? chip : dot}
+      {leads ? dot : chip}
     </View>
   );
 }
 
+/** The one point of clear air between a dot and its name, on whichever side
+ *  the name landed. `LABEL_GAP` is in every anchor calculation too. */
+const GAP = StyleSheet.create({
+  below: { marginTop: LABEL_GAP },
+  above: { marginBottom: LABEL_GAP },
+  right: { marginLeft: LABEL_GAP },
+  left: { marginRight: LABEL_GAP },
+});
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
-  pinWithLabel: { width: LABEL_W, alignItems: 'center' },
+  /**
+   * A name above or below the dot stacks; one to its left or right sits
+   * beside it. No fixed width on either: `alignItems` is what centres the dot
+   * over its coordinate, at any width, so the 96pt box this used to carry
+   * only ever served to give short names a marker frame far wider than their
+   * chip — invisible, tappable, and overlapping the pins either side of them.
+   * MapKit hit-tests an annotation against its frame, so that nothing was
+   * answering taps aimed at its neighbours.
+   */
+  stack: { alignItems: 'center' },
+  beside: { flexDirection: 'row', alignItems: 'center' },
   pinHit: {
     width: PIN_HIT,
     height: PIN_HIT,
@@ -747,14 +855,14 @@ const styles = StyleSheet.create({
   },
   label: {
     height: LABEL_H,
-    marginTop: LABEL_GAP,
-    maxWidth: LABEL_W,
     paddingHorizontal: 5,
     justifyContent: 'center',
     borderRadius: Radius.small,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  labelText: { fontSize: 10, fontWeight: '600', lineHeight: 13 },
+  /** Centred, because the chip is given a computed width rather than sized to
+   *  its text, so left-aligned type would sit off-centre inside it. */
+  labelText: { fontSize: 10, fontWeight: '600', lineHeight: 13, textAlign: 'center' },
   pin: {
     width: 18,
     height: 18,
