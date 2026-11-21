@@ -197,14 +197,25 @@ const TAP_SLOP = 22;
  *
  * Labelling all 366 is the version of this that nobody can read: at the
  * default framing the dots already touch, and a name on each would be a grey
- * smear across the whole resort. Fourteen is roughly what fits around one
- * park's worth of pins without the labels colliding, and getting below it is
- * one pinch away.
+ * smear across the whole resort.
+ *
+ * It was fourteen, which was too strict. The reason is POI_FILTER: this map
+ * deliberately withholds `.restaurant` from Apple so the same name is not
+ * drawn twice, and on `hybrid` Apple names almost nothing inside Walt Disney
+ * World anyway — it is private land. So below this threshold the aerial view
+ * is photography and unlabelled dots, and the only thing that can say what a
+ * dot is, is us. Twenty-eight roughly doubles the zoom range over which names
+ * are available, at the cost of some crowding in the densest corners of a
+ * park, which is the better trade when the alternative is an anonymous dot.
+ *
+ * It is a judgement, not a measurement — collisions depend on how the pins
+ * happen to be spread, not on how many there are. If it reads as cluttered,
+ * this one number is the dial.
  *
  * Clusters are not counted, and are never labelled — a cluster is several
  * places and has no one name.
  */
-const LABEL_MAX = 14;
+const LABEL_MAX = 28;
 
 /**
  * The label's box, fixed, because the marker's ANCHOR is computed from it.
