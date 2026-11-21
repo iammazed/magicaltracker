@@ -2,6 +2,9 @@ import { createContext, useCallback, useContext, useMemo, useState } from 'react
 
 import { NO_FILTERS, type VenueFilters } from '@/hooks/use-venues';
 
+/** The facets that hold a list. Everything else is a single value or a flag. */
+type MultiKey = 'kinds' | 'serviceTypes' | 'priceTiers';
+
 /**
  * Catalog filter state, lifted out of the Dining screen.
  *
@@ -15,8 +18,15 @@ import { NO_FILTERS, type VenueFilters } from '@/hooks/use-venues';
 type FiltersValue = {
   filters: VenueFilters;
   set: <K extends keyof VenueFilters>(key: K, value: VenueFilters[K]) => void;
-  /** Price is multi-select — "$ or $$" is a question people actually ask. */
-  togglePrice: (tier: number) => void;
+  /**
+   * Adds or removes one value from a multi-select facet.
+   *
+   * One function rather than three near-identical ones, because kind, service
+   * type and price now behave identically: pick several, they are OR'd, and
+   * picking the last one again empties the facet rather than leaving it stuck
+   * on a single value.
+   */
+  toggle: <K extends MultiKey>(key: K, value: VenueFilters[K][number]) => void;
   /** Leaves `search` alone: clearing refinements should not wipe what someone
    *  typed, because the text field stays visible and would then disagree. */
   clear: () => void;
@@ -33,14 +43,15 @@ export function CatalogFiltersProvider({ children }: { children: React.ReactNode
     [],
   );
 
-  const togglePrice = useCallback(
-    (tier: number) =>
-      setFilters((f) => ({
-        ...f,
-        priceTiers: f.priceTiers.includes(tier)
-          ? f.priceTiers.filter((t) => t !== tier)
-          : [...f.priceTiers, tier].sort(),
-      })),
+  const toggle = useCallback(
+    <K extends MultiKey>(key: K, value: VenueFilters[K][number]) =>
+      setFilters((f) => {
+        const list = f[key] as readonly (string | number)[];
+        const next = list.includes(value)
+          ? list.filter((v) => v !== value)
+          : [...list, value].sort();
+        return { ...f, [key]: next };
+      }),
     [],
   );
 
@@ -50,8 +61,8 @@ export function CatalogFiltersProvider({ children }: { children: React.ReactNode
   );
 
   const value = useMemo(
-    () => ({ filters, set, togglePrice, clear }),
-    [filters, set, togglePrice, clear],
+    () => ({ filters, set, toggle, clear }),
+    [filters, set, toggle, clear],
   );
 
   return <FiltersContext.Provider value={value}>{children}</FiltersContext.Provider>;

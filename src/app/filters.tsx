@@ -47,7 +47,7 @@ const SERVICE = [
 export default function FiltersScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const { filters, set, togglePrice, clear } = useCatalogFilters();
+  const { filters, set, toggle, clear } = useCatalogFilters();
   const { data: venues } = useVenues();
   const { byVenue } = useVisits();
   const { isPremium } = usePremium();
@@ -68,13 +68,17 @@ export default function FiltersScreen() {
       v: (typeof base)[number],
       skip: keyof typeof filters,
     ): boolean => {
-      if (skip !== 'kind') {
-        if (filters.kind ? v.venue_kind !== filters.kind : v.venue_kind === 'event') {
+      if (skip !== 'kinds') {
+        if (
+          filters.kinds.length
+            ? !filters.kinds.includes(v.venue_kind)
+            : v.venue_kind === 'event'
+        ) {
           return false;
         }
       }
-      if (skip !== 'serviceType' && filters.serviceType) {
-        if (!v.service_type.includes(filters.serviceType)) return false;
+      if (skip !== 'serviceTypes' && filters.serviceTypes.length) {
+        if (!filters.serviceTypes.some((t) => v.service_type.includes(t))) return false;
       }
       if (skip !== 'priceTiers' && filters.priceTiers.length) {
         if (!filters.priceTiers.includes(v.price_tier)) return false;
@@ -98,9 +102,9 @@ export default function FiltersScreen() {
 
     return {
       kind: (id: string) =>
-        base.filter((v) => v.venue_kind === id && matches(v, 'kind')).length,
+        base.filter((v) => v.venue_kind === id && matches(v, 'kinds')).length,
       service: (id: string) =>
-        base.filter((v) => v.service_type.includes(id) && matches(v, 'serviceType'))
+        base.filter((v) => v.service_type.includes(id) && matches(v, 'serviceTypes'))
           .length,
       price: (tier: number) =>
         base.filter((v) => v.price_tier === tier && matches(v, 'priceTiers')).length,
@@ -135,44 +139,42 @@ export default function FiltersScreen() {
         }}
       />
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Section title="Type">
+        <Section title="Type" note="Pick more than one if you like">
           <View style={styles.wrap}>
             <Option
               label="Anything to eat"
               sub="Hides events"
-              active={filters.kind === null}
-              onPress={() => set('kind', null)}
+              active={filters.kinds.length === 0}
+              onPress={() => set('kinds', [])}
             />
             {KINDS.map((k) => (
               <Option
                 key={k.id}
                 label={k.label}
                 sub={String(count.kind(k.id))}
-                active={filters.kind === k.id}
-                disabled={count.kind(k.id) === 0 && filters.kind !== k.id}
-                onPress={() => set('kind', filters.kind === k.id ? null : k.id)}
+                active={filters.kinds.includes(k.id)}
+                disabled={count.kind(k.id) === 0 && !filters.kinds.includes(k.id)}
+                onPress={() => toggle('kinds', k.id)}
               />
             ))}
           </View>
         </Section>
 
-        <Section title="Service">
+        <Section title="Service" note="Pick more than one if you like">
           <View style={styles.wrap}>
             <Option
               label="Any"
-              active={filters.serviceType === null}
-              onPress={() => set('serviceType', null)}
+              active={filters.serviceTypes.length === 0}
+              onPress={() => set('serviceTypes', [])}
             />
             {SERVICE.map((s) => (
               <Option
                 key={s.id}
                 label={s.label}
                 sub={String(count.service(s.id))}
-                active={filters.serviceType === s.id}
-                disabled={count.service(s.id) === 0 && filters.serviceType !== s.id}
-                onPress={() =>
-                  set('serviceType', filters.serviceType === s.id ? null : s.id)
-                }
+                active={filters.serviceTypes.includes(s.id)}
+                disabled={count.service(s.id) === 0 && !filters.serviceTypes.includes(s.id)}
+                onPress={() => toggle('serviceTypes', s.id)}
               />
             ))}
           </View>
@@ -187,7 +189,7 @@ export default function FiltersScreen() {
                 sub={String(count.price(tier))}
                 active={filters.priceTiers.includes(tier)}
                 disabled={count.price(tier) === 0 && !filters.priceTiers.includes(tier)}
-                onPress={() => togglePrice(tier)}
+                onPress={() => toggle('priceTiers', tier)}
               />
             ))}
           </View>

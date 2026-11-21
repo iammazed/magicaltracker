@@ -58,9 +58,17 @@ export function useAreas() {
 export type VenueFilters = {
   search: string;
   areaId: string | null;
-  /** `null` means every kind. `'event'` is how events are reached at all. */
-  kind: string | null;
-  serviceType: string | null;
+  /**
+   * Empty means every kind. `'event'` is how events are reached at all.
+   *
+   * A list rather than one value because "quick service or a lounge" is a
+   * question people ask out loud, the same way "$ or $$" is — and price was
+   * already multi-select, so a single-value kind was an inconsistency rather
+   * than a decision. Within a facet the values are OR'd; across facets they
+   * are AND'd.
+   */
+  kinds: string[];
+  serviceTypes: string[];
   priceTiers: number[];
   reservationsOnly: boolean;
   characterOnly: boolean;
@@ -71,8 +79,8 @@ export type VenueFilters = {
 export const NO_FILTERS: VenueFilters = {
   search: '',
   areaId: null,
-  kind: null,
-  serviceType: null,
+  kinds: [],
+  serviceTypes: [],
   priceTiers: [],
   reservationsOnly: false,
   characterOnly: false,
@@ -84,8 +92,8 @@ export const NO_FILTERS: VenueFilters = {
  *  are excluded: both have their own visible control on the screen. */
 export function activeFilterCount(f: VenueFilters): number {
   return (
-    (f.kind ? 1 : 0) +
-    (f.serviceType ? 1 : 0) +
+    (f.kinds.length ? 1 : 0) +
+    (f.serviceTypes.length ? 1 : 0) +
     (f.priceTiers.length ? 1 : 0) +
     (f.reservationsOnly ? 1 : 0) +
     (f.characterOnly ? 1 : 0) +
@@ -117,11 +125,18 @@ export function useFilteredVenues(
       // With no kind chosen, events are hidden. They are ticketed parties and
       // festivals, not somewhere you eat, so mixing 26 of them into a dinner
       // list is noise — but they are one chip away rather than unreachable.
-      if (f.kind) {
-        if (v.venue_kind !== f.kind) return false;
+      if (f.kinds.length) {
+        if (!f.kinds.includes(v.venue_kind)) return false;
       } else if (v.venue_kind === EVENT_KIND) return false;
 
-      if (f.serviceType && !v.service_type.includes(f.serviceType)) return false;
+      // `some`, not `every`: a venue carries several service types, and
+      // picking "quick" and "lounge" means either will do.
+      if (
+        f.serviceTypes.length &&
+        !f.serviceTypes.some((t) => v.service_type.includes(t))
+      ) {
+        return false;
+      }
       if (f.priceTiers.length && !f.priceTiers.includes(v.price_tier)) return false;
       if (f.reservationsOnly && !v.reservations_recommended) return false;
       if (
@@ -149,8 +164,8 @@ export function useFilteredVenues(
     visited,
     f.search,
     f.areaId,
-    f.kind,
-    f.serviceType,
+    f.kinds,
+    f.serviceTypes,
     f.priceTiers,
     f.reservationsOnly,
     f.characterOnly,

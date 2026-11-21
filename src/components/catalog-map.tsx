@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import MapView, {
   Marker,
   PROVIDER_DEFAULT,
+  type MapPressEvent,
   type MKPointOfInterestCategoryType,
 } from 'react-native-maps';
 
@@ -167,8 +168,29 @@ const SAME_TAP_MS = 100;
 
 /** A transparent 34pt box around an 18pt dot. Apple asks for 44pt targets and
  *  an 18pt pin is less than half that, but 44 would have neighbouring pins
- *  overlapping each other's hit areas at the closest zoom. */
+ *  overlapping each other's hit areas at the closest zoom. `TAP_SLOP` is how
+ *  that gets solved instead. */
 const PIN_HIT = 34;
+
+/**
+ * How far from a pin's centre a tap still counts as hitting it, in points.
+ *
+ * MapKit hit-tests an annotation against its view's frame and nothing else:
+ * land one point outside `PIN_HIT` and the tap goes to the map instead, which
+ * is why pins felt like they needed to be hit dead-on. Growing the frame is
+ * the obvious fix and the wrong one — frames cannot overlap without stealing
+ * each other's taps, so the dots would have to be spread out or the map
+ * zoomed further in.
+ *
+ * So the map resolves near-misses itself. 22pt is Apple's 44pt target as a
+ * radius, and because this picks the NEAREST pin rather than the first one
+ * whose box contains the point, overlapping tolerances are not ambiguous —
+ * two pins 10pt apart each own the half of the gap nearer to them.
+ *
+ * This only runs after the marker's own handler has declined the tap, so a
+ * direct hit still takes the fast path.
+ */
+const TAP_SLOP = 22;
 
 /**
  * Above this many individual pins on screen, names are hidden.
@@ -285,6 +307,9 @@ export function CatalogMap({
   const [viewport, setViewport] = useState<Viewport>(opening);
   const [selectedId, setSelectedId] = useState<string | null>(focusId ?? null);
 
+  /** Measured, not guessed: `nearestTo` converts degrees to points with it. */
+  const [mapSize, setMapSize] = useState({ width: 0, height: 0 });
+
   const pins = useMemo(
     () => clusterPins(places, viewport, focusId),
     [places, viewport, focusId],
@@ -316,14 +341,6 @@ export function CatalogMap({
     setSelectedId(id);
   }, []);
 
-  const onMapPress = useCallback(() => {
-    const at = Date.now();
-    setTimeout(() => {
-      if (markerTapAt.current >= at - SAME_TAP_MS) return;
-      setSelectedId(null);
-    }, SAME_TAP_MS);
-  }, []);
-
   /** Names appear only once there are few enough to read. Counted from the
    *  pins actually on screen rather than from `places`, so it follows the
    *  zoom rather than the size of the catalog. */
@@ -349,6 +366,67 @@ export function CatalogMap({
     [viewport],
   );
 
+  /**
+   * The pin nearest a tapped coordinate, if one is within `TAP_SLOP`.
+   *
+   * Degrees are converted to points using the viewport and the map's measured
+   * size, which is exact only while the map is north-up and flat — hence
+   * `rotateEnabled={false}` and `pitchEnabled={false}` on the MapView. Both
+   * were already effectively unsupported: `showsCompass` is off, so a user who
+   * rotated the map had no way to straighten it again.
+   *
+   * Returns the nearest, not the first within range, so overlapping
+   * tolerances resolve predictably.
+   */
+  const nearestTo = useCallback(
+    (tap: { latitude: number; longitude: number }) => {
+      if (!mapSize.width || !mapSize.height) return null;
+      const perLng = mapSize.width / viewport.longitudeDelta;
+      const perLat = mapSize.height / viewport.latitudeDelta;
+
+      let best: (typeof pins)[number] | null = null;
+      let bestDistance = TAP_SLOP;
+      for (const pin of pins) {
+        const dx = (pin.lng - tap.longitude) * perLng;
+        const dy = (pin.lat - tap.latitude) * perLat;
+        const distance = Math.hypot(dx, dy);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          best = pin;
+        }
+      }
+      return best;
+    },
+    [pins, viewport, mapSize],
+  );
+
+  const onMapPress = useCallback(
+    (event: MapPressEvent) => {
+      const at = Date.now();
+      const tap = event.nativeEvent.coordinate;
+      setTimeout(() => {
+        // A marker claimed this same tap, so it is already handled.
+        if (markerTapAt.current >= at - SAME_TAP_MS) return;
+
+        const near = nearestTo(tap);
+        if (!near) {
+          setSelectedId(null);
+          return;
+        }
+        // A near-miss does exactly what hitting it would have done: a cluster
+        // zooms, a pin opens its card.
+        if (near.kind === 'cluster') {
+          zoom(near.lat, near.lng);
+        } else {
+          // No haptic: selectPlace has none either, and a near-miss must be
+          // indistinguishable from a hit.
+          setSelectedId(near.item.id);
+        }
+      }, SAME_TAP_MS);
+    },
+    [nearestTo, zoom],
+  );
+
   return (
     <View style={styles.container}>
       <MapView
@@ -361,6 +439,11 @@ export function CatalogMap({
         // any other transient surface does. Via `onMapPress`, because a tap
         // on a pin lands here too.
         onPress={onMapPress}
+        onLayout={(e) => setMapSize(e.nativeEvent.layout)}
+        // North-up and flat, which TAP_SLOP's arithmetic assumes. Neither
+        // gesture was usable anyway without a compass to undo it.
+        rotateEnabled={false}
+        pitchEnabled={false}
         mapType={onImagery ? 'hybrid' : 'standard'}
         // Not `showsPointsOfInterests`. See POI_FILTER — the boolean's two
         // settings are "no labels at all", which is what this map had, and
