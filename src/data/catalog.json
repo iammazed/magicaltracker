@@ -1,6 +1,6 @@
 {
-  "version": "00d14063c00f",
-  "generated_at": "2026-11-21T05:24:12.475Z",
+  "version": "7f1fc59eefca",
+  "generated_at": "2026-11-21T05:47:56.544Z",
   "destinations": [
     {
       "id": "wdw",
@@ -899,7 +899,7 @@
         "family-style",
         "prix-fixe"
       ],
-      "cuisine": "American|Norwegian",
+      "cuisine": "american|norwegian",
       "price_tier": 4,
       "reservations_recommended": true,
       "is_character_dinner_dining": true,
@@ -4819,7 +4819,7 @@
     },
     {
       "id": "dockside-margaritas",
-      "name": "Dockside Maargaritas",
+      "name": "Dockside Margaritas",
       "destination_id": "wdw",
       "area_id": "disney-springs",
       "sub_area": "marketplace",
@@ -5653,7 +5653,7 @@
     },
     {
       "id": "flying-fish",
-      "name": "Flying FIsh",
+      "name": "Flying Fish",
       "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
@@ -7365,7 +7365,7 @@
     },
     {
       "id": "internation-festival-of-the-holidays-candlelight-processional",
-      "name": "EPCOT Internation Festival of the Holidays - Candlelight Processional Dining Package",
+      "name": "EPCOT International Festival of the Holidays - Candlelight Processional Dining Package",
       "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "american-adventure",
@@ -7406,7 +7406,7 @@
     },
     {
       "id": "international-festival-of-the-arts-disney-on-broadway",
-      "name": "EPCOT International Festival of the Arts - DISNEY ON BROADWAY  Concert Series Dining Packages",
+      "name": "EPCOT International Festival of the Arts - DISNEY ON BROADWAY Concert Series Dining Packages",
       "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "american-adventure",
@@ -7446,7 +7446,7 @@
     },
     {
       "id": "international-food-and-wine-festival-concert-series",
-      "name": "EPCOT Internation Food and Wine Festival Concert Series Dining Package",
+      "name": "EPCOT International Food and Wine Festival Concert Series Dining Package",
       "destination_id": "wdw",
       "area_id": "epcot",
       "sub_area": "american-adventure",
@@ -9968,7 +9968,7 @@
     },
     {
       "id": "minnies-wonderful-chrismastime-fireworks-dessert-party-plaza-garden",
-      "name": "Minnie's Wonderful Chrismastime Fireworks Dessert Party with Plaza Garden Viewing",
+      "name": "Minnie's Wonderful Christmastime Fireworks Dessert Party with Plaza Garden Viewing",
       "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "tomorrowland",
@@ -10011,7 +10011,7 @@
     },
     {
       "id": "minnies-wonderful-chrismastime-fireworks-dessert-party-terrace",
-      "name": "Minnie's Wonderful Chrismastime Fireworks Dessert Party at Tomorrowland Terrace",
+      "name": "Minnie's Wonderful Christmastime Fireworks Dessert Party at Tomorrowland Terrace",
       "destination_id": "wdw",
       "area_id": "magic-kingdom",
       "sub_area": "tomorrowland",
@@ -12489,7 +12489,7 @@
         "family-style",
         "prix-fixe"
       ],
-      "cuisine": "american|BBQ",
+      "cuisine": "american|bbq",
       "price_tier": 3,
       "reservations_recommended": true,
       "is_character_dinner_dining": false,
