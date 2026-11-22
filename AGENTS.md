@@ -2894,6 +2894,25 @@ diffable, and reviewable; the database is downstream of them.
 
 - **Never populate rows from memory or from an LLM.** Models invent restaurants that closed years
   ago and coordinates that are plausible but wrong. Open disneyworld.com, read it, type the row.
+- **Coordinates have no published source, so imagery read by hand is the source of record.**
+  Disney does not publish lat/lng anywhere, which is the one field the rule above cannot be
+  followed literally for. `2d9ae30` captured 125 of them off satellite imagery; do the same.
+- **OpenStreetMap is a detector and never a source.** Overpass is the right way to FIND a wrong
+  coordinate — query the named dining points in the resort bbox, match on name, and anything more
+  than about 60 m from its counterpart is worth looking at, against a median agreement of 25 m
+  across 249 matched rows. Do not copy a single value it returns. OSM is ODbL: pasting its
+  coordinates in would make this catalog a derived database and carry an attribution and
+  share-alike obligation into a paid app. That is the owner's decision and it has been made —
+  detector only. Record what OSM found as a direction, a distance and a neighbouring landmark,
+  which is what `docs/coordinate-worklist.md` holds, and let a human read the number off imagery.
+  OSM is also wrong sometimes, and not rarely: of the 22 rows it flagged as more than 60 m out,
+  16 were ours and **6 were OSM's**. A disagreement is a question, not a verdict. The worklist
+  names those six so a later sweep does not move a correct row to the wrong place.
+- **A check that compares venues to other venues goes blind when a group is wrong together.**
+  `2d9ae30` measured each venue against the median of its own land and reported nothing, while six
+  Magic Kingdom rows were 102 to 176 m out: a venue 130 m off inside a land 150 m across cannot
+  move that median enough to flag itself. Use a reference the venue rows cannot contaminate —
+  `resorts.csv` for a resort venue, something outside the repo for a park venue.
 - **`verified_on` is a gate.** `db:import` skips any row without it. Unverified data cannot reach
   the app.
 - **The CSVs are the only source of truth. `catalog-entry.xlsx` is generated and gitignored.**

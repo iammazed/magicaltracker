@@ -1,6 +1,6 @@
 {
-  "version": "7f1fc59eefca",
-  "generated_at": "2026-11-21T05:47:56.544Z",
+  "version": "6f7d49a2a3c1",
+  "generated_at": "2026-11-22T19:17:32.431Z",
   "destinations": [
     {
       "id": "wdw",
@@ -967,7 +967,7 @@
     },
     {
       "id": "ale-and-compass-lounge-restaurant",
-      "name": "Ale and Compass Lounge",
+      "name": "Ale and Compass Restaurant",
       "destination_id": "wdw",
       "area_id": "epcot-resort-area",
       "sub_area": null,
@@ -986,8 +986,8 @@
       "is_character_breakfast_dining": false,
       "is_signature": false,
       "status": "open",
-      "lat": 28.37014,
-      "lng": -81.55879,
+      "lat": 28.370821240918396,
+      "lng": -81.55834454472858,
       "description": "Relaxed, nautical-themed spot that serves New England-inspired comfort food and seafood classics in a cozy, lighthouse-like setting.",
       "tags": [
         "breakfast",
@@ -1346,8 +1346,8 @@
       "is_character_breakfast_dining": false,
       "is_signature": false,
       "status": "open",
-      "lat": 28.4186,
-      "lng": -81.5812,
+      "lat": 28.418868030380242,
+      "lng": -81.57942524658016,
       "description": "Quick-service snack counter that serves soft-serve ice cream, floats, and milkshakes.",
       "tags": [],
       "keywords": [
@@ -1507,8 +1507,8 @@
       "is_character_breakfast_dining": false,
       "is_signature": false,
       "status": "open",
-      "lat": 28.3575,
-      "lng": -81.5389,
+      "lat": 28.363063852933234,
+      "lng": -81.5425685600729,
       "description": "Lively, island-themed poolside bar and lounge dishing up burgers, Caribbean-inspired bites, cocktails and frozen drinks.",
       "tags": [
         "lunch",
@@ -2839,8 +2839,8 @@
       "is_character_breakfast_dining": false,
       "is_signature": false,
       "status": "open",
-      "lat": 28.356187084122393,
-      "lng": -81.60411708020222,
+      "lat": 28.352405738382725,
+      "lng": -81.60341883123752,
       "description": "An intimate, cozy watering hole that specializes in South African wines and appetizers, while also offering the full menu from the adjacent signature restaurant, Jiko – The Cooking Place.",
       "tags": [],
       "keywords": [
@@ -3005,8 +3005,8 @@
       "is_character_breakfast_dining": false,
       "is_signature": false,
       "status": "open",
-      "lat": 28.4192,
-      "lng": -81.5812,
+      "lat": 28.418152067726,
+      "lng": -81.58134507356408,
       "description": "Popular, baseball-themed restaurant famous for its classic American hot dogs, corn dog nuggets, and lively ragtime piano music.",
       "tags": [
         "lunch",
@@ -3875,8 +3875,8 @@
       "is_character_breakfast_dining": false,
       "is_signature": false,
       "status": "open",
-      "lat": 28.4191,
-      "lng": -81.5814,
+      "lat": 28.420184163741954,
+      "lng": -81.5825658177438,
       "description": "Maritime-themed serving hearty seafood favorites like lobster rolls and fried fish.",
       "tags": [
         "lunch",
@@ -4194,8 +4194,8 @@
       "is_character_breakfast_dining": false,
       "is_signature": false,
       "status": "open",
-      "lat": 28.4183,
-      "lng": -81.5796,
+      "lat": 28.41950190863081,
+      "lng": -81.5798191447281,
       "description": "Fast-food restaurant known for its classic American theme park fare and featuring a singing animatronic alien named Sonny Eclipse.",
       "tags": [
         "lunch",
@@ -6176,8 +6176,8 @@
       "is_character_breakfast_dining": false,
       "is_signature": false,
       "status": "open",
-      "lat": 28.42045,
-      "lng": -81.5803,
+      "lat": 28.421537425382738,
+      "lng": -81.58044923123582,
       "description": "Rustic, French-style snack bar themed after the villain from Beauty and the Beast and famous for its massive, warm cinnamon rolls.",
       "tags": [],
       "keywords": [
@@ -6419,8 +6419,8 @@
       "is_character_breakfast_dining": false,
       "is_signature": false,
       "status": "open",
-      "lat": 28.4182,
-      "lng": -81.5835,
+      "lat": 28.418863530388784,
+      "lng": -81.58474186007223,
       "description": "Old West-themed kiosk that serves fast comfort foods like hot honey chicken, fries, and beignets.",
       "tags": [],
       "keywords": [
@@ -6751,8 +6751,8 @@
       "is_character_breakfast_dining": false,
       "is_signature": false,
       "status": "open",
-      "lat": 28.35811407,
-      "lng": -81.58985573,
+      "lat": 28.35908017912438,
+      "lng": -81.59209675156076,
       "description": "Snack kiosk best known for serving grab-and-go options like fresh fruit, Mickey-shaped pretzels, and grilled corn on the cob.",
       "tags": [],
       "keywords": [
@@ -7344,8 +7344,8 @@
       "is_character_breakfast_dining": false,
       "is_signature": false,
       "status": "open",
-      "lat": 28.339424,
-      "lng": -81.574598,
+      "lat": 28.339815778177535,
+      "lng": -81.57302946007333,
       "description": "Spacious, music-themed food hall serving american classics like burgers, pizza, and bakery treats from morning until late night.",
       "tags": [
         "dinner",
@@ -7549,8 +7549,8 @@
       "is_character_breakfast_dining": false,
       "is_signature": true,
       "status": "open",
-      "lat": 28.3732,
-      "lng": -81.5173,
+      "lat": 28.37077580078899,
+      "lng": -81.52112367356516,
       "description": "Vibrant, multi-level restaurant that dishes up authentic Spanish tapas and wood-fired paellas in a lively atmosphere.",
       "tags": [
         "dinner",
@@ -10501,8 +10501,8 @@
       "is_character_breakfast_dining": false,
       "is_signature": false,
       "status": "open",
-      "lat": 28.40993052732107,
-      "lng": -81.58396956222643,
+      "lat": 28.406122599225,
+      "lng": -81.58406553123592,
       "description": "Relaxing, Polynesian-themed poolside quick-service spot serving  wings, salads, sandwiches, and cocktails.",
       "tags": [
         "lunch"
@@ -13651,8 +13651,8 @@
       "is_character_breakfast_dining": false,
       "is_signature": false,
       "status": "open",
-      "lat": 28.3582,
-      "lng": -81.5456,
+      "lat": 28.357989426959012,
+      "lng": -81.54296718890917,
       "description": "Pool-side walk-up counter that serves American cuisine with a flavorful Caribbean twist and tropical cocktails.",
       "tags": [
         "dinner",
@@ -13860,8 +13860,8 @@
       "is_character_breakfast_dining": false,
       "is_signature": false,
       "status": "open",
-      "lat": 28.415948,
-      "lng": -81.574233,
+      "lat": 28.41546577299325,
+      "lng": -81.57429844472813,
       "description": "Sleek, walk-up friendly lounge offering 1970s-inspired cocktails and elevated comfort bites in a retro mid-century setting.",
       "tags": [
         "lunch",
@@ -16852,8 +16852,8 @@
       "is_character_breakfast_dining": false,
       "is_signature": false,
       "status": "open",
-      "lat": 28.336309,
-      "lng": -81.573273,
+      "lat": 28.33573048580401,
+      "lng": -81.57238041774544,
       "description": "Cinema-themed, budget-friendly restaurant serving classic American comfort food like burgers, pizza, pasta, and breakfast food.",
       "tags": [
         "dinner",
