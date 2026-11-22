@@ -1722,11 +1722,43 @@ everything that helps you place yourself (`amusementPark`, `hotel`, `parking`, `
 `stadium`, `marina`, the park and water categories) and drops everything that competes with a pin
 (`restaurant`, `cafe`, `bakery`, `brewery`, `nightlife`, `store`).
 
-Two things about that prop. It **takes precedence** over `showsPointsOfInterests`, so passing both
-is pointless. And it works at this app's 15.1 floor: on iOS 16+ it goes through
-`MKMapConfiguration`, and below that the library falls back to setting `pointOfInterestFilter`
-straight on the `MKMapView`, which has existed since iOS 13. It is the **boolean** that is
-iOS 16-only.
+It works at this app's 15.1 floor: on iOS 16+ it goes through `MKMapConfiguration`, and below
+that the library falls back to setting `pointOfInterestFilter` straight on the `MKMapView`, which
+has existed since iOS 13.
+
+### Apple's labels are a switch, and it takes both props
+
+Reported after the filter shipped: Apple's points of interest "are still just showing up as the
+pink or coloured dots/icons and the words are still not showing up", with a request to raise
+whatever threshold governs when the words appear. **There is no such threshold.** The two props
+that exist choose which CATEGORIES get drawn; whether Apple prints a name beside an icon is its
+own label engine, takes no input from us, and inside Walt Disney World mostly declines because
+the place is private land with few named footprints. Do not go looking for the lever again — the
+answer is to name things ourselves, which is `map-labels.ts`.
+
+What could be offered is the switch, so a dot that cannot say what it is can be turned off. It is
+a `Landmarks` chip beside the layer control, stored in `app_settings` under `map_poi` for the same
+reason `map_layer` is, and declared `role="switch"` with a `checked` state — the objection
+recorded above about a two-state control not saying whether it means "you are here" or "tap to go
+there" was about an ICON, and a word that is lit when on answers it.
+
+**Turning them off needs BOTH props, and an earlier claim here that passing both is pointless was
+wrong.** Read `AIRMap.mm`: `setPointsOfInterestFilter` falls back to the boolean's behaviour when
+the array is empty, and `setShowsPointsOfInterests` returns early when the array is not. They are
+one control in two halves. Pinning the boolean to `false` and letting a non-empty filter win is
+right on iOS 16 and wrong below it, where the boolean sets `MKMapView.showsPointsOfInterest`
+directly and hides every POI whatever the filter holds. So `showsPointsOfInterests` carries the
+state. Either order of application settles correctly, because whichever prop lands second reads
+the other's new value. (The same file also disproves the old note that the boolean is iOS 16-only;
+it has an `else` branch for the legacy property.)
+
+**`mapType` must stay above the filter in the JSX, and the filter array is keyed on the layer.**
+`mapType` and `preferredConfiguration` are two views of one piece of MapKit state, so setting the
+map type replaces the configuration the filter was installed on. React would otherwise send
+`mapType` alone on a layer switch and leave Apple on its default POI set — every restaurant named
+a second time under our own label, the exact thing the filter exists to prevent. A fresh array per
+layer makes the filter a changed prop too, so it is reinstalled after the configuration it belongs
+to. Not verifiable from a Windows machine; it costs one native call per switch.
 
 **`showsBuildings` is not a lever on iOS.** The typings say "@platform iOS: Not supported", so
 there is no extruded-building switch for Apple Maps; `hybridFlyover` is the only route to massing.

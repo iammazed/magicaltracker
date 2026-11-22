@@ -98,6 +98,23 @@ const LAYER_KEY = 'map_layer';
 const parseLayer = (raw: string | null): Layer => (raw === 'standard' ? 'standard' : 'imagery');
 
 /**
+ * Whether Apple's own labels are drawn, remembered the same way the layer is.
+ *
+ * Asked for after a report that Apple's points of interest "are still just
+ * showing up as the pink or coloured dots/icons and the words are still not
+ * showing up". The words are not ours to turn on — see POI_FILTER — so the
+ * control this offers is the one that exists: the dots, or no dots. A dot that
+ * cannot say what it is has a real cost on a map already drawing its own pins,
+ * and somebody who reads them as noise should be able to say so.
+ *
+ * Defaults ON, because that is what shipped and because parking and transport
+ * earn their place.
+ */
+const POI_KEY = 'map_poi';
+
+const parsePoi = (raw: string | null): boolean => raw !== 'off';
+
+/**
  * Which of Apple's own labels to draw.
  *
  * This replaces `showsPointsOfInterests={false}`, which suppressed every one
@@ -119,7 +136,28 @@ const parseLayer = (raw: string | null): Layer => (raw === 'standard' ? 'standar
  * Note the native path: on iOS 16+ this goes through `MKMapConfiguration`, and
  * below that it falls back to setting `pointOfInterestFilter` straight on the
  * `MKMapView` — which has existed since iOS 13, so it works at this app's 15.1
- * floor too. The BOOLEAN prop is the one that is iOS 16-only.
+ * floor too.
+ *
+ * **Turning them off takes both props.** Read AIRMap.mm: the filter's setter
+ * falls back to the boolean's behaviour when the array is empty, and the
+ * boolean's setter returns early when the array is not. They are one control
+ * in two halves, so `showsPointsOfInterests` has to carry `showPoi` rather
+ * than a constant. Pinning it to `false` and letting a non-empty filter win is
+ * right on iOS 16, where the filter goes through `MKMapConfiguration` — and
+ * wrong below it, where the boolean sets `MKMapView.showsPointsOfInterest`
+ * directly and hides every POI whatever the filter holds. The floor is 15.1.
+ * Either order of application settles correctly, because whichever prop lands
+ * second reads the other's new value.
+ *
+ * **The array's identity is keyed on the layer on purpose.** `mapType` and
+ * `preferredConfiguration` are two views of one piece of MapKit state, so
+ * setting the map type replaces the configuration this filter was installed
+ * on. React would otherwise send `mapType` by itself on a layer switch and
+ * leave Apple on its default POI set — every restaurant named a second time
+ * under our own label, which is the thing the filter exists to prevent. A new
+ * array makes the filter a changed prop too, and the JSX order below puts
+ * `mapType` first, so it is reinstalled onto the configuration it belongs to.
+ * Not verifiable from a Windows machine; it costs one native call per switch.
  */
 const POI_FILTER: MKPointOfInterestCategoryType[] = [
   'amusementPark',
@@ -252,12 +290,20 @@ export function CatalogMap({
    * cost of waiting is a blank rectangle where the map should be.
    */
   const [layer, setLayer] = useState<Layer>('imagery');
+  const [showPoi, setShowPoi] = useState(true);
 
   useEffect(() => {
     let alive = true;
     void (async () => {
-      const raw = await getSetting(db, LAYER_KEY);
-      if (alive) setLayer(parseLayer(raw));
+      // Read together, so the map settles into both remembered choices in one
+      // render rather than swapping the layer and then the labels.
+      const [rawLayer, rawPoi] = await Promise.all([
+        getSetting(db, LAYER_KEY),
+        getSetting(db, POI_KEY),
+      ]);
+      if (!alive) return;
+      setLayer(parseLayer(rawLayer));
+      setShowPoi(parsePoi(rawPoi));
     })();
     return () => {
       alive = false;
@@ -273,7 +319,25 @@ export function CatalogMap({
     [db],
   );
 
+  const togglePoi = useCallback(() => {
+    setShowPoi((on) => {
+      const next = !on;
+      void setSetting(db, POI_KEY, next ? 'on' : 'off');
+      return next;
+    });
+    tapPicked();
+  }, [db]);
+
   const onImagery = layer === 'imagery';
+
+  /** A fresh array per layer, and empty when off. See POI_FILTER for both. */
+  const poiFilter = useMemo<MKPointOfInterestCategoryType[]>(() => {
+    // `layer` is a dependency for its IDENTITY, not its value: a new array is
+    // what makes React send this prop again after `mapType` has replaced the
+    // configuration it was installed on.
+    void layer;
+    return showPoi ? [...POI_FILTER] : [];
+  }, [showPoi, layer]);
 
   /**
    * Computed once, from the first render's props.
@@ -513,10 +577,10 @@ export function CatalogMap({
         rotateEnabled={false}
         pitchEnabled={false}
         mapType={onImagery ? 'hybrid' : 'standard'}
-        // Not `showsPointsOfInterests`. See POI_FILTER — the boolean's two
-        // settings are "no labels at all", which is what this map had, and
-        // "Apple's name for every restaurant printed under ours".
-        pointsOfInterestFilter={POI_FILTER}
+        // Both halves of one control, and `mapType` has to stay above them.
+        // See POI_FILTER.
+        pointsOfInterestFilter={poiFilter}
+        showsPointsOfInterests={showPoi}
         showsCompass={false}
         toolbarEnabled={false}
       >
@@ -642,40 +706,89 @@ export function CatalogMap({
           sitting on the map, like the count badge, not a marker pinned to the
           ground.
         */}
-        <View
-          style={[
-            styles.layers,
-            { backgroundColor: theme.backgroundElement, borderColor: theme.border },
-          ]}
-        >
-          {(['imagery', 'standard'] as const).map((option) => {
-            const active = layer === option;
-            return (
-              <Pressable
-                key={option}
-                onPress={() => chooseLayer(option)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                accessibilityLabel={
-                  option === 'imagery' ? 'Satellite view' : 'Standard map view'
-                }
-                style={[
-                  styles.layerOption,
-                  active && { backgroundColor: theme.backgroundSelected },
-                ]}
-              >
-                <ThemedText
-                  allowFontScaling={false}
+        <View style={styles.controls}>
+          <View
+            style={[
+              styles.layers,
+              { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+            ]}
+          >
+            {(['imagery', 'standard'] as const).map((option) => {
+              const active = layer === option;
+              return (
+                <Pressable
+                  key={option}
+                  onPress={() => chooseLayer(option)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={
+                    option === 'imagery' ? 'Satellite view' : 'Standard map view'
+                  }
                   style={[
-                    styles.layerText,
-                    { color: active ? theme.accentText : theme.textFaint },
+                    styles.layerOption,
+                    active && { backgroundColor: theme.backgroundSelected },
                   ]}
                 >
-                  {option === 'imagery' ? 'Satellite' : 'Map'}
-                </ThemedText>
-              </Pressable>
-            );
-          })}
+                  <ThemedText
+                    allowFontScaling={false}
+                    style={[
+                      styles.layerText,
+                      { color: active ? theme.accentText : theme.textFaint },
+                    ]}
+                  >
+                    {option === 'imagery' ? 'Satellite' : 'Map'}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {/*
+            One chip rather than the two the layer control uses, because this
+            is a state and not a choice between two places to be. The objection
+            recorded above — that a two-state control cannot say whether it
+            means "you are here" or "tap to go there" — was about an ICON. A
+            word that is lit when on and faint when off says which, the way the
+            layer options already do, and `role="switch"` says it out loud to
+            VoiceOver, which an unlabelled toggle cannot.
+
+            "Landmarks" rather than "Points of interest" or "Apple labels":
+            what is actually in POI_FILTER is hotels, parking, transport,
+            theatres and parks, and the word has to make sense to somebody who
+            has never heard of MapKit.
+          */}
+          <Pressable
+            onPress={togglePoi}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: showPoi }}
+            accessibilityLabel="Apple's landmarks"
+            accessibilityHint={
+              showPoi
+                ? "Hides Apple's own hotel, parking and transport markers"
+                : "Shows Apple's own hotel, parking and transport markers"
+            }
+            style={[
+              styles.layers,
+              { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+            ]}
+          >
+            <View
+              style={[
+                styles.layerOption,
+                showPoi && { backgroundColor: theme.backgroundSelected },
+              ]}
+            >
+              <ThemedText
+                allowFontScaling={false}
+                style={[
+                  styles.layerText,
+                  { color: showPoi ? theme.accentText : theme.textFaint },
+                ]}
+              >
+                Landmarks
+              </ThemedText>
+            </View>
+          </Pressable>
         </View>
       </View>
 
@@ -903,6 +1016,14 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.one + 2,
     borderRadius: Radius.pill,
     borderWidth: StyleSheet.hairlineWidth,
+  },
+  /** The layer control and the landmarks switch, side by side. A third chip
+   *  stacked under the count badge would push map chrome down over the
+   *  imagery it is meant to sit lightly on; both fit on one line at 393pt. */
+  controls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
   },
   layers: {
     flexDirection: 'row',
