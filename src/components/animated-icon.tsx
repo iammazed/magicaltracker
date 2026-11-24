@@ -45,17 +45,26 @@ const TEAL = '#00807E';
 const MARK = 160;
 
 /**
- * Long enough to read six words, short enough not to feel like a gate.
+ * How long the overlay lives, and the only dial worth turning — the
+ * percentages below scale with it.
  *
- * The tagline fades in over the first 450ms, sits, and the overlay starts
- * clearing at 64% — a little over 700ms. This is the only dial worth turning
- * if launch starts feeling slow: the percentages below scale with it.
+ * What matters is not this number but the gap between the tagline finishing
+ * its own 450ms fade-in and the overlay starting to clear, because that gap
+ * is the only stretch where the line is actually readable. At the first
+ * numbers — 1100ms with the hold at 64% — the gap was 254ms for six words,
+ * and it was reported as going away too quickly. It did.
+ *
+ * At 2000ms with the hold at 80% the line stands still from 450ms to 1600ms,
+ * a little over a second, and the clear still takes the 400ms it always took,
+ * so the exit is no slower than before. Shorten DURATION again and the hold
+ * percentage has to come with it, or the readable window is what you lose.
  */
-const DURATION = 1100;
+const DURATION = 2000;
 
 const splashKeyframe = new Keyframe({
   0: { opacity: 1 },
-  64: { opacity: 1 },
+  // Hold, then clear over the last fifth: 400ms at the DURATION above.
+  80: { opacity: 1 },
   100: { opacity: 0, easing: Easing.out(Easing.quad) },
 });
 

@@ -314,7 +314,13 @@ the second, so it fades rather than pops.
 outlives its own fade by a few hundred milliseconds, so without it the first tap of the session
 lands on nothing. The starter had this bug too.
 
-`DURATION` is the only dial worth turning. The percentages in `splashKeyframe` scale with it.
+`DURATION` is the only dial worth turning, and the percentages in `splashKeyframe` scale with it.
+What matters is not the total but the gap between the tagline finishing its own 450ms fade-in and
+the overlay starting to clear, because that gap is the only stretch where the line can be read. At
+the first numbers — 1100ms with the hold at 64% — it was 254ms, reported on 2026-11-24 as going
+away too quickly. It is 2000ms and 80% now: the line stands still for a little over a second and
+the clear still takes 400ms. Shorten `DURATION` again and move the hold percentage with it, or the
+readable window is the thing that goes.
 
 ### A caption under a heading takes no full stop
 
