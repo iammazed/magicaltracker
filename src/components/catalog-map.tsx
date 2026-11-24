@@ -117,6 +117,21 @@ const parsePoi = (raw: string | null): boolean => raw !== 'off';
 /**
  * Which of Apple's own labels to draw.
  *
+ * **Why these icons have no words is an OPEN QUESTION, and the old answer here
+ * was wrong.** This file used to say Apple declines to label places inside
+ * Walt Disney World because it is private land with few named footprints. Then
+ * the same phone was pointed at Apple Maps, standing in the same place, and
+ * the names were there. So the label engine is perfectly willing; something
+ * about THIS map is stopping it, and the three candidates are in AGENTS.md
+ * along with the test that tells them apart. Do not add a category or drop one
+ * on the strength of a guess about labels — which is how the eight pink
+ * entertainment categories were briefly removed from this array and put back.
+ *
+ * What IS settled, from Apple's own documentation: no property anywhere in
+ * `MKStandardMapConfiguration`, `MKHybridMapConfiguration` or
+ * `MKPointOfInterestFilter` governs label text. They select CATEGORIES. So
+ * whatever the cause turns out to be, the fix is not a prop on this filter.
+ *
  * This replaces `showsPointsOfInterests={false}`, which suppressed every one
  * of them — and that is most of why the map was reported as bland and hard to
  * read. There was no reason recorded for it anywhere, in this file or in

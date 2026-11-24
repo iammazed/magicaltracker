@@ -1736,14 +1736,70 @@ has existed since iOS 13.
 Reported after the filter shipped: Apple's points of interest "are still just showing up as the
 pink or coloured dots/icons and the words are still not showing up", with a request to raise
 whatever threshold governs when the words appear. **There is no such threshold.** The two props
-that exist choose which CATEGORIES get drawn; whether Apple prints a name beside an icon is its
-own label engine, takes no input from us, and inside Walt Disney World mostly declines because
-the place is private land with few named footprints. Do not go looking for the lever again â€” the
-answer is to name things ourselves, which is `map-labels.ts`.
+that exist choose which CATEGORIES get drawn, and nothing in them governs label text.
+
+**But the reason OUR map has no labels is an open question, and the answer first recorded here was
+wrong.** This section used to say Apple declines to label places inside Walt Disney World because
+it is private land with few named footprints. The owner then opened Apple Maps on the same phone,
+in the same place, and read the names off the same landmark pins. The label engine is willing.
+Something about this map is stopping it. Three candidates, cheapest discriminator first:
+
+1. **Our own annotations.** Every marker this app draws is `displayPriority: required` — that is
+   `react-native-maps`' default, applied in `RNMapsMarkerView.mm` on the Fabric path, and
+   `MKAnnotationView`'s own default below it, so it holds either way. Required annotations are the
+   ones MapKit must never hide, and 30 to 50 of them are on screen at park zoom, each with a name
+   chip of ours beside it. A map whose canvas is already claimed has nowhere to put a label. One
+   forum report matches the symptom exactly — "with custom annotations on the map, the map
+   displays with no text", and with none, "I get road and location names" — but it is WatchKit,
+   anecdotal, and carries no reply from Apple. Test it by filtering to a sparse area (ESPN Sports
+   has 3 venues, Blizzard Beach 9) and looking at empty ground with Landmarks on.
+2. **The include-list filter itself.** Apple Maps applies no filter. Test it by sending an empty
+   array with the boolean true, which `AIRMap.mm` turns into `filterIncludingAllCategories` — the
+   unfiltered behaviour. If the names come back, the include list is implicated. Expect every
+   restaurant to be labelled twice while the test is up; that is the state `POI_FILTER` exists to
+   prevent, so it is a diagnostic and not a candidate shipping state.
+3. **The imagery configuration.** Every report of this has said satellite, which made it the first
+   suspect — but the comparison turned out to be satellite to satellite. Apple Maps draws the names
+   over its own imagery, on the same phone, in the same place. So imagery is not the obstacle in
+   itself, and what is left of this candidate is narrower: whether `MKHybridMapConfiguration` as
+   this library installs it behaves like whatever Maps.app uses for satellite. Switching to the
+   standard layer with Landmarks on is still worth doing, because an answer either way narrows the
+   other two.
+
+**The one lever, and it is indirect.** `Marker` takes `displayPriority` (`required` | `high` |
+`low`, default `required`). It cannot turn Apple's words on; what it can do is make our pins yield
+in the collision, which also lets MapKit HIDE our pins — the wrong trade for a catalog whose pins
+are the product. Only worth reaching for if candidate 1 is confirmed, and worth seeing on a device
+before choosing.
+
+Whatever the outcome, naming things ourselves is still the load-bearing answer, and that is
+`map-labels.ts`.
+
+**This is MapKit, not a gap in `react-native-maps`.** Checked against Apple's documentation after
+the report came a third time: `MKStandardMapConfiguration` carries `pointOfInterestFilter`,
+`showsTraffic` and `emphasisStyle`; `MKHybridMapConfiguration` carries `pointOfInterestFilter` and
+`showsTraffic`; `MKPointOfInterestFilter` carries `includingAll`, `excludingAll`, the two category
+initialisers and `includes`/`excludes`. Every one selects categories. None mentions a name, title
+or label, so there is nothing for a native module to reach for either. (`emphasisStyle` is the
+only one that touches prominence, it is standard-only, it has no label setting, and 1.27.2 does
+not expose it.)
+
+**All 18 categories stay in `POI_FILTER` until the question above is settled.** The eight pink
+entertainment ones — `amusementPark`, `aquarium`, `zoo`, `stadium`, `theater`, `movieTheater`,
+`museum`, `landmark` — were briefly dropped on the reasoning that an icon which cannot name itself
+earns no place. That reasoning depended on the labels being unobtainable, which is exactly the
+claim that turned out to be wrong, so they went back. Trim this array for clutter if clutter is
+the complaint; do not trim it as a workaround for missing text.
+
+**`selectableMapFeatures` is not wired up on the Apple path at all.** `AIRMap.mm` never sets it,
+and `onPoiClick` exists only in `AirGoogleMaps`. So whatever an Apple POI does when tapped is
+MapKit's own default behaviour: the app cannot read which feature was hit, cannot style the
+selection, and cannot put its name in our own card. Worth knowing before promising anything about
+a tappable landmark.
 
 What could be offered is the switch, so a dot that cannot say what it is can be turned off. It is
 a `Landmarks` chip beside the layer control, stored in `app_settings` under `map_poi` for the same
-reason `map_layer` is, and declared `role="switch"` with a `checked` state â€” the objection
+reason `map_layer` is, and declared `role="switch"` with a `checked` state — the objection
 recorded above about a two-state control not saying whether it means "you are here" or "tap to go
 there" was about an ICON, and a word that is lit when on answers it.
 
