@@ -1778,8 +1778,29 @@ in the collision, which also lets MapKit HIDE our pins — the wrong trade for a
 are the product. Only worth reaching for if candidate 1 is confirmed, and worth seeing on a device
 before choosing.
 
-Whatever the outcome, naming things ourselves is still the load-bearing answer, and that is
-`map-labels.ts`.
+**The nearest thing to an Apple answer, and read it narrowly.** Forum thread 104732, accepted
+answer from an Apple DTS engineer: "Selecting a system provided point of interest is not
+possible", and "if you only want to show certain points of interest, like a type of restaraunt,
+you can use `MKLocalSearch` to query for those locations in a specific map region, and add the
+results to the map as your own annotations" (their spelling).
+
+Two cautions on citing it. It is from **June 2018**, four years before the configuration API and
+before `selectableMapFeatures` existed, so its first sentence is simply out of date — selecting a
+system POI is possible now, with a property this library never sets on the Apple path. And its
+second sentence is about which PLACES to show, not about label text; it is not an answer to this
+question. What it is good for is the shape of Apple's advice, which has not changed: when you want
+specific named places on the map, you find them and you draw them. That is the same conclusion the
+current documentation reaches by omission.
+
+So whatever the outcome of the three candidates, naming things ourselves stays the load-bearing
+answer, and that is `map-labels.ts`. The candidates matter for one reason only: if our own
+annotations are what suppress Apple's labels, that is a trade we are making without having chosen
+it, and it should be chosen.
+
+Reported again on 2026-11-24, by a second person on a second phone, and **expect this to keep
+being reported.** Nothing has shipped that would change it — the work since the first report has
+been documentation and a count moving into the header — so another sighting is not new evidence
+and does not narrow anything. Only the two tests above do that.
 
 **This is MapKit, not a gap in `react-native-maps`.** Checked against Apple's documentation after
 the report came a third time: `MKStandardMapConfiguration` carries `pointOfInterestFilter`,
