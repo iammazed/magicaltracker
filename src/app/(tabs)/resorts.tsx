@@ -61,13 +61,33 @@ export default function ResortsScreen() {
    *  with the focused map in `show-on-map`. */
   const mapPlaces = useMemo<MapPlace[]>(() => resortPlaces(filtered), [filtered]);
 
+  /** The bar follows the search field and the tier chips, for the reason set
+   *  out on Dining: the map's own count badge is gone as a duplicate of this
+   *  bar, and the bar counted all 35 whatever was on screen. Unlike Dining
+   *  nothing is hidden by default here, but this still reads the filter state
+   *  rather than comparing lengths, so the two screens behave alike. */
+  const narrowed = tier !== null || search.trim() !== '';
+  const stayedShown = useMemo(
+    () => filtered.reduce((n, r) => (stayedIds.has(r.id) ? n + 1 : n), 0),
+    [filtered, stayedIds],
+  );
+
   return (
     <ThemedView style={styles.container}>
       <View style={styles.safe}>
         <SkyHeader
           eyebrow="WALT DISNEY WORLD"
           title="Resorts"
-          progress={{ done: stayedCount, total: resorts.length, prefix: 'Stayed at' }}
+          progress={
+            narrowed
+              ? {
+                  done: stayedShown,
+                  total: filtered.length,
+                  prefix: 'Stayed at',
+                  label: 'shown',
+                }
+              : { done: stayedCount, total: resorts.length, prefix: 'Stayed at' }
+          }
           collapsed={collapsed}
         >
           <TextInput
@@ -111,7 +131,7 @@ export default function ResortsScreen() {
           })}
         </CollapsibleChips>
 
-        {/* List-only: the map has its own count badge. */}
+        {/* List-only: a line of text above the map would push the map down. */}
         {view === 'list' && !loading && resorts.length > 0 ? (
           <ThemedText type="small" themeColor="textFaint" style={styles.resultCount}>
             {filtered.length === resorts.length

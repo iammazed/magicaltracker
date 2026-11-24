@@ -119,7 +119,12 @@ export function SkyHeader({
    *  naturally in front — "Eaten at 48 of 392" is how somebody would say it
    *  out loud, where "48 of 392 eaten at" is the same words in an order
    *  nobody uses. A qualifier cannot move: "On this trip 12 of 392" is worse
-   *  than what it replaced. Pass one or the other, not both. */
+   *  than what it replaced.
+   *
+   *  Both together is allowed and is what a filtered screen passes — "Eaten
+   *  at 12 of 48 shown" needs the verb in front and the qualifier behind. What
+   *  cannot happen is a qualifier leading. Keep the whole sentence short: it
+   *  is held to one line, so a long one truncates. */
   progress?: { done: number; total: number; label?: string; prefix?: string };
   /** A top-right escape. The tab screens are under `headerShown: false`, so a
    *  screen in a temporary mode — adding dining to a trip — has no navigation
@@ -178,6 +183,63 @@ export function SkyHeader({
     }),
   };
 
+  /**
+   * Built once and rendered inside whichever of the two wrappers below is
+   * in play, rather than written out twice.
+   *
+   * Two copies is a drift hazard this file has already been bitten by:
+   * `progressText` exists because the collapsed and expanded headers had
+   * phrased the same number two different ways. One element used in two
+   * branches cannot drift, and only one branch is ever mounted.
+   */
+  const identity = (
+    <>
+      <View style={styles.headingRow}>
+        <View style={styles.heading}>
+          {eyebrow ? <ThemedText style={styles.eyebrow}>{eyebrow}</ThemedText> : null}
+          <ThemedText style={styles.title} numberOfLines={1}>
+            {title}
+          </ThemedText>
+        </View>
+        {action ? (
+          <Pressable
+            onPress={action.onPress}
+            accessibilityRole="button"
+            hitSlop={10}
+            style={styles.action}
+          >
+            <ThemedText style={styles.actionText}>{action.label}</ThemedText>
+          </Pressable>
+        ) : null}
+      </View>
+
+      {progress ? (
+        <View style={styles.progress}>
+          <View style={styles.track}>
+            {/* Width as a percentage string, so it needs no layout
+                measurement and cannot be wrong on first paint. A floor of
+                2% keeps a single visit visible instead of rounding to
+                nothing. */}
+            <View
+              style={[
+                styles.fill,
+                { width: `${pct > 0 ? Math.max(pct * 100, 2) : 0}%` },
+              ]}
+            />
+          </View>
+          {/* One line, always. The block's height is measured ONCE, so a
+              label that wrapped to two lines would be clipped by the
+              animated wrapper for the rest of the session — and the label
+              is now a sentence the filters can lengthen. Truncation is the
+              safe failure; clipping is not. */}
+          <ThemedText style={styles.progressLabel} numberOfLines={1}>
+            {progressText(progress)}
+          </ThemedText>
+        </View>
+      ) : null}
+    </>
+  );
+
   return (
     <SkyCard radius={0} style={styles.card}>
       <Stars />
@@ -197,87 +259,11 @@ export function SkyHeader({
               fill in. */}
           {blockHeight === 0 ? (
             <View onLayout={measure} style={styles.collapsibleInner}>
-          <View style={styles.headingRow}>
-            <View style={styles.heading}>
-              {eyebrow ? <ThemedText style={styles.eyebrow}>{eyebrow}</ThemedText> : null}
-              <ThemedText style={styles.title} numberOfLines={1}>
-                {title}
-              </ThemedText>
-            </View>
-            {action ? (
-              <Pressable
-                onPress={action.onPress}
-                accessibilityRole="button"
-                hitSlop={10}
-                style={styles.action}
-              >
-                <ThemedText style={styles.actionText}>{action.label}</ThemedText>
-              </Pressable>
-            ) : null}
-          </View>
-
-          {progress ? (
-            <View style={styles.progress}>
-              <View style={styles.track}>
-                {/* Width as a percentage string, so it needs no layout
-                    measurement and cannot be wrong on first paint. A floor of
-                    2% keeps a single visit visible instead of rounding to
-                    nothing. */}
-                <View
-                  style={[
-                    styles.fill,
-                    { width: `${pct > 0 ? Math.max(pct * 100, 2) : 0}%` },
-                  ]}
-                />
-              </View>
-              <ThemedText style={styles.progressLabel}>
-                {progressText(progress)}
-              </ThemedText>
-            </View>
-          ) : null}
+              {identity}
             </View>
           ) : (
             <Animated.View style={[styles.collapsible, collapsing]}>
-              <View style={styles.collapsibleInner}>
-          <View style={styles.headingRow}>
-            <View style={styles.heading}>
-              {eyebrow ? <ThemedText style={styles.eyebrow}>{eyebrow}</ThemedText> : null}
-              <ThemedText style={styles.title} numberOfLines={1}>
-                {title}
-              </ThemedText>
-            </View>
-            {action ? (
-              <Pressable
-                onPress={action.onPress}
-                accessibilityRole="button"
-                hitSlop={10}
-                style={styles.action}
-              >
-                <ThemedText style={styles.actionText}>{action.label}</ThemedText>
-              </Pressable>
-            ) : null}
-          </View>
-
-          {progress ? (
-            <View style={styles.progress}>
-              <View style={styles.track}>
-                {/* Width as a percentage string, so it needs no layout
-                    measurement and cannot be wrong on first paint. A floor of
-                    2% keeps a single visit visible instead of rounding to
-                    nothing. */}
-                <View
-                  style={[
-                    styles.fill,
-                    { width: `${pct > 0 ? Math.max(pct * 100, 2) : 0}%` },
-                  ]}
-                />
-              </View>
-              <ThemedText style={styles.progressLabel}>
-                {progressText(progress)}
-              </ThemedText>
-            </View>
-          ) : null}
-              </View>
+              <View style={styles.collapsibleInner}>{identity}</View>
             </Animated.View>
           )}
 

@@ -351,15 +351,20 @@ that makes the tick mean anything. One override, not six.
 ### A count reads verb-first
 
 `SkyHeader`'s progress bar said "48 of 392 eaten at", which is the right words in an order
-nobody speaks. It takes `prefix` and `label` now: `prefix` leads the count, `label` trails it,
-and a caller passes one or the other. The distinction is not stylistic — "Eaten at 48 of 392"
-and "Stayed at 12 of 35" are verbs and lead naturally, while "on this trip" is a qualifier and
-cannot move without becoming worse than what it replaced.
+nobody speaks. It takes `prefix` and `label` now: `prefix` leads the count and `label` trails
+it. The distinction is not stylistic — "Eaten at 48 of 392" and "Stayed at 12 of 35" are verbs
+and lead naturally, while "on this trip" is a qualifier and cannot move without becoming worse
+than what it replaced. Both at once is the filtered case, "Eaten at 12 of 48 shown"; what cannot
+happen is a qualifier leading.
 
-`progressText` is shared because the collapsed and expanded headers are duplicated JSX that has
-drifted before. `CatalogMap`'s badge was reordered to match, since it prints the same count on
-the same two screens — it upper-cases `doneLabel` at the badge and leaves it alone in
-"Already visited", which still reads correctly as a suffix.
+The whole sentence is held to `numberOfLines={1}`. The identity block's height is measured ONCE,
+so a label that wrapped would be clipped by the collapse animation for the rest of the session —
+and the label is now a sentence the filters can lengthen. Truncation is the safe failure.
+
+`progressText` is shared because the collapsed and expanded headers phrased the same number two
+different ways once. The headers themselves are no longer two copies: the block is built into one
+`identity` element and rendered inside whichever wrapper is in play, since only one of them is
+ever mounted. `CatalogMap` no longer prints a count at all.
 
 ---
 
@@ -1733,12 +1738,12 @@ pink or coloured dots/icons and the words are still not showing up", with a requ
 whatever threshold governs when the words appear. **There is no such threshold.** The two props
 that exist choose which CATEGORIES get drawn; whether Apple prints a name beside an icon is its
 own label engine, takes no input from us, and inside Walt Disney World mostly declines because
-the place is private land with few named footprints. Do not go looking for the lever again — the
+the place is private land with few named footprints. Do not go looking for the lever again â€” the
 answer is to name things ourselves, which is `map-labels.ts`.
 
 What could be offered is the switch, so a dot that cannot say what it is can be turned off. It is
 a `Landmarks` chip beside the layer control, stored in `app_settings` under `map_poi` for the same
-reason `map_layer` is, and declared `role="switch"` with a `checked` state — the objection
+reason `map_layer` is, and declared `role="switch"` with a `checked` state â€” the objection
 recorded above about a two-state control not saying whether it means "you are here" or "tap to go
 there" was about an ICON, and a word that is lit when on answers it.
 
@@ -1787,13 +1792,29 @@ of this map stuttering, two paragraphs down. A key change remounts the marker on
 the new colours, and leaves it not tracking. Switching layers is a rare deliberate tap, so one
 remount of the pins on screen is the right thing to spend.
 
-**The two floating chips are one centred column, not two positioned boxes.** The count badge was
-centred and the layer control was first written hard against the right edge, which collides:
-"Visited 48 of 392" and "Satellite / Map" are each around half a phone wide, so on a 393pt screen
-their boxes meet in the middle. Two overlays whose widths both depend on their text is a layout
-that works until a longer word arrives, and `doneLabel` is a prop while the counts grow a digit at
-100. A column cannot overlap itself. The container needs `pointerEvents="box-none"` or it eats
-taps meant for the map.
+**The map's chrome is one centred column, not boxes positioned against opposite edges.** A count
+badge used to sit above the layer control, centred, while the control was written hard against the
+right edge — and those two collide: "Visited 48 of 392" and "Satellite / Map" are each around half
+a phone wide, so on a 393pt screen their boxes meet in the middle. Two overlays whose widths both
+depend on their text is a layout that works until a longer word arrives. A column cannot overlap
+itself, so anything added to this map goes in it. The container needs `pointerEvents="box-none"`
+or it eats taps meant for the map.
+
+**The map prints no count, and the header's bar counts what is on screen instead.** The map
+carried "Visited 48 of 392" until a review pointed out that the SkyHeader bar says the same thing
+a few points above it on both tab screens — the same verb, the same two numbers, twice on one
+screen. The map's job is where things are; how many of them are done belongs to the header that is
+already there, and on show-on-map, which has no such header, a catalog-wide total was never what
+that screen was about.
+
+The badge's figure was not quite a duplicate, though, and that part was kept: it counted the SHOWN
+set where the bar counts the catalog, so a map filtered to EPCOT had nothing saying how much of
+EPCOT was done. Both tab screens now pass the shown set to the bar whenever the user has narrowed
+something — "Eaten at 12 of 48 shown" — and the plain total when they have not. The narrowing is
+read from the filter STATE, never from `filtered.length < venues.length`, which is true with no
+filters on at all because the default Dining view hides the events. The word is "shown" rather
+than the area's name because `CollapsibleChips` already prints that below the header in every
+state, collapsed included.
 
 Two things about markers are load-bearing. `tracksViewChanges` must be `false` on any marker with
 custom children, or the map re-renders every one of them continuously and visibly stutters — it

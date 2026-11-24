@@ -264,7 +264,7 @@ export function CatalogMap({
   places: MapPlace[];
   /** Ids the user has logged — visited venues, or resorts stayed at. */
   doneIds: Set<string>;
-  /** "visited" / "stayed at", for the count badge and the card. */
+  /** "visited" / "stayed at", for the card: "Already visited". */
   doneLabel: string;
   onOpen: (place: MapPlace) => void;
   /** Open zoomed to this place with its card already up, rather than on the
@@ -450,11 +450,6 @@ export function CatalogMap({
   const selected = useMemo(
     () => places.find((p) => p.id === selectedId) ?? null,
     [places, selectedId],
-  );
-
-  const doneShown = useMemo(
-    () => places.filter((p) => doneIds.has(p.id)).length,
-    [places, doneIds],
   );
 
   const zoom = useCallback(
@@ -664,38 +659,28 @@ export function CatalogMap({
       </MapView>
 
       {/*
-        One overlay holding both chips, stacked and centred, rather than two
-        absolutely-positioned boxes.
+        One centred column for the map's own chrome, rather than boxes
+        positioned against opposite edges.
 
-        The badge was centred and the layer control was first written hard
-        against the right edge, which collides: "Visited 48 of 392" and
+        A count badge used to sit above these controls, reading "Visited 48 of
+        392", and it is gone as a duplicate: both tab screens print the same
+        sentence in the SkyHeader bar immediately above the map, and the third
+        caller, show-on-map, is about one place rather than a total. What this
+        map says about a place it says on the card, which names the selected
+        pin and marks it "Already visited".
+
+        The column stays, and it is the reason to put anything new here rather
+        than against an edge. The badge was centred and the layer control was
+        first written hard right, which collides: "Visited 48 of 392" and
         "Satellite / Map" are each around half a phone wide, so on a 393pt
-        screen their boxes meet in the middle. Two independently positioned
-        overlays whose widths both depend on their text is a layout that works
-        until a longer word arrives — `doneLabel` is a prop and the counts grow
-        a digit at 100. A column cannot overlap itself.
+        screen their boxes meet in the middle. Two overlays whose widths both
+        depend on their text is a layout that works until a longer word
+        arrives. A column cannot overlap itself.
 
         `pointerEvents="box-none"` so the container does not swallow taps meant
         for the map underneath it; the chips inside still take their own.
       */}
       <View style={styles.topOverlay} pointerEvents="box-none">
-        {/* Counts, because "how much of this have I done?" is the question the
-            map exists to answer at a glance. */}
-        <View
-          style={[
-            styles.badge,
-            { backgroundColor: theme.backgroundElement, borderColor: theme.border },
-          ]}
-        >
-          <ThemedText type="small" themeColor="textSecondary">
-            {/* Verb first, matching the SkyHeader bar on the same screens —
-                "Visited 48 of 392", not "48 of 392 visited". `doneLabel` is
-                capitalised here and left alone in "Already visited" below. */}
-            {doneLabel.charAt(0).toUpperCase() + doneLabel.slice(1)} {doneShown} of{' '}
-            {places.length}
-          </ThemedText>
-        </View>
-
         {/*
           Two named options rather than one icon that toggles. A single layers
           button has to mean either "you are here" or "tap to go there", and a
@@ -703,8 +688,7 @@ export function CatalogMap({
           it. Both words fit, so both words are shown.
 
           Styled as theme chrome rather than in the imagery literals: it is UI
-          sitting on the map, like the count badge, not a marker pinned to the
-          ground.
+          sitting on the map, not a marker pinned to the ground.
         */}
         <View style={styles.controls}>
           <View
@@ -1011,15 +995,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
   },
-  badge: {
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one + 2,
-    borderRadius: Radius.pill,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  /** The layer control and the landmarks switch, side by side. A third chip
-   *  stacked under the count badge would push map chrome down over the
-   *  imagery it is meant to sit lightly on; both fit on one line at 393pt. */
+  /** The layer control and the landmarks switch, side by side. Stacking them
+   *  instead would push map chrome down over the imagery it is meant to sit
+   *  lightly on; both fit on one line at 393pt. */
   controls: {
     flexDirection: 'row',
     alignItems: 'center',

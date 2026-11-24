@@ -318,6 +318,29 @@ export default function CatalogScreen() {
       .map((a) => ({ ...a, count: counts.get(a.id) ?? 0 }));
   }, [withoutArea, areas]);
 
+  /**
+   * What the header's bar counts once the filters have narrowed the screen.
+   *
+   * The map used to carry a badge of its own for this — "Visited 12 of 48"
+   * over the imagery — and it is gone, as a duplicate of the bar a few points
+   * above it. The FIGURE was not a duplicate, though: the bar counts the whole
+   * catalog and ignores the chips, so a map filtered to EPCOT had nothing
+   * saying how much of EPCOT was done. The bar follows the filters instead.
+   *
+   * `narrowed` has to be read from the filter state and cannot be inferred
+   * from the counts: with nothing filtered at all `filtered` is ALREADY
+   * shorter than `venues`, because the default view hides the events.
+   *
+   * "shown" rather than the area's name, which `CollapsibleChips` prints
+   * directly below in every state, collapsed included.
+   */
+  const narrowed =
+    filters.areaId !== null || filters.search.trim() !== '' || refinements > 0;
+  const shownDone = useMemo(
+    () => filtered.reduce((n, v) => (byVenue.has(v.id) ? n + 1 : n), 0),
+    [filtered, byVenue],
+  );
+
   return (
     <ThemedView style={styles.container}>
       <View style={styles.safe}>
@@ -336,7 +359,14 @@ export default function CatalogScreen() {
           progress={
             planning
               ? { done: plannedIds.size, total: venues.length, label: 'on this trip' }
-              : { done: visitedCount, total: venues.length, prefix: 'Eaten at' }
+              : narrowed
+                ? {
+                    done: shownDone,
+                    total: filtered.length,
+                    prefix: 'Eaten at',
+                    label: 'shown',
+                  }
+                : { done: visitedCount, total: venues.length, prefix: 'Eaten at' }
           }
           action={planning ? { label: 'Done', onPress: finish } : undefined}
           collapsed={collapsed}
@@ -407,8 +437,9 @@ export default function CatalogScreen() {
         </CollapsibleChips>
 
         {/* The header's bar answers "how much have I done"; this answers
-            "what am I looking at right now", which the filters change. The
-            map carries its own count badge, so it is list-only. */}
+            "what am I looking at right now", which the filters change.
+            List-only: a line of text above the map would push the map down,
+            and the area chips above it already say what is in play. */}
         {view === 'list' && !loading && venues.length > 0 ? (
           <ThemedText type="small" themeColor="textFaint" style={styles.resultCount}>
             {filtered.length === venues.length
