@@ -296,13 +296,38 @@ face, never a brand face — Pacifico and Berkshire Swash are for the wordmark, 
 are loaded at runtime by `BrandFontsProvider`, so at splash time they may not exist yet and the
 line would silently render in a substitute at the wrong width.
 
+**The teal is a starting point now, not the surface.** Reported on 2026-11-25: the splash is flat
+teal where the icon it continues is the gold `M` on the twilight gradient. `SkyGradient` fades up
+over the teal across `SKY_FADE`, 600ms, slower than the tagline's 450ms so it reads as dusk
+falling rather than a colour being swapped, corner to corner at `SkyCard`'s angle so the splash
+and the app's own surfaces are lit from the same direction.
+
+**It fades rather than simply being the background, and that is forced.** `app.json` can express
+one flat colour. The native splash is a PNG on a solid fill drawn before any JavaScript runs, so
+the first render pass has to stay exactly that flat teal or the handover gets a seam — which is
+the whole reason this file exists. The gradient can only arrive after the handover. Fading it is
+what makes "after" look deliberate instead of broken.
+
+**The finish belongs to the next binary.** A genuinely gradient launch means baking the gradient
+into the splash image itself — a full-bleed PNG with the mark composited in and `resizeMode:
+"cover"`, since `imageWidth` centres a mark on a fill and cannot do a background. That changes
+`app.json` and an `expoConfigExternalFile`, so it changes the fingerprint and needs a build; it
+should ride along with the `challenge_marks` migration rather than on its own. When it does,
+`SKY_FADE` and the `styles.sky` layer become a fade from the gradient to the gradient — a no-op —
+and should be deleted in the same commit, leaving the overlay flat again in the new colours.
+
+White text stays white on it, which is `SkyGradient`'s own rule and is also the measurement: 4.78:1
+on the teal, with nothing to spare, against 7.78:1 and 17.13:1 at the two ends of the gradient.
+
 **Three constants must agree with `app.json` and there is nothing that checks them.** `TEAL`
 against the `expo-splash-screen` plugin's `backgroundColor`, `MARK` against its `imageWidth`, and
 the `require` against its `image`. Change one side only and the flash comes back in a new colour.
 
-The colours are literals, which is sanctioned here for the same reason as the share card and the
-map pins: the surface is one fixed colour in both schemes, because the PNG it continues cannot
-know the scheme. A theme token would invert and leave a gold mark on white.
+The flat colours are literals, which is sanctioned here for the same reason as the share card and
+the map pins: this surface is fixed in both schemes, because the PNG it continues cannot know the
+scheme, and a scheme-dependent token would invert and leave a gold mark on white. `SkyGradient` is
+not an exception to that — it is a shared constant rather than a resolved token, and `theme.ts`
+pins it as dark in both themes on purpose. Anything else here stays a literal.
 
 **Both render passes are load-bearing.** `hideAsync` is called from `onLayout`, after this view
 has actually been laid out, because calling it earlier leaves a frame between the native splash
